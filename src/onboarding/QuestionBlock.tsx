@@ -5,7 +5,6 @@ import Animated, {
   FadeIn,
   FadeInDown,
   FadeInUp,
-  FadeOutUp,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -147,7 +146,13 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
   return (
     <Animated.View
       entering={FadeInUp.duration(420).springify().damping(16)}
-      exiting={FadeOutUp.duration(220)}
+      // No `exiting` animation here on purpose — react-native-reanimated's
+      // exit animations absolutely-position the outgoing view to animate it
+      // out while the new one enters, but that exit reliably fails to clean
+      // up on React Native Web, leaving the old question's text permanently
+      // stuck overlapping the new one. The parent already unmounts this via
+      // a changing `key`, so it just disappears instantly, which is a fine
+      // tradeoff for not showing broken overlap.
       style={styles.block}
     >
       <TypewriterText
