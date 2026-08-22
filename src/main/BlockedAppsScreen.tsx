@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
 /** Real, editable blocked-apps list — replaces the old mock AppPickerScreen
  *  /MyAppsScreen, which had no actual Android package identifiers wired to
@@ -84,7 +85,7 @@ export default function BlockedAppsScreen({
                 <View key={pkg} style={[styles.row, i > 0 && styles.rowBorder]}>
                   <Text style={[styles.rowTitle, { flex: 1 }]}>{pkg}</Text>
                   <Pressable onPress={() => onChange(blockedPackages.filter((p) => p !== pkg))} style={styles.removeBtn} hitSlop={8}>
-                    <Text style={styles.removeIcon}>✕</Text>
+                    <Icon name="close" size={12} color={colors.textDim} />
                   </Pressable>
                 </View>
               ))}

@@ -5,11 +5,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
-function Feature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <View style={styles.featureRow}>
-      <Text style={styles.featureIcon}>{icon}</Text>
+      <View style={styles.featureIconWrap}>{icon}</View>
       <Text style={styles.featureText}>
         <Text style={styles.featureTitle}>{title} </Text>
         <Text style={styles.featureDesc}>{desc}</Text>
@@ -22,7 +23,7 @@ export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: (
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
-        <Text style={styles.closeIcon}>✕</Text>
+        <Icon name="close" size={18} color={colors.text} />
       </Pressable>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -36,7 +37,7 @@ export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: (
 
         <View style={{ height: 34 }} />
 
-        <Feature icon="🛡" title="Focus, uninterrupted." desc="Finally do your best work yet." />
+        <Feature icon={<Icon name="shield" size={19} color={colors.text} />} title="Focus, uninterrupted." desc="Finally do your best work yet." />
         <Feature icon="🗓" title="Own your time." desc="And fill your days with more intention." />
         <Feature icon="👥" title="Be fully present." desc="Because life isn't happening on your screen." />
 
@@ -91,6 +92,7 @@ const styles = StyleSheet.create({
   headingAccent: { color: '#c9f57a' },
   featureRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 18 },
   featureIcon: { fontSize: 19, width: 36 },
+  featureIconWrap: { width: 36, alignItems: 'flex-start', justifyContent: 'center' },
   featureText: { flex: 1, fontSize: 15, lineHeight: 22 },
   featureTitle: { color: colors.text, fontWeight: '700' },
   featureDesc: { color: 'rgba(255,255,255,0.8)' },

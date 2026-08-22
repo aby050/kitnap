@@ -22,6 +22,7 @@ import {
 } from 'device-permissions';
 import { checkUsageAccessPermission, openUsageAccessSettings, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import Icon from '../ui/Icon';
 
 type Props = {
   name: string;
@@ -258,7 +259,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
                     style={styles.removeBtn}
                     hitSlop={8}
                   >
-                    <Text style={styles.removeIcon}>✕</Text>
+                    <Icon name="close" size={12} color={colors.textDim} />
                   </Pressable>
                 </View>
               ))}
@@ -399,7 +400,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
 
               <View style={{ height: 40 }} />
               <Text style={styles.fistBumpLabel}>Let's solidify it with a fist bump</Text>
-              <ContinueButton label="👊 Let's Do It" onPress={onFinish} />
+              <ContinueButton label="Let's Do It" onPress={onFinish} />
             </Animated.View>
           );
         })()}

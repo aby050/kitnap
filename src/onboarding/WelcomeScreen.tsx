@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import OpalOrb from '../components/OpalOrb';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
 const { width, height } = Dimensions.get('window');
 const CONFETTI_COLORS = ['#f5c542', '#e07a5f', '#8fb8ff', '#7CF5B0', '#ff7ab8', '#7dd8ff', '#d9f77e'];
@@ -70,7 +71,7 @@ export default function WelcomeScreen({ onDone }: { onDone: () => void }) {
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(400).duration(500)} style={styles.checkCircle}>
-            <Text style={styles.checkGlyph}>✓</Text>
+            <Icon name="check" size={28} color="#062a14" strokeWidth={2.8} />
           </Animated.View>
 
           <Animated.Text entering={FadeInDown.delay(550).duration(500)} style={styles.heading}>

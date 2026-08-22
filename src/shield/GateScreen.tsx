@@ -13,6 +13,7 @@ import Animated, {
 import { buildFinalChallenge, buildGate, GateQuestion } from '../data/gateQuestions';
 import { Intensity } from '../data/themes';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 import BreathingExercise from './BreathingExercise';
 import ActivityChallenge from './ActivityChallenge';
 import { success, tapLight } from '../ui/haptics';
@@ -241,7 +242,7 @@ export default function GateScreen({
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable onPress={onAbandoned} hitSlop={10}>
-          <Text style={styles.close}>✕</Text>
+          <Icon name="close" size={16} color={colors.textDim} />
         </Pressable>
         <View style={styles.dots}>
           {questions.map((_, i) => (

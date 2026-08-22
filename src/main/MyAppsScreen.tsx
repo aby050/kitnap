@@ -7,6 +7,7 @@ import Svg, { Circle, Rect, Path, Defs, RadialGradient, Stop } from 'react-nativ
 
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import { getIntensity, IntensityKey } from '../data/themes';
+import Icon from '../ui/Icon';
 
 const { width } = Dimensions.get('window');
 
@@ -294,7 +295,7 @@ function FolderCard({
               <Circle cx="12" cy="12" r="3" />
             </Svg>
             <View style={styles.neverLockBadge}>
-              <Text style={{ fontSize: 9, color: 'white' }}>🔒</Text>
+              <Icon name="lock" size={9} color="white" strokeWidth={2.4} />
             </View>
           </View>
         )}
@@ -370,7 +371,7 @@ export default function MyAppsScreen({
             <Text style={styles.sectionTitle}>Blocked apps</Text>
           </View>
           <Pressable style={styles.circleArrowBtn} hitSlop={8} onPress={onOpenBlockedApps}>
-            <Text style={styles.arrowGlyph}>➔</Text>
+            <Icon name="arrowRight" size={14} color="#ffffff" />
           </Pressable>
         </View>
 
@@ -401,7 +402,7 @@ export default function MyAppsScreen({
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Rules</Text>
           <Pressable style={styles.circleArrowBtn} hitSlop={8} onPress={onOpenSchedules}>
-            <Text style={styles.arrowGlyph}>➔</Text>
+            <Icon name="arrowRight" size={14} color="#ffffff" />
           </Pressable>
         </View>
 

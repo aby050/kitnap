@@ -13,6 +13,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Circle, Path, Rect, Ellipse } from 'react-native-svg';
 import { colors } from '../theme';
 import { PresetSections } from '../components/PresetCard';
+import Icon from '../ui/Icon';
 
 const { width } = Dimensions.get('window');
 
@@ -365,7 +366,7 @@ export default function HomeScreen({
 
           {/* Blocked Apps badge */}
           <Pressable style={styles.blockedAppsBadge} onPress={onOpenApps}>
-            <Text style={styles.blockedAppsLock}>🔒</Text>
+            <Icon name="lock" size={13} color="rgba(255,255,255,0.75)" />
             <Text style={styles.blockedAppsLabel}>Blocked Apps</Text>
             <View style={styles.miniIconsRow}>
               <View style={[styles.miniAppIcon, { backgroundColor: '#34C759' }]}>

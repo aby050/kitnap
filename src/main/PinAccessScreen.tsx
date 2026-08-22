@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
 const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
 
@@ -90,7 +91,7 @@ export default function PinAccessScreen({
 
       {stage === 'done' ? (
         <Animated.View entering={FadeIn.duration(400)} style={styles.doneBody}>
-          <Text style={styles.doneGlyph}>🔒</Text>
+          <Icon name="lock" size={40} color={colors.accent} strokeWidth={1.6} />
           <Text style={styles.doneTitle}>PIN set</Text>
           <Text style={styles.doneSub}>
             Opening Settings will now ask for this PIN. This never applies to Emergency access.

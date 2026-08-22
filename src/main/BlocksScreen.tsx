@@ -14,6 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { colors } from '../theme';
 import { AppLimit } from '../data/store';
+import Icon from '../ui/Icon';
 
 // Default distraction apps we can choose to add limits to
 const AVAILABLE_APPS = [
@@ -442,7 +443,7 @@ function AppLimitModal({
               <Text style={styles.sheetTitle}>{app.name} limit</Text>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-              <Text style={styles.closeGlyph}>✕</Text>
+              <Icon name="close" size={14} color={colors.textDim} />
             </Pressable>
           </View>
 

@@ -5,6 +5,7 @@ import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop, Circle, Line } fr
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
 const CHART_W = 340;
 const CHART_H = 210;
@@ -14,10 +15,10 @@ const REGULAR = 'M -10 44 C 60 40, 110 52, 170 50 C 230 48, 280 46, 350 46';
 const MEMBER = 'M -10 62 C 60 58, 100 92, 170 104 C 230 114, 250 146, 300 152 C 320 154, 335 156, 350 157';
 const MEMBER_FILL = `${MEMBER} L 350 210 L -10 210 Z`;
 
-function Feature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <View style={styles.featureRow}>
-      <Text style={styles.featureIcon}>{icon}</Text>
+      <View style={styles.featureIconWrap}>{icon}</View>
       <Text style={styles.featureText}>
         <Text style={styles.featureTitle}>{title} </Text>
         <Text style={styles.featureDesc}>{desc}</Text>
@@ -95,7 +96,7 @@ export default function PaywallScreen({
 
         <View style={{ height: 26 }} />
 
-        <Feature icon="🛡" title="Focus, uninterrupted." desc="Finally do your best work yet." />
+        <Feature icon={<Icon name="shield" size={19} color={colors.text} />} title="Focus, uninterrupted." desc="Finally do your best work yet." />
         <Feature icon="🗓" title="Own your time." desc="And fill your days with more intention." />
         <Feature icon="👥" title="Be fully present." desc="Because life isn't happening on your screen." />
 
@@ -158,6 +159,7 @@ const styles = StyleSheet.create({
   axisRight: { color: colors.accent, fontSize: 13, fontWeight: '600' },
   featureRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 18 },
   featureIcon: { fontSize: 19, width: 34 },
+  featureIconWrap: { width: 34, alignItems: 'flex-start', justifyContent: 'center' },
   featureText: { flex: 1, fontSize: 15, lineHeight: 22 },
   featureTitle: { color: colors.text, fontWeight: '700' },
   featureDesc: { color: 'rgba(255,255,255,0.8)' },
