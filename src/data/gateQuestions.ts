@@ -171,77 +171,32 @@ export const FAMILY_G: GateQuestion[] = [
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
 /**
- * Level 2 (breathing) / Level 3 (physical) unlock, appended after the normal
- * ladder only for 'strict' users at their final step — gentle/steady never
- * see it, so their tuned friction curve is untouched.
- *
  * healthLimited comes straight from the onboarding health-limitation answer:
- * if the user flagged anything, they always get breathing, never activity.
- * "Behavioral interruption, not physical punishment" — never force movement
- * on someone who told us it might not be safe for them.
+ * if the user flagged anything, they always get the quiz/math/breathing
+ * rotation, never a physical activity challenge. "Behavioral interruption,
+ * not physical punishment" — never force movement on someone who told us
+ * it might not be safe for them.
  */
-function pickMedium(): GateQuestion {
+function pickQuizChallenge(): GateQuestion {
   const roll = Math.random();
   if (roll < 0.4) return pick(FAMILY_F_BREATHE);
   if (roll < 0.75) return randomMathChallenge();
   return pick(FAMILY_F_QUIZ);
 }
 
-export function buildFinalChallenge(
-  intensityKey: 'gentle' | 'steady' | 'strict',
-  step: number,
-  maxQuestions: number,
-  healthLimited: boolean,
-): GateQuestion | null {
-  if (intensityKey !== 'strict' || step < maxQuestions) return null;
-  if (healthLimited) return pickMedium();
-  return Math.random() < 0.5 ? pickMedium() : pick(FAMILY_G);
-}
-
 /**
- * Builds the gate for a given unlock number. Friction scales with how much the
- * user has already used today, never with elapsed time — the 1st unlock is
- * cheap and the 9th is expensive, which is what makes it feel fair.
+ * Every unlock requires exactly one challenge, always — no free early
+ * unlocks and no ladder buildup. Steady always gets the quiz/math/breathing
+ * rotation; Strict always gets a physical activity challenge (or the same
+ * quiz rotation if health-limited). The only way around it is spending an
+ * emergency token, handled by the caller (GateScreen), not here.
  */
-export function buildGate(
-  intensityKey: 'gentle' | 'steady' | 'strict',
-  unlockNumber: number,
-  ladderStartsAt: number,
-  maxQuestions: number,
-  goalLine = '',
-  pastReflections: PastReflection[] = [],
-): GateQuestion[] {
-  const step = unlockNumber - ladderStartsAt + 1;
-  const familyD = familyDFor(goalLine, pastReflections);
-
-  if (step <= 0) return [];
-
-  if (intensityKey === 'gentle') {
-    // Easiest tasks: Tap intent (A), Dwell 4s (B), 2 slow breaths (F_BREATHE), 5s Hold (E)
-    if (step === 1) return [pick(FAMILY_A)];
-    if (step === 2) return [pick(FAMILY_A), pick(FAMILY_B)];
-    if (step === 3) return [pick(FAMILY_A), pick(FAMILY_B), FAMILY_F_BREATHE[0]];
-
-    const fullGentle = [pick(FAMILY_A), pick(FAMILY_B), FAMILY_F_BREATHE[0], FAMILY_E[0]];
-    return fullGentle.slice(0, maxQuestions);
-  }
-
-  if (intensityKey === 'steady') {
-    // Medium tasks: Tap (A), Dwell (B), Recall history (D), 12s Hold (E), 3 slow breaths (F)
-    if (step === 1) return [pick(FAMILY_A)];
-    if (step === 2) return [pick(FAMILY_A), pick(FAMILY_B)];
-    if (step === 3) return [pick(FAMILY_A), pick(FAMILY_B), pick(familyD)];
-
-    const fullSteady = [pick(FAMILY_A), pick(FAMILY_B), pick(familyD), FAMILY_E[2], FAMILY_F_BREATHE[1]];
-    return fullSteady.slice(0, maxQuestions);
-  }
-
-  // 'strict' (Hardest friction): starts immediately. Holds are 30s, Typing (C) is required.
-  if (step === 1) return [pick(FAMILY_A), pick(FAMILY_C)];
-  if (step === 2) return [pick(FAMILY_A), pick(FAMILY_C), pick(familyD)];
-
-  const fullStrict = [pick(FAMILY_A), pick(FAMILY_B), pick(FAMILY_C), pick(familyD), FAMILY_E[1]];
-  return fullStrict.slice(0, maxQuestions);
+export function pickChallenge(
+  intensityKey: 'steady' | 'strict',
+  healthLimited: boolean,
+): GateQuestion {
+  if (intensityKey === 'steady' || healthLimited) return pickQuizChallenge();
+  return pick(FAMILY_G);
 }
 
 export const ESSENTIALS = [

@@ -42,7 +42,6 @@ import {
 import { checkUsageAccessPermission, openUsageAccessSettings } from './src/data/androidUsage';
 
 const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
-  gentle: 'gentle',
   steady: 'balanced',
   strict: 'strict',
 };

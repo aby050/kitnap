@@ -105,9 +105,8 @@ export function recommendIntensity(
   }
 
   let key: IntensityKey;
-  if (score >= 5) key = 'strict';
-  else if (score >= 2) key = 'steady';
-  else key = 'gentle';
+  if (score >= 3) key = 'strict';
+  else key = 'steady';
 
   if (reasons.length === 0) {
     reasons.push('Based on a balanced read of your answers');

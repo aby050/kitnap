@@ -1,106 +1,28 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInUp,
-  FadeOutUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import { buildFinalChallenge, buildGate, GateQuestion } from '../data/gateQuestions';
+import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import { GateQuestion, pickChallenge } from '../data/gateQuestions';
 import { Intensity } from '../data/themes';
 import { colors } from '../theme';
 import Icon from '../ui/Icon';
 import BreathingExercise from './BreathingExercise';
 import ActivityChallenge from './ActivityChallenge';
-import { success, tapLight } from '../ui/haptics';
+import { success } from '../ui/haptics';
 
 type Props = {
-  unlockNumber: number;
   intensity: Intensity;
   futureSelfMessage: string;
-  goalLine?: string;
   healthLimited?: boolean;
   onGranted: (minutes: number) => void;
   onAbandoned: () => void;
   onEmergency: () => void;
-  /** Called for each typed answer so it can be replayed later in Reflection
-   *  and by Family D gate questions. `unlocked` is filled in by the caller
-   *  once the outcome of the whole gate is known. */
-  onReflection?: (prompt: string, text: string) => void;
-  /** Real things they typed at previous gates, newest last — played back by
-   *  Family D instead of invented example quotes. */
-  pastReflections?: { date: string; text: string; unlocked: boolean }[];
+  /** Tokens the user currently holds — "Skip with a token" is only offered
+   *  when this is > 0. */
+  tokenBalance: number;
+  /** Spends one token and grants the unlock immediately, no challenge. */
+  onSkipWithToken: () => void;
 };
-
-function DwellQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'dwell' }>; onDone: () => void }) {
-  const progress = useSharedValue(0);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    progress.value = withTiming(1, { duration: q.seconds * 1000, easing: Easing.linear });
-    const t = setTimeout(() => setReady(true), q.seconds * 1000);
-    return () => clearTimeout(t);
-  }, []);
-
-  const bar = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
-
-  return (
-    <View style={styles.qBody}>
-      <Text style={styles.prompt}>{q.prompt}</Text>
-      <View style={styles.dwellTrack}>
-        <Animated.View style={[styles.dwellBar, bar]} />
-      </View>
-      <Pressable disabled={!ready} onPress={onDone} style={[styles.cta, !ready && styles.ctaDisabled]}>
-        <Text style={styles.ctaText}>{ready ? 'Continue' : 'Read it'}</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function HoldQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'hold' }>; onDone: () => void }) {
-  const progress = useSharedValue(0);
-  const timer = useRef<any>(null);
-  const [held, setHeld] = useState(0);
-
-  const start = () => {
-    progress.value = withTiming(1, { duration: q.seconds * 1000, easing: Easing.linear });
-    const startedAt = Date.now();
-    timer.current = setInterval(() => {
-      const elapsed = (Date.now() - startedAt) / 1000;
-      setHeld(elapsed);
-      if (elapsed >= q.seconds) {
-        clearInterval(timer.current);
-        onDone();
-      }
-    }, 100);
-  };
-
-  const stop = () => {
-    clearInterval(timer.current);
-    progress.value = withTiming(0, { duration: 300 });
-    setHeld(0);
-  };
-
-  useEffect(() => () => clearInterval(timer.current), []);
-
-  const ring = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
-
-  return (
-    <View style={styles.qBody}>
-      <Text style={styles.prompt}>{q.prompt}</Text>
-      <Text style={styles.holdCount}>{Math.max(0, q.seconds - Math.floor(held))}s</Text>
-      <Pressable onPressIn={start} onPressOut={stop} style={styles.holdPad}>
-        <Animated.View style={[styles.holdFill, ring]} />
-        <Text style={styles.holdLabel}>Hold</Text>
-      </Pressable>
-      <Text style={styles.hint}>Let go and it resets.</Text>
-    </View>
-  );
-}
 
 function MathQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'math' }>; onDone: () => void }) {
   const [input, setInput] = useState('');
@@ -179,55 +101,33 @@ function QuizQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'quiz' }
 }
 
 export default function GateScreen({
-  unlockNumber,
   intensity,
   futureSelfMessage,
-  goalLine = '',
   healthLimited = false,
   onGranted,
   onAbandoned,
   onEmergency,
-  onReflection,
-  pastReflections = [],
+  tokenBalance,
+  onSkipWithToken,
 }: Props) {
-  const questions = useMemo(() => {
-    const base = buildGate(
-      intensity.key,
-      unlockNumber,
-      intensity.ladderStartsAt,
-      intensity.maxQuestions,
-      goalLine,
-      pastReflections,
-    );
-    const step = unlockNumber - intensity.ladderStartsAt + 1;
-    const final = buildFinalChallenge(intensity.key, step, intensity.maxQuestions, healthLimited);
-    return final ? [...base, final] : base;
-  }, [unlockNumber]);
-  const [index, setIndex] = useState(0);
-  const [text, setText] = useState('');
+  // One challenge, chosen fresh each time this screen mounts — not
+  // recomputed on every render, so retrying doesn't reroll the question.
+  const q = useMemo(() => pickChallenge(intensity.key, healthLimited), [intensity.key, healthLimited]);
+  const [showFutureSelf, setShowFutureSelf] = useState(!!futureSelfMessage);
+  const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
-  // At unlock #4 and above their own recorded message plays first, unskippable.
-  const showsFutureSelf = unlockNumber >= 4 && !!futureSelfMessage;
-  const [futureSelfSeen, setFutureSelfSeen] = useState(!showsFutureSelf);
-
-  const next = () => {
-    setText('');
-    if (index >= questions.length - 1) {
-      success();
-      onGranted(intensity.grantMinutes);
-    } else {
-      tapLight();
-      setIndex(index + 1);
-    }
+  const grant = () => {
+    success();
+    onGranted(intensity.grantMinutes);
   };
 
-  if (!futureSelfSeen) {
+  if (showFutureSelf) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <Animated.View entering={FadeIn.duration(500)} style={styles.qBody}>
           <Text style={styles.eyebrow}>FROM YOU, EARLIER</Text>
           <Text style={styles.futureSelf}>“{futureSelfMessage}”</Text>
-          <Pressable onPress={() => setFutureSelfSeen(true)} style={styles.cta}>
+          <Pressable onPress={() => setShowFutureSelf(false)} style={styles.cta}>
             <Text style={styles.ctaText}>Continue</Text>
           </Pressable>
         </Animated.View>
@@ -235,98 +135,60 @@ export default function GateScreen({
     );
   }
 
-  const q = questions[index];
-  if (!q) return null;
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable onPress={onAbandoned} hitSlop={10}>
           <Icon name="close" size={16} color={colors.textDim} />
         </Pressable>
-        <View style={styles.dots}>
-          {questions.map((_, i) => (
-            <View key={i} style={[styles.dot, i <= index && styles.dotOn]} />
-          ))}
-        </View>
+        <Text style={styles.challengeLabel}>
+          {intensity.key === 'strict' && q.kind === 'activity' ? 'Physical unlock' : 'Quick unlock'}
+        </Text>
         <Pressable onPress={onEmergency} hitSlop={10}>
           <Text style={styles.emergency}>Emergency</Text>
         </Pressable>
       </View>
 
-      {/* No `exiting` animation — it doesn't clean up on React Native Web
-          and leaves the outgoing question stuck overlapping the next one
-          (see the identical fix/comment in OnboardingFlow's QuestionBlock). */}
-      <Animated.View
-        key={index}
-        entering={FadeInUp.duration(380)}
-        style={{ flex: 1 }}
-      >
-        {q.kind === 'tap' && (
-          <View style={styles.qBody}>
-            <Text style={styles.prompt}>{q.prompt}</Text>
-            <View style={styles.options}>
-              {q.options.map((opt, i) => {
-                const isDontKnow = i === q.options.length - 1;
-                return (
-                  <Pressable
-                    key={opt}
-                    onPress={isDontKnow ? onAbandoned : next}
-                    style={[styles.option, isDontKnow && styles.optionDontKnow]}
-                  >
-                    <Text style={[styles.optionText, isDontKnow && styles.optionDontKnowText]}>{opt}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        )}
+      <Animated.View entering={FadeInUp.duration(380)} style={{ flex: 1 }}>
+        {q.kind === 'breathe' && <BreathingExercise q={q} onDone={grant} />}
+        {q.kind === 'math' && <MathQuestion q={q} onDone={grant} />}
+        {q.kind === 'quiz' && <QuizQuestion q={q} onDone={grant} />}
+        {q.kind === 'activity' && <ActivityChallenge q={q} onDone={grant} />}
+      </Animated.View>
 
-        {q.kind === 'type' && (
-          <View style={styles.qBody}>
-            <Text style={styles.prompt}>{q.prompt}</Text>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              multiline
-              placeholder="Type here…"
-              placeholderTextColor={colors.textFaint}
-              style={styles.textArea}
-              autoFocus
-            />
-            <Text style={styles.counter}>
-              {text.trim().length}/{q.minChars}
+      <View style={styles.skipWrap}>
+        <Pressable onPress={() => setShowSkipConfirm(true)} hitSlop={10}>
+          <Text style={styles.skipLink}>
+            {tokenBalance > 0 ? 'Skip with a token instead' : 'No tokens left to skip'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {showSkipConfirm && (
+        <View style={styles.confirmOverlay}>
+          <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>Skip this challenge?</Text>
+            <Text style={styles.confirmBody}>
+              Spend 1 emergency token and unlock instantly, no challenge. You have {tokenBalance} token
+              {tokenBalance === 1 ? '' : 's'}.
             </Text>
             <Pressable
-              disabled={text.trim().length < q.minChars}
+              disabled={tokenBalance <= 0}
               onPress={() => {
-                onReflection?.(q.prompt, text.trim());
-                next();
+                setShowSkipConfirm(false);
+                success();
+                onSkipWithToken();
               }}
-              style={[styles.cta, text.trim().length < q.minChars && styles.ctaDisabled]}
+              style={[styles.confirmSpendBtn, tokenBalance <= 0 && styles.ctaDisabled]}
             >
-              <Text style={styles.ctaText}>Continue</Text>
+              <Text style={styles.ctaText}>Spend 1 token and skip</Text>
             </Pressable>
-          </View>
-        )}
-
-        {q.kind === 'recall' && (
-          <View style={styles.qBody}>
-            <Text style={styles.eyebrow}>{q.prompt}</Text>
-            <Text style={styles.recallBody}>“{q.body}”</Text>
-            <Pressable onPress={next} style={styles.cta}>
-              <Text style={styles.ctaText}>Continue</Text>
+            <Pressable onPress={() => setShowSkipConfirm(false)} style={styles.confirmKeepBtn}>
+              <Text style={styles.confirmKeepText}>Never mind, I'll do it</Text>
             </Pressable>
-          </View>
-        )}
-
-        {q.kind === 'dwell' && <DwellQuestion q={q} onDone={next} />}
-        {q.kind === 'hold' && <HoldQuestion q={q} onDone={next} />}
-        {q.kind === 'breathe' && <BreathingExercise q={q} onDone={next} />}
-        {q.kind === 'math' && <MathQuestion q={q} onDone={next} />}
-        {q.kind === 'quiz' && <QuizQuestion q={q} onDone={next} />}
-        {q.kind === 'activity' && <ActivityChallenge q={q} onDone={next} />}
-      </Animated.View>
+          </Animated.View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -335,6 +197,35 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 },
   close: { color: colors.textDim, fontSize: 20 },
+  challengeLabel: { color: colors.textDim, fontSize: 13, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  skipWrap: { alignItems: 'center', paddingBottom: 22 },
+  skipLink: { color: 'rgba(255,255,255,0.4)', fontSize: 13.5, fontWeight: '600', textDecorationLine: 'underline' },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  confirmBox: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: '#141517',
+    borderRadius: 26,
+    padding: 24,
+    gap: 14,
+  },
+  confirmTitle: { color: '#ffffff', fontSize: 19, fontWeight: '800', textAlign: 'center' },
+  confirmBody: { color: 'rgba(255,255,255,0.65)', fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  confirmSpendBtn: {
+    paddingVertical: 15,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  confirmKeepBtn: { paddingVertical: 13, alignItems: 'center' },
+  confirmKeepText: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: '600' },
   emergency: { color: 'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: '600' },
   dots: { flexDirection: 'row', gap: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)' },
