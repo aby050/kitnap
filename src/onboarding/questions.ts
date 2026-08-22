@@ -6,7 +6,11 @@ export type Question =
   | { id: string; kind: 'slider'; prompt: string; min: number; max: number; default: number }
   | { id: string; kind: 'review'; prompt: string };
 
-export const QUESTIONS: Question[] = [
+/** First stretch of onboarding, before any permission is asked — enough
+ *  for the app to feel like it's actually listening before it asks for
+ *  anything. Split from ONBOARDING_QUESTIONS_2 by a permission checkpoint
+ *  (Display-over-apps + Screen-time access) in App.tsx. */
+export const ONBOARDING_QUESTIONS_1: Question[] = [
   { id: 'intro', kind: 'static', prompt: "I'll help protect your focus." },
   { id: 'name', kind: 'text', prompt: "First, what's your name?", placeholder: 'John' },
   { id: 'returning', kind: 'choice', prompt: 'Quick check, have we met before?', options: ['Yes, sign in', "I'm new here"] },
@@ -42,6 +46,11 @@ export const QUESTIONS: Question[] = [
     prompt: "What's the first thing you do when you wake up?",
     options: ['Check my phone', 'Check the time', 'Talk to someone', 'Just lie there a bit'],
   },
+];
+
+/** Second stretch, after the first permission checkpoint — the bulk of the
+ *  question set, ending in the 'review' step that auto-advances onward. */
+export const ONBOARDING_QUESTIONS_2: Question[] = [
   { id: 'age', kind: 'slider', prompt: 'How old are you?', min: 13, max: 90, default: 25 },
   {
     id: 'describes',
