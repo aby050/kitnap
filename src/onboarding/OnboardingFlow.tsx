@@ -6,7 +6,7 @@ import OpalOrb from '../components/OpalOrb';
 import QuestionBlock from './QuestionBlock';
 import HistoryItem from './HistoryItem';
 import LoginScreen from '../main/LoginScreen';
-import { Question, resolvePrompt } from './questions';
+import { Question, QUESTIONS, resolvePrompt } from './questions';
 import { Account } from '../data/store';
 import { colors } from '../theme';
 
@@ -14,16 +14,16 @@ type Answer = { value: string; label: string };
 type HistoryEntry = { id: string; prompt: string; label: string };
 
 export default function OnboardingFlow({
-  questions,
+  questions = QUESTIONS,
   initialAnswers = {},
   initialHistory = [],
   onComplete,
   onAccountSignedIn,
 }: {
-  /** Which slice of the question set this mount runs — lets App.tsx split
-   *  the flow across permission checkpoints while answers/history carry
-   *  forward between mounts via initialAnswers/initialHistory. */
-  questions: Question[];
+  /** Defaults to the full question set — overridable if a caller ever needs
+   *  to run a subset (answers/history carry forward via initialAnswers/
+   *  initialHistory if so). */
+  questions?: Question[];
   initialAnswers?: Record<string, Answer>;
   initialHistory?: HistoryEntry[];
   onComplete: (answers: Record<string, Answer>) => void;
