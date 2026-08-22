@@ -605,6 +605,7 @@ export default function MainApp({
           {tab === 'apps' && (
             <MyAppsScreen
               blockedPackages={blockedPackages}
+              intensityKey={activeIntensityKey}
               schedules={schedules}
               onUnblockPackage={(pkg) => {
                 const next = blockedPackages.filter((p) => p !== pkg);

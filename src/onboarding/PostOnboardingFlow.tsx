@@ -6,7 +6,6 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import Animated, {
   FadeIn,
   FadeInUp,
-  FadeOutUp,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -21,7 +20,8 @@ import {
   openNotificationListenerSettings,
   openOverlaySettings,
 } from 'device-permissions';
-import { checkUsageAccessPermission, openUsageAccessSettings } from '../data/androidUsage';
+import { checkUsageAccessPermission, openUsageAccessSettings, queryDailyUsage } from '../data/androidUsage';
+import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 
 type Props = {
   name: string;
@@ -31,13 +31,33 @@ type Props = {
 
 const ANALYZING_LINES = ['Analyzing your answers…', 'Understanding your habits…', 'Creating your setup…'];
 
-const DISTRACTION_APPS = [
-  { name: 'Facebook', usage: '1h 6m today', color: '#1877F2', letter: 'f' },
-  { name: 'Instagram', usage: '18m today', color: '#E1306C', letter: '◎' },
-  { name: 'Reddit', usage: '2m today', color: '#FF4500', letter: 'r' },
-  { name: 'YouTube', usage: 'Not used today', color: '#FF0000', letter: '▶' },
-  { name: 'X', usage: 'Not used today', color: '#000000', letter: '𝕏' },
+// Fallback shown only when real usage access isn't available (iOS, web, or
+// the user declined the permission) — never shown alongside real numbers.
+const FALLBACK_DISTRACTION_APPS = [
+  { name: 'Facebook', usage: 'Usage not available', color: '#1877F2', letter: 'f' },
+  { name: 'Instagram', usage: 'Usage not available', color: '#E1306C', letter: '◎' },
+  { name: 'Reddit', usage: 'Usage not available', color: '#FF4500', letter: 'r' },
+  { name: 'YouTube', usage: 'Usage not available', color: '#FF0000', letter: '▶' },
+  { name: 'X', usage: 'Usage not available', color: '#000000', letter: '𝕏' },
 ];
+
+const APP_BRAND: Record<string, { color: string; letter: string }> = {
+  'com.facebook.katana': { color: '#1877F2', letter: 'f' },
+  'com.instagram.android': { color: '#E1306C', letter: '◎' },
+  'com.reddit.frontpage': { color: '#FF4500', letter: 'r' },
+  'com.google.android.youtube': { color: '#FF0000', letter: '▶' },
+  'com.twitter.android': { color: '#000000', letter: '𝕏' },
+  'com.zhiliaoapp.musically': { color: '#010101', letter: 'T' },
+  'com.snapchat.android': { color: '#FFFC00', letter: 'S' },
+};
+
+function formatUsage(ms: number): string {
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return 'Not used today';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}m today` : `${m}m today`;
+}
 
 function ContinueButton({ label = 'Continue', onPress }: { label?: string; onPress: () => void }) {
   const scale = useSharedValue(1);
@@ -65,6 +85,8 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
   const [notificationAccess, setNotificationAccess] = useState(false);
   const [removedApps, setRemovedApps] = useState<string[]>([]);
   const [notifSub, setNotifSub] = useState(0);
+  const [realHours, setRealHours] = useState<number | null>(null);
+  const [realApps, setRealApps] = useState<typeof FALLBACK_DISTRACTION_APPS>([]);
 
   // Each toggle reflects real OS permission state — checked on mount and
   // again whenever the app regains focus (the only way to know if the user
@@ -74,7 +96,8 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
     setDisplayOverApps(canDrawOverlays());
     setAccessibilityAccess(isAccessibilityServiceEnabled());
     setNotificationAccess(isNotificationListenerEnabled());
-    setScreenTimeAccess(await checkUsageAccessPermission());
+    const hasUsageAccess = await checkUsageAccessPermission();
+    setScreenTimeAccess(hasUsageAccess);
   }, []);
 
   useEffect(() => {
@@ -85,12 +108,53 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
     return () => sub.remove();
   }, [refreshPermissions]);
 
-  const badDays = Math.round((screentimeHours * 365) / 24);
-  const projectedYears = Math.max(1, Math.round((50 * screentimeHours) / 16));
+  // Once usage access is actually granted, replace the self-reported/mock
+  // numbers with a real 7-day daily average and the user's real top apps —
+  // this only ever runs once permission flips true, and only on Android.
+  useEffect(() => {
+    if (!screenTimeAccess) return;
+    (async () => {
+      const end = Date.now();
+      const start = end - 7 * 24 * 60 * 60 * 1000;
+      const daily = await queryDailyUsage(start, end);
+      if (daily.length === 0) return;
+
+      const totalsByPackage = new Map<string, number>();
+      for (const entry of daily) {
+        totalsByPackage.set(
+          entry.packageName,
+          (totalsByPackage.get(entry.packageName) ?? 0) + entry.totalTimeInForeground,
+        );
+      }
+      const grandTotalMs = Array.from(totalsByPackage.values()).reduce((a, b) => a + b, 0);
+      const daysSeen = new Set(daily.map((d) => new Date(d.lastTimeUsed).toDateString())).size || 1;
+      setRealHours(grandTotalMs / daysSeen / 3_600_000);
+
+      const top = Array.from(totalsByPackage.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([packageName, ms]) => {
+          const known = DEFAULT_BLOCKED_APPS.find((a) => a.packageName === packageName);
+          const brand = APP_BRAND[packageName] ?? { color: '#6b7280', letter: (known?.name ?? packageName).charAt(0).toUpperCase() };
+          return {
+            name: known?.name ?? packageName.split('.').pop() ?? packageName,
+            usage: formatUsage(ms),
+            color: brand.color,
+            letter: brand.letter,
+          };
+        });
+      setRealApps(top);
+    })();
+  }, [screenTimeAccess]);
+
+  const effectiveHours = realHours ?? screentimeHours;
+  const badDays = Math.round((effectiveHours * 365) / 24);
+  const projectedYears = Math.max(1, Math.round((50 * effectiveHours) / 16));
   const reclaimedYears = Math.max(1, Math.round(projectedYears * 0.3));
 
-  const activeApps = DISTRACTION_APPS.filter((a) => !removedApps.includes(a.name));
-  const primaryApp = activeApps[0] || DISTRACTION_APPS[0];
+  const distractionApps = realApps.length > 0 ? realApps : FALLBACK_DISTRACTION_APPS;
+  const activeApps = distractionApps.filter((a) => !removedApps.includes(a.name));
+  const primaryApp = activeApps[0] || distractionApps[0];
 
   useEffect(() => {
     if (step !== 0) return;
@@ -114,7 +178,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
         )}
 
         {step === 1 && (
-          <Animated.View entering={FadeInUp.duration(400)} exiting={FadeOutUp.duration(200)} style={styles.centerBlock}>
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
             <Text style={styles.heading}>
               I can help with that{name ? `, ${name}` : ''}.{'\n\n'}
               <Text style={styles.headingBold}>But to change your habits, I'm going to need your permission.</Text>
@@ -161,7 +225,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
         )}
 
         {step === 2 && (
-          <Animated.View entering={FadeInUp.duration(400)} exiting={FadeOutUp.duration(200)} style={styles.centerBlock}>
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
             <Text style={styles.smallHeading}>The bad news is that you'll spend{' '}
               <Text style={styles.accentInline}>{badDays} days</Text> on your phone this year.
             </Text>
@@ -174,7 +238,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
         )}
 
         {step === 3 && (
-          <Animated.View entering={FadeInUp.duration(400)} exiting={FadeOutUp.duration(200)} style={styles.centerBlock}>
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
             <Text style={styles.smallHeading}>The good news is that this app can help you get back</Text>
             <BigNumber value={`${reclaimedYears} years`} />
             <Text style={styles.smallHeading}>of your life.</Text>
@@ -184,10 +248,14 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
         )}
 
         {step === 4 && (
-          <Animated.View entering={FadeInUp.duration(400)} exiting={FadeOutUp.duration(200)} style={styles.appSelectBlock}>
-            <Text style={[styles.heading, { marginBottom: 20 }]}>These apps seem to be your biggest distractions</Text>
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.appSelectBlock}>
+            <Text style={[styles.heading, { marginBottom: 20 }]}>
+              {realApps.length > 0
+                ? 'These are your real biggest distractions'
+                : 'These apps seem to be your biggest distractions'}
+            </Text>
             <View style={styles.appList}>
-              {DISTRACTION_APPS.filter((a) => !removedApps.includes(a.name)).map((app, i) => (
+              {distractionApps.filter((a) => !removedApps.includes(a.name)).map((app, i) => (
                 <View key={app.name} style={[styles.appRow, i > 0 && styles.appRowBorder]}>
                   <View style={[styles.appIcon, { backgroundColor: app.color }]}>
                     <Text style={styles.appIconLetter}>{app.letter}</Text>
@@ -208,7 +276,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
             </View>
             <View style={{ height: 16 }} />
             <Text style={styles.appsSelectedLabel}>
-              {DISTRACTION_APPS.length - removedApps.length} apps selected
+              {distractionApps.length - removedApps.length} apps selected
             </Text>
             <View style={{ height: 16 }} />
             <ContinueButton onPress={next} />
@@ -287,11 +355,11 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
         )}
 
         {step === 6 && (() => {
-          const targetMinutes = Math.round(screentimeHours * 0.7 * 60);
+          const targetMinutes = Math.round(effectiveHours * 0.7 * 60);
           const targetH = Math.floor(targetMinutes / 60);
           const targetM = targetMinutes % 60;
           const targetTimeStr = targetH > 0 ? `${targetH}h ${targetM}m` : `${targetM}m`;
-          const reclaimedDays = Math.round(screentimeHours * 365 * 0.3 / 24);
+          const reclaimedDays = Math.round(effectiveHours * 365 * 0.3 / 24);
 
           return (
             <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>

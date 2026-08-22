@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Svg, { Circle, Rect, Path, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import { getIntensity, IntensityKey } from '../data/themes';
 
 const { width } = Dimensions.get('window');
 
@@ -172,13 +173,22 @@ function AppIcon({ name, size = 54, hasLock = true }: { name: string; size?: num
 }
 
 // Blocked App Tile component with neon glow border
-function BlockedAppTile({ name, onUnblock }: { name: string; onUnblock: () => void }) {
+function BlockedAppTile({
+  name,
+  strictnessLabel,
+  onUnblock,
+}: {
+  name: string;
+  strictnessLabel: string;
+  onUnblock: () => void;
+}) {
   return (
     <View style={styles.blockedAppContainer}>
       <Pressable onPress={onUnblock} style={styles.glowOuterCircle}>
         <AppIcon name={name} size={50} hasLock={true} />
       </Pressable>
       <Text style={styles.appNameText} numberOfLines={1}>{name}</Text>
+      <Text style={styles.strictnessText} numberOfLines={1}>Locked · {strictnessLabel}</Text>
       <Pressable onPress={onUnblock}>
         <Text style={styles.unblockText}>Unblock</Text>
       </Pressable>
@@ -307,6 +317,7 @@ function PadlockIcon() {
 
 export default function MyAppsScreen({
   blockedPackages = [],
+  intensityKey = 'steady',
   onUnblockPackage,
   onOpenBlockedApps,
   onOpenSchedules,
@@ -315,6 +326,10 @@ export default function MyAppsScreen({
   schedules = [],
 }: {
   blockedPackages?: string[];
+  /** Newly-locked apps show the currently-active global strictness level —
+   *  there's no per-app override yet, this just makes the existing global
+   *  setting visible on each tile instead of implying nothing was chosen. */
+  intensityKey?: IntensityKey;
   onUnblockPackage?: (packageName: string) => void;
   onOpenBlockedApps?: () => void;
   onOpenSchedules?: () => void;
@@ -323,6 +338,7 @@ export default function MyAppsScreen({
   schedules?: { id: string; name: string; start: string; end: string; days: string }[];
 }) {
   const blockedApps = blockedPackages.map((pkg) => ({ packageName: pkg, name: appLabel(pkg) }));
+  const strictnessLabel = getIntensity(intensityKey).name;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -368,6 +384,7 @@ export default function MyAppsScreen({
               <BlockedAppTile
                 key={app.packageName}
                 name={app.name}
+                strictnessLabel={strictnessLabel}
                 onUnblock={() => onUnblockPackage?.(app.packageName)}
               />
             ))}
@@ -530,6 +547,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 2,
+    width: '100%',
+  },
+  strictnessText: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
     width: '100%',
   },
   unblockText: {

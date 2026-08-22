@@ -21,13 +21,10 @@ export const QUESTIONS: Question[] = [
     prompt: 'What matters most to you?',
     options: ['Focus better', 'Sleep better', 'Be more present', 'Improve mental health', 'Other'],
   },
-  {
-    id: 'loseTime',
-    kind: 'choice',
-    // {matters} is resolved by OnboardingFlow from the previous answer.
-    prompt: 'Thinking about {matters}: where do you lose the most time?',
-    options: ['Social media', 'News', 'Gaming', 'Streaming', 'Work-related', 'Shopping', 'Messaging', 'Other'],
-  },
+  // "Where do you lose the most time" removed — once usage-access
+  // permission is granted (PostOnboardingFlow), the app reads this from
+  // real device usage stats and tells the user directly (by app name)
+  // instead of asking them to self-report it.
   {
     id: 'affirm_lose_time',
     kind: 'static',
@@ -47,29 +44,14 @@ export const QUESTIONS: Question[] = [
   },
   { id: 'age', kind: 'slider', prompt: 'How old are you?', min: 13, max: 90, default: 25 },
   {
-    id: 'gender',
-    kind: 'choice',
-    prompt: 'How do you describe your gender?',
-    options: ['Woman', 'Man', 'Non-binary', 'Other', "I'd rather not say"],
-  },
-  {
     id: 'describes',
     kind: 'choice',
     prompt: 'What best describes you?',
     options: ['Technology', 'Entrepreneur', 'Remote', 'Finance', 'Creative', 'Student', 'Caregiver', 'Retired', 'Other', "I'd rather not say"],
   },
-  {
-    id: 'screentime',
-    kind: 'choice',
-    prompt: "What's your average screen time per day? Best guess is okay.",
-    options: ['< 1 hour', '1–3 hours', '3–4 hours', '4–5 hours', '5–7 hours', '7+ hours', "I don't know"],
-  },
-  {
-    id: 'devices',
-    kind: 'choice',
-    prompt: 'Where do you want us to block distractions?',
-    options: ['Phone', 'Computer', 'Tablet', 'All of them'],
-  },
+  // Self-reported "average screen time" and "which devices" removed —
+  // both are answered for real once usage-access permission is granted
+  // (real per-day average, real app names) instead of guessed here.
   {
     id: 'controlScale',
     kind: 'slider',

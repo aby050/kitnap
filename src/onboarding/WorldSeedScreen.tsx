@@ -28,12 +28,13 @@ export default function WorldSeedScreen({
         </Animated.Text>
 
         <Animated.Text entering={FadeInDown.delay(700).duration(500)} style={styles.sub}>
-          Bare, for now. Every hour you don't give away raises something on it — and nothing you build here
-          ever comes back down.
+          We're not a fancy app. No feeds, no filters, no noise — less to look at means less to distract you.
+          What's running underneath is the part that actually works: the same pattern of use that got you here
+          quietly builds the case for change, hour by hour.
         </Animated.Text>
 
         <Animated.Text entering={FadeInDown.delay(950).duration(500)} style={styles.ghostHint}>
-          The faint shape is your first landmark. It needs one hour.
+          Every hour you don't give away raises something here — and it never comes back down.
         </Animated.Text>
       </View>
 
