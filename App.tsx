@@ -30,7 +30,7 @@ import MainApp from './src/main/MainApp';
 import PersistentBackground from './src/components/PersistentBackground';
 import { IntensityKey, ThemeKey } from './src/data/themes';
 import { EMPTY_GOAL, GoalData } from './src/data/goal';
-import { DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
+import { clearState, DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
 import {
   canDrawOverlays,
@@ -174,6 +174,22 @@ export default function App() {
   }, []);
 
   const patch = (partial: Partial<PersistedState>) => setPersisted((s) => ({ ...s, ...partial }));
+
+  // Nothing here has a server copy (see AccountScreen/DeleteAccountScreen),
+  // so "delete account" is a real local wipe: clear the store, reset every
+  // piece of onboarding state this component holds, and land back at
+  // splash — genuinely a clean install, not a soft sign-out.
+  const handleDeleteAccount = async () => {
+    await clearState();
+    setPersisted(DEFAULT_STATE);
+    setAnswers({});
+    setThemeKey('quiet');
+    setIntensityKey('steady');
+    setFutureSelfMessage('');
+    setGoal(EMPTY_GOAL);
+    setPendingShieldPackage(null);
+    setStage('splash');
+  };
 
   const name = answers.name?.value ?? '';
   const screentimeHours = SCREENTIME_HOURS[answers.screentime?.value ?? ''] ?? 4;
@@ -379,6 +395,7 @@ export default function App() {
               onPatch={patch}
               pendingShieldPackage={pendingShieldPackage}
               onShieldConsumed={() => setPendingShieldPackage(null)}
+              onDeleteAccount={handleDeleteAccount}
             />
           )}
         </View>

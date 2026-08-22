@@ -1,17 +1,9 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { GradientButton, SettingRow } from '../components/ui';
+import { Ionicons } from '@expo/vector-icons';
+import { SettingRow } from '../components/ui';
 import { colors } from '../theme';
-
-const PRO_FEATURES = [
-  { icon: '🛡', title: 'Tougher Apps Unblocking', sub: 'No Unblocks allowed for all rules' },
-  { icon: '🔀', title: 'Create more rules' },
-  { icon: '✅', title: 'Allowlist Blocking' },
-  { icon: '🕘', title: 'Focus Score history' },
-];
 
 function Group({ children }: { children: React.ReactNode }) {
   return <View style={styles.group}>{children}</View>;
@@ -21,6 +13,17 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   return <Text style={styles.groupLabel}>{children}</Text>;
 }
 
+function RowIcon({ name, color = colors.text }: { name: keyof typeof Ionicons.glyphMap; color?: string }) {
+  return <Ionicons name={name} size={19} color={color} />;
+}
+
+/**
+ * Only real, wired-up features live here — every row below opens an actual
+ * screen or toggles actual state. Placeholder rows with no destination
+ * (Desktop App, Health Data, Community Forum, Restore Purchase, etc.) were
+ * removed rather than shipped as dead taps; add them back only once they're
+ * real.
+ */
 export default function SettingsScreen({
   onBack,
   onOpenGuardian,
@@ -35,6 +38,7 @@ export default function SettingsScreen({
   onOpenTogether,
   onOpenBlockedApps,
   onOpenDifficulty,
+  onOpenDeleteAccount,
   difficultyLabel,
   pinEnabled,
 }: {
@@ -51,12 +55,10 @@ export default function SettingsScreen({
   onOpenTogether?: () => void;
   onOpenBlockedApps?: () => void;
   onOpenDifficulty?: () => void;
+  onOpenDeleteAccount?: () => void;
   difficultyLabel?: string;
   pinEnabled?: boolean;
 }) {
-  const [uninstallProtection, setUninstallProtection] = useState(false);
-  const [blockWebsites, setBlockWebsites] = useState(false);
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -68,96 +70,97 @@ export default function SettingsScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Pro upsell card — hidden while the paywall is hidden. */}
-
-        {/* Account / sign-in row — login & signup disabled for now. */}
-
-        <GroupLabel>Personalize</GroupLabel>
+        <GroupLabel>Blocking</GroupLabel>
         <Group>
-          <SettingRow icon="🔔" title="Notifications" value="On" />
-          <SettingRow icon="🚫" title="Blocked Apps" subtitle="Which apps trigger the shield" onPress={onOpenBlockedApps} />
-          <SettingRow icon="🎚" title="Unlock difficulty" value={difficultyLabel} subtitle="How hard it is to get past the shield" onPress={onOpenDifficulty} />
-          <SettingRow icon="⚡" title="Block Screens" subtitle="Customize overlays when apps are blocked" onPress={onOpenBlockScreens} />
-          <SettingRow icon="🕐" title="Waiting Room" subtitle="Customize the content you see during Waiting Room" onPress={onOpenWaitingRoom} />
-          <SettingRow icon="🗓" title="Schedules" subtitle="Add or edit recurring block windows" onPress={onOpenSchedules} />
-          <SettingRow icon="✨" title="Autofocus" subtitle="Configure distracting score interventions" onPress={onOpenAutofocus} />
-          <SettingRow icon="💌" title="Message to future you" subtitle="Re-record what plays back on your 4th unlock" onPress={onOpenFutureSelf} last />
+          <SettingRow
+            icon={<RowIcon name="ban-outline" />}
+            title="Blocked Apps"
+            subtitle="Which apps trigger the shield"
+            onPress={onOpenBlockedApps}
+          />
+          <SettingRow
+            icon={<RowIcon name="speedometer-outline" />}
+            title="Unlock difficulty"
+            value={difficultyLabel}
+            subtitle="Steady (quiz) or Strict (physical)"
+            onPress={onOpenDifficulty}
+          />
+          <SettingRow
+            icon={<RowIcon name="flash-outline" />}
+            title="Block Screens"
+            subtitle="Customize overlays when apps are blocked"
+            onPress={onOpenBlockScreens}
+          />
+          <SettingRow
+            icon={<RowIcon name="time-outline" />}
+            title="Waiting Room"
+            subtitle="Customize the content you see during Waiting Room"
+            onPress={onOpenWaitingRoom}
+          />
+          <SettingRow
+            icon={<RowIcon name="calendar-outline" />}
+            title="Schedules"
+            subtitle="Add or edit recurring block windows"
+            onPress={onOpenSchedules}
+          />
+          <SettingRow
+            icon={<RowIcon name="sparkles-outline" />}
+            title="Autofocus"
+            subtitle="Configure distracting score interventions"
+            onPress={onOpenAutofocus}
+            last
+          />
+        </Group>
+
+        <GroupLabel>Personal</GroupLabel>
+        <Group>
+          <SettingRow
+            icon={<RowIcon name="mail-outline" />}
+            title="Message to future you"
+            subtitle="Re-record what plays back at the gate"
+            onPress={onOpenFutureSelf}
+            last
+          />
         </Group>
 
         <GroupLabel>Protection</GroupLabel>
         <Group>
           <SettingRow
-            icon="🤝"
+            icon={<RowIcon name="people-outline" />}
             title="Guardian"
             subtitle="A friend holds the code to loosen your own rules"
             onPress={onOpenGuardian}
           />
-          <SettingRow icon="🔑" title="PIN code access" value={pinEnabled ? 'On' : 'Off'} onPress={onOpenPin} />
-          <SettingRow icon="👥" title="Together" subtitle="Guardian and shared groves" onPress={onOpenTogether} last />
-        </Group>
-
-        <GroupLabel>Support</GroupLabel>
-        <Group>
-          <SettingRow icon="💬" title="Chat with Support" />
-          <SettingRow icon="📖" title="Help Center" />
-          <SettingRow icon="🎟" title="Emergency Pass" value="Available" />
-          <SettingRow icon="↻" title="Reload" subtitle="Reapplies your rules and blocks if something isn't working." last />
-        </Group>
-
-        <GroupLabel>Integrations</GroupLabel>
-        <Group>
-          <SettingRow icon="💻" title="Desktop App" subtitle="Stay focused on your desktop" />
-          <SettingRow icon="🔳" title="Connect Desktop" subtitle="Scan the code shown in the desktop app" last />
-        </Group>
-
-        <GroupLabel>Permissions</GroupLabel>
-        <Group>
-          <SettingRow icon="❤️" title="Health Data" subtitle="Access Steps and Sleep data" value="Connect" showChevron={false} last />
-        </Group>
-
-        <GroupLabel>Advanced</GroupLabel>
-        <Group>
           <SettingRow
-            icon="🔒"
-            title="App Uninstall Protection"
-            subtitle="Prevents the app from being deleted while blocking."
-            right={
-              <Switch
-                value={uninstallProtection}
-                onValueChange={setUninstallProtection}
-                trackColor={{ true: colors.accent, false: 'rgba(255,255,255,0.2)' }}
-                thumbColor="#fff"
-              />
-            }
+            icon={<RowIcon name="key-outline" />}
+            title="PIN code access"
+            value={pinEnabled ? 'On' : 'Off'}
+            onPress={onOpenPin}
           />
-          <SettingRow icon="🔞" title="Adult Website Protection" />
           <SettingRow
-            icon="🌐"
-            title="Block Websites in Allow-Only Rules"
-            subtitle="Blocks all websites during allow-only rules"
-            right={
-              <Switch
-                value={blockWebsites}
-                onValueChange={setBlockWebsites}
-                trackColor={{ true: colors.accent, false: 'rgba(255,255,255,0.2)' }}
-                thumbColor="#fff"
-              />
-            }
+            icon={<RowIcon name="people-circle-outline" />}
+            title="Together"
+            subtitle="Guardian and shared groves"
+            onPress={onOpenTogether}
             last
           />
         </Group>
 
-        <GroupLabel>Social</GroupLabel>
+        <GroupLabel>Account</GroupLabel>
         <Group>
-          <SettingRow icon="⇪" title="Share App" />
-          <SettingRow icon="🎁" title="Enter Referral Code" last />
-        </Group>
-
-        <GroupLabel>Other</GroupLabel>
-        <Group>
-          <SettingRow icon="👥" title="Community Forum" />
-          <SettingRow icon="↺" title="Restore Purchase" />
-          <SettingRow icon="ℹ️" title="About" last />
+          <SettingRow
+            icon={<RowIcon name="person-circle-outline" />}
+            title="My Account"
+            value={accountLabel ?? 'Not signed in'}
+            onPress={onOpenAccount}
+          />
+          <SettingRow
+            icon={<RowIcon name="trash-outline" color="#FF6B6B" />}
+            title="Delete Account"
+            subtitle="Permanently erase your data from this device"
+            onPress={onOpenDeleteAccount}
+            last
+          />
         </Group>
       </ScrollView>
     </SafeAreaView>
@@ -178,20 +181,6 @@ const styles = StyleSheet.create({
   headerGlyph: { color: colors.text, fontSize: 19 },
   headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
-  planTitle: { color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 14 },
-  planSub: { color: colors.textDim, fontSize: 16, marginTop: 6 },
-  planAccent: { color: colors.accent, fontWeight: '700' },
-  proCard: {
-    backgroundColor: 'rgba(255,255,255,0.045)',
-    borderRadius: 24,
-    padding: 18,
-    marginTop: 18,
-    overflow: 'hidden',
-  },
-  proRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 16 },
-  proIcon: { fontSize: 19, width: 26 },
-  proTitle: { color: colors.text, fontSize: 16.5, fontWeight: '600' },
-  proSub: { color: colors.textDim, fontSize: 14, marginTop: 3 },
   groupLabel: { color: colors.text, fontSize: 19, fontWeight: '800', marginTop: 30, marginBottom: 12 },
   group: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 22, overflow: 'hidden' },
 });
