@@ -253,10 +253,12 @@ export default function GateScreen({
         </Pressable>
       </View>
 
+      {/* No `exiting` animation — it doesn't clean up on React Native Web
+          and leaves the outgoing question stuck overlapping the next one
+          (see the identical fix/comment in OnboardingFlow's QuestionBlock). */}
       <Animated.View
         key={index}
         entering={FadeInUp.duration(380)}
-        exiting={FadeOutUp.duration(180)}
         style={{ flex: 1 }}
       >
         {q.kind === 'tap' && (
