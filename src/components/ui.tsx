@@ -65,7 +65,7 @@ export function SettingRow({
   showChevron = true,
   last,
 }: {
-  icon?: string;
+  icon?: React.ReactNode;
   title: string;
   subtitle?: string;
   value?: string;
@@ -76,7 +76,7 @@ export function SettingRow({
 }) {
   return (
     <Pressable onPress={onPress} style={[styles.settingRow, !last && styles.settingRowBorder]}>
-      {icon ? <Text style={styles.settingIcon}>{icon}</Text> : null}
+      {icon ? <View style={styles.settingIconWrap}>{icon}</View> : null}
       <View style={{ flex: 1 }}>
         <Text style={styles.settingTitle}>{title}</Text>
         {subtitle ? <Text style={styles.settingSubtitle}>{subtitle}</Text> : null}
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   settingRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
-  settingIcon: { fontSize: 17, width: 26 },
+  settingIconWrap: { width: 26, alignItems: 'flex-start', justifyContent: 'center' },
   settingTitle: { color: colors.text, fontSize: 15.5, fontWeight: '600' },
   settingSubtitle: { color: colors.textDim, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
   settingValue: { color: colors.textDim, fontSize: 14 },

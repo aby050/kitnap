@@ -10,6 +10,7 @@ import MilestonesScreen from './MilestonesScreen';
 import SettingsScreen from './SettingsScreen';
 import TimerScreen from './TimerScreen';
 import EmergencyTokensScreen from './EmergencyTokensScreen';
+import DeleteAccountScreen from './DeleteAccountScreen';
 import ReflectionScreen from './ReflectionScreen';
 import EssentialsScreen from './EssentialsScreen';
 // World feature — deprioritized per product decision (Opal-style apps don't
@@ -79,7 +80,8 @@ type Overlay =
   | 'difficulty'
   | 'weeklyInsight'
   | 'blocks'
-  | 'emergencyTokens';
+  | 'emergencyTokens'
+  | 'deleteAccount';
 type Block = null | 'shield' | 'gate' | 'grant' | 'emergency';
 type TimerPreset = { minutes: number; label: string; autoStart: boolean };
 
@@ -99,6 +101,7 @@ export default function MainApp({
   onPatch = () => {},
   pendingShieldPackage = null,
   onShieldConsumed = () => {},
+  onDeleteAccount = async () => {},
 }: {
   themeKey?: ThemeKey;
   intensityKey?: IntensityKey;
@@ -111,6 +114,9 @@ export default function MainApp({
    *  tab/overlay was showing. */
   pendingShieldPackage?: string | null;
   onShieldConsumed?: () => void;
+  /** Wipes all local data and returns the app to onboarding — owned by
+   *  App.tsx since it has to reset top-level state this component doesn't. */
+  onDeleteAccount?: () => Promise<void>;
 }) {
   const [tab, setTab] = useState<Tab>('home');
   const [overlay, setOverlay] = useState<Overlay>(null);
@@ -400,8 +406,16 @@ export default function MainApp({
           onOpenTogether={() => setOverlay('together')}
           onOpenBlockedApps={() => setOverlay('blockedApps')}
           onOpenDifficulty={() => setOverlay('difficulty')}
+          onOpenDeleteAccount={() => setOverlay('deleteAccount')}
           difficultyLabel={intensity.name}
           pinEnabled={!!pin}
+        />
+      );
+    if (overlay === 'deleteAccount')
+      return (
+        <DeleteAccountScreen
+          onBack={() => setOverlay('settings')}
+          onConfirmDelete={onDeleteAccount}
         />
       );
     if (overlay === 'blockedApps')
