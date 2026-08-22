@@ -15,17 +15,28 @@ export default function TogetherScreen({
   hoursReclaimed,
   onOpenGuardian,
   onInvite,
+  onBack,
 }: {
   guardian: Guardian;
   hoursReclaimed: number;
   onOpenGuardian: () => void;
   onInvite: () => void;
+  onBack?: () => void;
 }) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {onBack && (
+        <View style={styles.header}>
+          <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
+            <Text style={styles.headerGlyph}>‹</Text>
+          </Pressable>
+          <Text style={styles.headerTitle}>Together</Text>
+          <View style={{ width: 40 }} />
+        </View>
+      )}
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Together</Text>
-        <Text style={styles.lede}>Nothing here changes your world — it's just who gets to see it grow.</Text>
+        {!onBack && <Text style={styles.title}>Together</Text>}
+        <Text style={styles.lede}>Nothing here changes your progress — it's just who gets to see it grow.</Text>
 
         <Animated.View entering={FadeInDown.duration(400)}>
           <Pressable onPress={onOpenGuardian} style={styles.guardianCard}>
@@ -51,8 +62,8 @@ export default function TogetherScreen({
           <Text style={styles.emptyGlyph}>🌳</Text>
           <Text style={styles.emptyTitle}>No one's here yet</Text>
           <Text style={styles.emptyBody}>
-            Invite someone to grow a grove together — you'll each see the other's landmarks rise, never the
-            details of how they got there.
+            Invite someone to grow a grove together — you'll each see the other's hours reclaimed rise, never
+            the details of how they got there.
           </Text>
           <View style={{ height: 16 }} />
           <GradientButton label="⇪  Invite someone" onPress={onInvite} />
@@ -70,6 +81,17 @@ export default function TogetherScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  circleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerGlyph: { color: colors.text, fontSize: 19 },
+  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingTop: 4, paddingBottom: 110 },
   title: { color: colors.text, fontSize: 34, fontWeight: '800' },
   lede: { color: colors.textDim, fontSize: 14.5, lineHeight: 21, marginTop: 8, marginBottom: 24 },

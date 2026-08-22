@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import Animated, {
+  FadeIn,
+  FadeInDown,
   FadeInUp,
   FadeOutUp,
   useAnimatedStyle,
@@ -55,23 +57,90 @@ function ContinueButton({ label = 'Continue', disabled, onPress }: { label?: str
 /** Renders only the CURRENT question, centered. Once answered the parent
  * swaps it out of the tree entirely (moved into history), so this never
  * needs to render an "answered" state itself. */
+// --- Typewriter Component ---
+interface TypewriterTextProps {
+  text: string;
+  speed?: number;
+  onComplete?: () => void;
+  style?: any;
+}
+
+function TypewriterText({ text, speed = 20, onComplete, style }: TypewriterTextProps) {
+  const [displayedText, setDisplayedText] = useState('');
+  const [showCursor, setShowCursor] = useState(true);
+  const [isTyping, setIsTyping] = useState(true);
+
+  useEffect(() => {
+    setDisplayedText('');
+    setIsTyping(true);
+    let index = 0;
+    
+    const interval = setInterval(() => {
+      index++;
+      setDisplayedText(text.slice(0, index));
+      if (index >= text.length) {
+        clearInterval(interval);
+        setIsTyping(false);
+        onComplete?.();
+      }
+    }, speed);
+
+    return () => clearInterval(interval);
+  }, [text, speed]);
+
+  // Blinking cursor
+  useEffect(() => {
+    let cursorInterval: any;
+    if (!isTyping) {
+      let count = 0;
+      cursorInterval = setInterval(() => {
+        setShowCursor((prev) => !prev);
+        count++;
+        if (count > 6) { // Blink 3 times, then hide
+          clearInterval(cursorInterval);
+          setShowCursor(false);
+        }
+      }, 500);
+    } else {
+      setShowCursor(true);
+    }
+    return () => {
+      if (cursorInterval) clearInterval(cursorInterval);
+    };
+  }, [isTyping]);
+
+  return (
+    <Text style={style}>
+      {displayedText}
+      <Text style={[styles.cursor, { opacity: showCursor ? 1 : 0 }]}> ▌</Text>
+    </Text>
+  );
+}
+
 export default function QuestionBlock({ question, onAnswer }: Props) {
   const [text, setText] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [multiSelected, setMultiSelected] = useState<string[]>([]);
   const [sliderVal, setSliderVal] = useState(question.kind === 'slider' ? question.default : 0);
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    if (question.kind === 'static') {
-      const t = setTimeout(() => onAnswer('true', ''), 850);
-      return () => clearTimeout(t);
-    }
     if (question.kind === 'review') {
       progress.value = withTiming(1, { duration: 1500 });
       const t = setTimeout(() => onAnswer('done', ''), 1900);
       return () => clearTimeout(t);
     }
   }, []);
+
+  const handleTypewriterComplete = () => {
+    setIsTypingComplete(true);
+    if (question.kind === 'static') {
+      setTimeout(() => {
+        onAnswer('true', '');
+      }, 1000); // 1.0s delay for reading after typing is done
+    }
+  };
 
   const barStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
 
@@ -81,10 +150,14 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       exiting={FadeOutUp.duration(220)}
       style={styles.block}
     >
-      <Text style={styles.prompt}>{question.prompt}</Text>
+      <TypewriterText
+        text={question.prompt}
+        onComplete={handleTypewriterComplete}
+        style={styles.prompt}
+      />
 
-      {question.kind === 'text' && (
-        <View style={styles.fullWidth}>
+      {isTypingComplete && question.kind === 'text' && (
+        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
           <TextInput
             value={text}
             onChangeText={setText}
@@ -95,30 +168,67 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
           />
           <View style={{ height: 14 }} />
           <ContinueButton
-            disabled={text.trim().length === 0}
-            onPress={() => onAnswer(text.trim(), `Hi, ${text.trim()}`)}
+            label={question.optional && text.trim().length === 0 ? 'Skip' : 'Continue'}
+            disabled={!question.optional && text.trim().length === 0}
+            onPress={() => {
+              const t = text.trim();
+              const label = question.id === 'name' ? `Hi, ${t}` : t;
+              onAnswer(t, label);
+            }}
           />
-        </View>
+        </Animated.View>
       )}
 
-      {question.kind === 'choice' && (
-        <View style={styles.optionsWrap}>
-          {question.options.map((opt) => (
-            <OptionButton
-              key={opt}
-              label={opt}
-              selected={selected === opt}
-              onPress={() => {
-                setSelected(opt);
-                setTimeout(() => onAnswer(opt, opt), 260);
-              }}
-            />
-          ))}
-        </View>
+      {isTypingComplete && question.kind === 'choice' && (
+        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
+          <View style={styles.optionsWrap}>
+            {question.options.map((opt) => (
+              <OptionButton
+                key={opt}
+                label={opt}
+                selected={selected === opt}
+                onPress={() => {
+                  setSelected(opt);
+                  setTimeout(() => onAnswer(opt, opt), 260);
+                }}
+              />
+            ))}
+          </View>
+          {question.optional && (
+            <Pressable style={styles.skipBtn} onPress={() => onAnswer('', '')} hitSlop={10}>
+              <Text style={styles.skipText}>Skip</Text>
+            </Pressable>
+          )}
+        </Animated.View>
       )}
 
-      {question.kind === 'slider' && (
-        <View style={styles.fullWidth}>
+      {isTypingComplete && question.kind === 'multi' && (
+        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
+          <View style={styles.optionsWrap}>
+            {question.options.map((opt) => (
+              <OptionButton
+                key={opt}
+                label={opt}
+                selected={multiSelected.includes(opt)}
+                onPress={() => {
+                  setMultiSelected((prev) =>
+                    prev.includes(opt) ? prev.filter((o) => o !== opt) : [...prev, opt]
+                  );
+                }}
+              />
+            ))}
+          </View>
+          <View style={{ height: 14 }} />
+          <ContinueButton
+            label={multiSelected.length === 0 ? 'Skip' : 'Continue'}
+            disabled={!question.optional && multiSelected.length === 0}
+            onPress={() => onAnswer(multiSelected.join(','), multiSelected.join(', '))}
+          />
+        </Animated.View>
+      )}
+
+      {isTypingComplete && question.kind === 'slider' && (
+        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
           <Text style={styles.ageValue}>{Math.round(sliderVal)}</Text>
           <Slider
             style={{ width: '100%', height: 40 }}
@@ -133,7 +243,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
           />
           <View style={{ height: 6 }} />
           <ContinueButton onPress={() => onAnswer(String(Math.round(sliderVal)), String(Math.round(sliderVal)))} />
-        </View>
+        </Animated.View>
       )}
 
       {question.kind === 'review' && (
@@ -215,6 +325,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  skipBtn: {
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  skipText: {
+    color: colors.textFaint,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
   ageValue: {
     color: colors.accent,
     fontSize: 34,
@@ -233,5 +353,13 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 4,
     backgroundColor: colors.accent,
+  },
+  cursor: {
+    color: '#FFB800',
+    fontWeight: 'bold',
+    fontSize: 22,
+    textShadowColor: 'rgba(255, 184, 0, 0.95)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
 });

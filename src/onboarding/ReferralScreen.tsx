@@ -6,6 +6,15 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { colors } from '../theme';
 
+/**
+ * Viral-growth screen at the tail of onboarding, after the discount
+ * retention offer and before Welcome. Purely a referral/invite funnel — not
+ * connected to the app-lock or token mechanics at all. Inviting real-world
+ * friends unlocks free Pro time at fixed thresholds (20/50/100 friends);
+ * "Skip" is always available and carries no penalty. Currently the tier
+ * progress bars are hardcoded to 0% — wiring real invite counts needs a
+ * referral-tracking backend call this screen doesn't make yet.
+ */
 const TIERS = [
   {
     count: '20 FRIENDS',

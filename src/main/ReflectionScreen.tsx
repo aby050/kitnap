@@ -1,36 +1,69 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import {
+  ProgressState,
+  dailySeries,
+  dateKey,
+  formatDuration,
+  formatSignedMinutes,
+  sumRange,
+  weekdayShort,
+  weeklyWindows,
+} from '../data/progress';
+import { GateReflection } from '../data/store';
 import { colors } from '../theme';
 
 type Tab = 'week' | 'patterns' | 'words';
 
-/** Apple returns opaque tokens, not app names — so the heatmap runs on time of
- *  day, never on "you opened Instagram 11 times". */
-const HEAT = [
-  { hour: '6a', v: 0.05 }, { hour: '8a', v: 0.2 }, { hour: '10a', v: 0.35 },
-  { hour: '12p', v: 0.5 }, { hour: '2p', v: 0.42 }, { hour: '4p', v: 0.55 },
-  { hour: '6p', v: 0.7 }, { hour: '8p', v: 0.85 }, { hour: '10p', v: 1.0 },
-  { hour: '12a', v: 0.78 }, { hour: '2a', v: 0.3 }, { hour: '4a', v: 0.08 },
-];
+function relativeDay(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return '';
+  const days = Math.floor((Date.now() - then.getTime()) / 86400000);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return `${days} days ago`;
+}
 
-const WORDS = [
-  { date: '2 days ago', text: 'just checking one thing', outcome: 'You stayed 34 minutes.' },
-  { date: '4 days ago', text: "I'm bored and I don't want to start the report" },
-  { date: '6 days ago', text: 'I want my evenings back' },
-  { date: '9 days ago', text: "I'll feel exactly as empty as last time" },
-];
+function heatColor(v: number) {
+  if (v > 0.8) return '#ff8f6b';
+  if (v > 0.55) return '#ffd36b';
+  if (v > 0.3) return '#b6f5a0';
+  return 'rgba(124,245,176,0.35)';
+}
 
-const STATS = [
-  { label: 'Requests you abandoned mid-gate', value: '14', good: true },
-  { label: 'Unlocks granted', value: '9', good: false },
-  { label: 'Time reclaimed', value: '4h 20m', good: true },
-  { label: 'Emergency access used', value: '0 times', good: false },
-];
-
-export default function ReflectionScreen() {
+export default function ReflectionScreen({
+  progress,
+  gateReflections = [],
+}: {
+  progress: ProgressState;
+  gateReflections?: GateReflection[];
+}) {
   const [tab, setTab] = useState<Tab>('week');
+
+  const today = dateKey();
+  const windows = weeklyWindows(today);
+  const week = sumRange(progress, windows.thisStart, today);
+  const lastWeek = sumRange(progress, windows.prevStart, windows.prevEnd);
+  const savedDelta = week.savedMinutes - lastWeek.savedMinutes;
+
+  const stats = [
+    { label: 'Requests you abandoned mid-gate', value: String(week.distractionsBlocked), good: true },
+    { label: 'Unlocks granted', value: String(week.hardUnlocks), good: false },
+    { label: 'Time reclaimed', value: formatDuration(week.savedMinutes), good: true },
+    { label: 'Focus sessions completed', value: String(week.lockSessions), good: true },
+  ];
+
+  // Per-day focus across the last 7 days, normalised against the best day —
+  // this is the honest version of what used to be a hardcoded hour-of-day
+  // heatmap. We can't see hour-level timing, so we don't pretend to.
+  const series = useMemo(() => dailySeries(progress, windows.thisStart, today), [progress, windows.thisStart, today]);
+  const peak = Math.max(1, ...series.map((d) => d.focusMinutes + d.savedMinutes));
+  const bestDay = series.reduce((best, d) => (d.savedMinutes > best.savedMinutes ? d : best), series[0]);
+
+  const hasAnyData = week.savedMinutes > 0 || week.focusMinutes > 0 || week.lockSessions > 0;
+  const words = [...gateReflections].reverse();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -52,7 +85,7 @@ export default function ReflectionScreen() {
             <Text style={styles.lede}>
               Honest, unflattering, and never pushed to you as a notification.
             </Text>
-            {STATS.map((s, i) => (
+            {stats.map((s, i) => (
               <Animated.View key={s.label} entering={FadeInDown.delay(i * 60).duration(340)} style={styles.statRow}>
                 <Text style={[styles.statValue, s.good && { color: colors.accent }]}>{s.value}</Text>
                 <Text style={styles.statLabel}>{s.label}</Text>
@@ -60,7 +93,9 @@ export default function ReflectionScreen() {
             ))}
             <View style={styles.callout}>
               <Text style={styles.calloutText}>
-                Your hardest hour is 10pm. Four of your nine unlocks happened after it.
+                {!hasAnyData
+                  ? "Nothing logged yet this week. Once you start blocking distractions and running focus sessions, this fills in on its own."
+                  : `Compared with last week, you've reclaimed ${formatSignedMinutes(savedDelta)}.`}
               </Text>
             </View>
           </Animated.View>
@@ -69,26 +104,42 @@ export default function ReflectionScreen() {
         {tab === 'patterns' && (
           <Animated.View entering={FadeIn.duration(320)}>
             <Text style={styles.lede}>
-              When you lose time — not which apps. We genuinely can't see the app names, and we'd rather say so.
+              Which days you actually held the line — not which apps. We can't see app names on iOS, and we'd
+              rather say so than guess.
             </Text>
-            <View style={styles.heatWrap}>
-              {HEAT.map((h, i) => (
-                <Animated.View key={h.hour} entering={FadeInDown.delay(i * 35).duration(320)} style={styles.heatCol}>
-                  <View style={styles.heatTrack}>
-                    <View
-                      style={[
-                        styles.heatBar,
-                        { height: `${Math.max(6, h.v * 100)}%`, backgroundColor: heatColor(h.v) },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.heatLabel}>{h.hour}</Text>
-                </Animated.View>
-              ))}
-            </View>
-            <View style={styles.callout}>
-              <Text style={styles.calloutText}>Late night is your weak spot. Consider a Sleep schedule.</Text>
-            </View>
+            {!hasAnyData ? (
+              <View style={styles.callout}>
+                <Text style={styles.calloutText}>No days recorded yet. Come back after a day or two of use.</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.heatWrap}>
+                  {series.map((d, i) => {
+                    const v = (d.focusMinutes + d.savedMinutes) / peak;
+                    return (
+                      <Animated.View key={d.date} entering={FadeInDown.delay(i * 35).duration(320)} style={styles.heatCol}>
+                        <View style={styles.heatTrack}>
+                          <View
+                            style={[
+                              styles.heatBar,
+                              { height: `${Math.max(6, v * 100)}%`, backgroundColor: heatColor(v) },
+                            ]}
+                          />
+                        </View>
+                        <Text style={styles.heatLabel}>{weekdayShort(d.date)}</Text>
+                      </Animated.View>
+                    );
+                  })}
+                </View>
+                <View style={styles.callout}>
+                  <Text style={styles.calloutText}>
+                    {bestDay && bestDay.savedMinutes > 0
+                      ? `Your strongest day was ${weekdayShort(bestDay.date)} — ${formatDuration(bestDay.savedMinutes)} reclaimed.`
+                      : 'Still early. A pattern needs a few days before it means anything.'}
+                  </Text>
+                </View>
+              </>
+            )}
           </Animated.View>
         )}
 
@@ -97,25 +148,29 @@ export default function ReflectionScreen() {
             <Text style={styles.lede}>
               Everything you've typed at the gate. These come back to you later, in your own words.
             </Text>
-            {WORDS.map((w, i) => (
-              <Animated.View key={w.text} entering={FadeInDown.delay(i * 70).duration(340)} style={styles.wordCard}>
-                <Text style={styles.wordDate}>{w.date}</Text>
-                <Text style={styles.wordText}>“{w.text}”</Text>
-                {w.outcome ? <Text style={styles.wordOutcome}>{w.outcome}</Text> : null}
-              </Animated.View>
-            ))}
+            {words.length === 0 ? (
+              <View style={styles.callout}>
+                <Text style={styles.calloutText}>
+                  Nothing written yet. The gate asks you to type a reason once friction kicks in — whatever you
+                  write shows up here.
+                </Text>
+              </View>
+            ) : (
+              words.map((w, i) => (
+                <Animated.View key={`${w.date}-${i}`} entering={FadeInDown.delay(i * 70).duration(340)} style={styles.wordCard}>
+                  <Text style={styles.wordDate}>{relativeDay(w.date)}</Text>
+                  <Text style={styles.wordText}>“{w.text}”</Text>
+                  <Text style={styles.wordOutcome}>
+                    {w.unlocked ? 'You went in anyway.' : 'You backed out. That one counted.'}
+                  </Text>
+                </Animated.View>
+              ))
+            )}
           </Animated.View>
         )}
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function heatColor(v: number) {
-  if (v > 0.8) return '#ff8f6b';
-  if (v > 0.55) return '#ffd36b';
-  if (v > 0.3) return '#b6f5a0';
-  return 'rgba(124,245,176,0.35)';
 }
 
 const styles = StyleSheet.create({

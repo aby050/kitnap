@@ -6,6 +6,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { AppTheme } from '../data/themes';
 import { daysUntil, GoalData } from '../data/goal';
 import { colors } from '../theme';
+import { success, tapLight, warning } from '../ui/haptics';
 
 type Props = {
   theme: AppTheme;
@@ -13,6 +14,7 @@ type Props = {
   unlockNumber: number;
   /** Shown only once the ladder has started, so the user learns its shape. */
   ladderActive: boolean;
+  isBedtime?: boolean;
   onNotNow: () => void;
   onNeedIt: () => void;
   onEmergency: () => void;
@@ -25,6 +27,7 @@ export default function ShieldScreen({
   goal,
   unlockNumber,
   ladderActive,
+  isBedtime = false,
   onNotNow,
   onNeedIt,
   onEmergency,
@@ -44,7 +47,7 @@ export default function ShieldScreen({
       <LinearGradient colors={theme.palette} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         {/* Break-glass: every shield, every intensity. One tap, zero questions, never charged. */}
-        <Pressable onPress={onEmergency} style={styles.emergencyBtn} hitSlop={10}>
+        <Pressable onPress={() => { warning(); onEmergency(); }} style={styles.emergencyBtn} hitSlop={10}>
           <Text style={styles.emergencyText}>Emergency</Text>
         </Pressable>
 
@@ -56,6 +59,12 @@ export default function ShieldScreen({
               <Text style={styles.glyph}>{theme.glyph}</Text>
             )}
           </Animated.View>
+
+          {isBedtime && (
+            <Animated.View entering={FadeIn.delay(100).duration(400)} style={styles.bedtimePill}>
+              <Text style={styles.bedtimeText}>🌙 It's past your bedtime</Text>
+            </Animated.View>
+          )}
 
           <Animated.Text entering={FadeInDown.delay(150).duration(500)} style={styles.line}>
             {line}
@@ -69,10 +78,10 @@ export default function ShieldScreen({
         </View>
 
         <View style={styles.actions}>
-          <Pressable onPress={onNotNow} style={styles.primaryBtn}>
+          <Pressable onPress={() => { success(); onNotNow(); }} style={styles.primaryBtn}>
             <Text style={styles.primaryText}>Not now</Text>
           </Pressable>
-          <Pressable onPress={onNeedIt} style={styles.secondaryBtn}>
+          <Pressable onPress={() => { tapLight(); onNeedIt(); }} style={styles.secondaryBtn}>
             <Text style={styles.secondaryText}>I need it</Text>
           </Pressable>
         </View>
@@ -98,6 +107,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   ladderText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600' },
+  bedtimePill: {
+    backgroundColor: 'rgba(255,184,0,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,184,0,0.4)',
+    borderRadius: 16,
+    paddingVertical: 7,
+    paddingHorizontal: 15,
+  },
+  bedtimeText: { color: '#FFD27A', fontSize: 13, fontWeight: '700' },
   actions: { paddingHorizontal: 24, paddingBottom: 20, gap: 12 },
   primaryBtn: {
     backgroundColor: '#fff',
