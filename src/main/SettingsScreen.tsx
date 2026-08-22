@@ -30,7 +30,12 @@ export default function SettingsScreen({
   onOpenSchedules,
   onOpenPin,
   onOpenAccount,
+  accountLabel,
   onOpenFutureSelf,
+  onOpenTogether,
+  onOpenBlockedApps,
+  onOpenDifficulty,
+  difficultyLabel,
   pinEnabled,
 }: {
   onBack: () => void;
@@ -41,7 +46,12 @@ export default function SettingsScreen({
   onOpenSchedules?: () => void;
   onOpenPin?: () => void;
   onOpenAccount?: () => void;
+  accountLabel?: string;
   onOpenFutureSelf?: () => void;
+  onOpenTogether?: () => void;
+  onOpenBlockedApps?: () => void;
+  onOpenDifficulty?: () => void;
+  difficultyLabel?: string;
   pinEnabled?: boolean;
 }) {
   const [uninstallProtection, setUninstallProtection] = useState(false);
@@ -87,12 +97,14 @@ export default function SettingsScreen({
 
         <GroupLabel>Account</GroupLabel>
         <Group>
-          <SettingRow icon="👤" title="My Account" onPress={onOpenAccount} last />
+          <SettingRow icon="👤" title="My Account" value={accountLabel ?? 'Not signed in'} onPress={onOpenAccount} last />
         </Group>
 
         <GroupLabel>Personalize</GroupLabel>
         <Group>
           <SettingRow icon="🔔" title="Notifications" value="On" />
+          <SettingRow icon="🚫" title="Blocked Apps" subtitle="Which apps trigger the shield" onPress={onOpenBlockedApps} />
+          <SettingRow icon="🎚" title="Unlock difficulty" value={difficultyLabel} subtitle="How hard it is to get past the shield" onPress={onOpenDifficulty} />
           <SettingRow icon="⚡" title="Block Screens" subtitle="Customize overlays when apps are blocked" onPress={onOpenBlockScreens} />
           <SettingRow icon="🕐" title="Waiting Room" subtitle="Customize the content you see during Waiting Room" onPress={onOpenWaitingRoom} />
           <SettingRow icon="🗓" title="Schedules" subtitle="Add or edit recurring block windows" onPress={onOpenSchedules} />
@@ -108,7 +120,8 @@ export default function SettingsScreen({
             subtitle="A friend holds the code to loosen your own rules"
             onPress={onOpenGuardian}
           />
-          <SettingRow icon="🔑" title="PIN code access" value={pinEnabled ? 'On' : 'Off'} onPress={onOpenPin} last />
+          <SettingRow icon="🔑" title="PIN code access" value={pinEnabled ? 'On' : 'Off'} onPress={onOpenPin} />
+          <SettingRow icon="👥" title="Together" subtitle="Guardian and shared groves" onPress={onOpenTogether} last />
         </Group>
 
         <GroupLabel>Support</GroupLabel>

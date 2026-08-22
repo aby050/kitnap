@@ -4,14 +4,18 @@
  * A full 5-question gate always includes exactly one C and one D; those two
  * carry the weight and the rest are pacing.
  */
-export type Family = 'A' | 'B' | 'C' | 'D' | 'E';
+export type Family = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
 export type GateQuestion =
   | { family: 'A'; kind: 'tap'; prompt: string; options: string[] }
   | { family: 'B'; kind: 'dwell'; prompt: string; seconds: number }
   | { family: 'C'; kind: 'type'; prompt: string; minChars: number }
   | { family: 'D'; kind: 'recall'; prompt: string; body: string }
-  | { family: 'E'; kind: 'hold'; prompt: string; seconds: number };
+  | { family: 'E'; kind: 'hold'; prompt: string; seconds: number }
+  | { family: 'F'; kind: 'breathe'; prompt: string; cycles: number }
+  | { family: 'F'; kind: 'math'; prompt: string; a: number; b: number; op: '+' | '−' | '×' }
+  | { family: 'F'; kind: 'quiz'; prompt: string; options: string[]; correctIndex: number; explain: string }
+  | { family: 'G'; kind: 'activity'; prompt: string; reps: number; activity: string };
 
 /** Family A — Intent. "I don't know" is always present, always largest, always a soft exit. */
 export const FAMILY_A: GateQuestion[] = [
@@ -50,34 +54,149 @@ export const FAMILY_C: GateQuestion[] = [
   { family: 'C', kind: 'type', prompt: 'Finish this sentence: "I am opening this because…"', minChars: 15 },
 ];
 
-/** Family D — Their own history, played back. Falls back to generic examples
- *  only when the user never wrote a goal line. */
-export const FAMILY_D: GateQuestion[] = [
-  { family: 'D', kind: 'recall', prompt: '14 days ago you wrote:', body: 'I want my evenings back.' },
+/** Family D — Their own history, played back.
+ *
+ *  Deliberately has no hardcoded "quotes" — the whole point of this family is
+ *  that it's the user's own words. Inventing plausible-sounding lines they
+ *  never wrote ("I want my evenings back") reads as real to them and is a lie.
+ *  If we have nothing of theirs, we fall back to a neutral prompt that makes
+ *  no claim about what they said. */
+export const FAMILY_D_NEUTRAL: GateQuestion[] = [
   {
     family: 'D',
     kind: 'recall',
-    prompt: 'Last time you unlocked here, you typed:',
-    body: 'just checking one thing.\n\nYou stayed 34 minutes.',
+    prompt: 'You set this up for a reason.',
+    body: "You haven't written that reason down yet. Whatever it was, it still applies right now.",
   },
-  { family: 'D', kind: 'recall', prompt: 'When you set this up, you said you wanted:', body: 'To be present with my family in the evening.' },
 ];
 
-export function familyDFor(goalLine: string): GateQuestion[] {
-  if (!goalLine) return FAMILY_D;
-  return [
-    { family: 'D', kind: 'recall', prompt: 'When you set this up, you wrote:', body: goalLine },
-    ...FAMILY_D,
-  ];
+export type PastReflection = { date: string; text: string; unlocked: boolean };
+
+function daysAgoLabel(iso: string): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return 'Earlier you wrote:';
+  const days = Math.floor((Date.now() - then.getTime()) / 86400000);
+  if (days <= 0) return 'Earlier today you wrote:';
+  if (days === 1) return 'Yesterday you wrote:';
+  return `${days} days ago you wrote:`;
 }
 
-/** Family E — Physical. The boredom is the intervention. */
+/**
+ * Builds Family D from real material only: their goal line, plus anything
+ * they actually typed at a previous gate. `pastReflections` is expected
+ * newest-last; the most recent few are the most confronting so we prefer those.
+ */
+export function familyDFor(goalLine: string, pastReflections: PastReflection[] = []): GateQuestion[] {
+  const out: GateQuestion[] = [];
+
+  if (goalLine) {
+    out.push({ family: 'D', kind: 'recall', prompt: 'When you set this up, you wrote:', body: goalLine });
+  }
+
+  for (const r of pastReflections.slice(-5)) {
+    if (!r.text.trim()) continue;
+    out.push({
+      family: 'D',
+      kind: 'recall',
+      prompt: daysAgoLabel(r.date),
+      body: r.unlocked ? `${r.text}\n\nYou went in anyway.` : r.text,
+    });
+  }
+
+  return out.length > 0 ? out : FAMILY_D_NEUTRAL;
+}
+
+/** Family E — Physical. The boredom is the intervention. Level 1 (Easy)
+ *  unlock is the plain 5-second hold; the longer holds are used later in
+ *  the ladder as friction increases. */
 export const FAMILY_E: GateQuestion[] = [
+  { family: 'E', kind: 'hold', prompt: 'Hold for 5 seconds to continue.', seconds: 5 },
   { family: 'E', kind: 'hold', prompt: 'Hold to continue.', seconds: 30 },
   { family: 'E', kind: 'hold', prompt: 'One full breath. Hold while you take it.', seconds: 12 },
 ];
 
+/** Family F — Medium unlock. Breathing, a quick mental-math check, or a
+ *  health/wellbeing quiz question — variety so it never gets memorised into
+ *  muscle memory the way a single fixed exercise would. */
+export const FAMILY_F_BREATHE: GateQuestion[] = [
+  { family: 'F', kind: 'breathe', prompt: 'Two slow breaths before you go in.', cycles: 2 },
+  { family: 'F', kind: 'breathe', prompt: 'Slow down. Three breaths, then we let you through.', cycles: 3 },
+];
+
+/** Generates a fresh problem every time so it can't be memorised. */
+export function randomMathChallenge(): Extract<GateQuestion, { kind: 'math' }> {
+  const ops: Array<'+' | '−' | '×'> = ['+', '−', '×'];
+  const op = pick(ops);
+  const a = op === '×' ? 2 + Math.floor(Math.random() * 10) : 10 + Math.floor(Math.random() * 40);
+  const b = op === '×' ? 2 + Math.floor(Math.random() * 10) : 1 + Math.floor(Math.random() * (op === '−' ? a - 1 : 40));
+  return { family: 'F', kind: 'math', prompt: 'Quick one — solve this to continue.', a, b, op };
+}
+
+export const FAMILY_F_QUIZ: Extract<GateQuestion, { kind: 'quiz' }>[] = [
+  {
+    family: 'F',
+    kind: 'quiz',
+    prompt: 'How many hours of sleep does the average adult need?',
+    options: ['4–5 hours', '7–9 hours', '10–12 hours', 'None, sleep is optional'],
+    correctIndex: 1,
+    explain: '7–9 hours is the range most adults need to actually recover.',
+  },
+  {
+    family: 'F',
+    kind: 'quiz',
+    prompt: 'Which helps more with an afternoon energy dip?',
+    options: ['A short walk', 'Another coffee', 'More scrolling', 'Skipping lunch'],
+    correctIndex: 0,
+    explain: 'Movement beats caffeine for a sustained energy dip.',
+  },
+  {
+    family: 'F',
+    kind: 'quiz',
+    prompt: 'Blue light late at night mainly affects…',
+    options: ['Your eye color', 'Melatonin production', 'Your appetite', 'Nothing measurable'],
+    correctIndex: 1,
+    explain: 'It suppresses melatonin, which is why late scrolling makes sleep harder.',
+  },
+];
+
+/** Family G — Hard unlock. Physical movement, phone camera up so it can't be
+ *  done from a pocket. Never offered to anyone who flagged a physical
+ *  limitation during onboarding — see buildFinalChallenge(). */
+export const FAMILY_G: GateQuestion[] = [
+  { family: 'G', kind: 'activity', prompt: 'Do 10 squats to unlock.', reps: 10, activity: 'squats' },
+  { family: 'G', kind: 'activity', prompt: 'Do 10 jumping jacks to unlock.', reps: 10, activity: 'jumping jacks' },
+  { family: 'G', kind: 'activity', prompt: 'Do 8 push-ups to unlock.', reps: 8, activity: 'push-ups' },
+];
+
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+/**
+ * Level 2 (breathing) / Level 3 (physical) unlock, appended after the normal
+ * ladder only for 'strict' users at their final step — gentle/steady never
+ * see it, so their tuned friction curve is untouched.
+ *
+ * healthLimited comes straight from the onboarding health-limitation answer:
+ * if the user flagged anything, they always get breathing, never activity.
+ * "Behavioral interruption, not physical punishment" — never force movement
+ * on someone who told us it might not be safe for them.
+ */
+function pickMedium(): GateQuestion {
+  const roll = Math.random();
+  if (roll < 0.4) return pick(FAMILY_F_BREATHE);
+  if (roll < 0.75) return randomMathChallenge();
+  return pick(FAMILY_F_QUIZ);
+}
+
+export function buildFinalChallenge(
+  intensityKey: 'gentle' | 'steady' | 'strict',
+  step: number,
+  maxQuestions: number,
+  healthLimited: boolean,
+): GateQuestion | null {
+  if (intensityKey !== 'strict' || step < maxQuestions) return null;
+  if (healthLimited) return pickMedium();
+  return Math.random() < 0.5 ? pickMedium() : pick(FAMILY_G);
+}
 
 /**
  * Builds the gate for a given unlock number. Friction scales with how much the
@@ -85,21 +204,44 @@ const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
  * cheap and the 9th is expensive, which is what makes it feel fair.
  */
 export function buildGate(
+  intensityKey: 'gentle' | 'steady' | 'strict',
   unlockNumber: number,
   ladderStartsAt: number,
   maxQuestions: number,
   goalLine = '',
+  pastReflections: PastReflection[] = [],
 ): GateQuestion[] {
   const step = unlockNumber - ladderStartsAt + 1;
-  const familyD = familyDFor(goalLine);
+  const familyD = familyDFor(goalLine, pastReflections);
 
   if (step <= 0) return [];
-  if (step === 1) return [pick(FAMILY_A)];
-  if (step === 2) return [pick(FAMILY_A), pick(FAMILY_C)];
-  if (step === 3) return [pick(FAMILY_A), pick(FAMILY_C), pick(familyD)];
 
-  const full: GateQuestion[] = [pick(FAMILY_A), pick(FAMILY_B), pick(FAMILY_C), pick(familyD), pick(FAMILY_E)];
-  return full.slice(0, maxQuestions);
+  if (intensityKey === 'gentle') {
+    // Easiest tasks: Tap intent (A), Dwell 4s (B), 2 slow breaths (F_BREATHE), 5s Hold (E)
+    if (step === 1) return [pick(FAMILY_A)];
+    if (step === 2) return [pick(FAMILY_A), pick(FAMILY_B)];
+    if (step === 3) return [pick(FAMILY_A), pick(FAMILY_B), FAMILY_F_BREATHE[0]];
+
+    const fullGentle = [pick(FAMILY_A), pick(FAMILY_B), FAMILY_F_BREATHE[0], FAMILY_E[0]];
+    return fullGentle.slice(0, maxQuestions);
+  }
+
+  if (intensityKey === 'steady') {
+    // Medium tasks: Tap (A), Dwell (B), Recall history (D), 12s Hold (E), 3 slow breaths (F)
+    if (step === 1) return [pick(FAMILY_A)];
+    if (step === 2) return [pick(FAMILY_A), pick(FAMILY_B)];
+    if (step === 3) return [pick(FAMILY_A), pick(FAMILY_B), pick(familyD)];
+
+    const fullSteady = [pick(FAMILY_A), pick(FAMILY_B), pick(familyD), FAMILY_E[2], FAMILY_F_BREATHE[1]];
+    return fullSteady.slice(0, maxQuestions);
+  }
+
+  // 'strict' (Hardest friction): starts immediately. Holds are 30s, Typing (C) is required.
+  if (step === 1) return [pick(FAMILY_A), pick(FAMILY_C)];
+  if (step === 2) return [pick(FAMILY_A), pick(FAMILY_C), pick(familyD)];
+
+  const fullStrict = [pick(FAMILY_A), pick(FAMILY_B), pick(FAMILY_C), pick(familyD), FAMILY_E[1]];
+  return fullStrict.slice(0, maxQuestions);
 }
 
 export const ESSENTIALS = [

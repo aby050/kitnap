@@ -3,19 +3,21 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
+import { Schedule } from '../data/store';
 import { colors } from '../theme';
 
-type Schedule = { id: string; name: string; start: string; end: string; days: string };
-
-const SEED: Schedule[] = [
-  { id: 'work', name: 'Work Time', start: '09:00', end: '17:00', days: 'Mon–Fri' },
-  { id: 'sleep', name: 'Sleep Mode', start: '22:00', end: '07:00', days: 'Every day' },
-];
-
 /** Rules were display-only before this — this is where you actually add or
- *  edit a recurring block window. */
-export default function ScheduleEditorScreen({ onBack }: { onBack: () => void }) {
-  const [schedules, setSchedules] = useState<Schedule[]>(SEED);
+ *  edit a recurring block window. Schedules are persisted by the caller, so
+ *  edits survive a restart instead of resetting to a seed list. */
+export default function ScheduleEditorScreen({
+  schedules,
+  onChange,
+  onBack,
+}: {
+  schedules: Schedule[];
+  onChange: (next: Schedule[]) => void;
+  onBack: () => void;
+}) {
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftStart, setDraftStart] = useState('');
@@ -41,15 +43,13 @@ export default function ScheduleEditorScreen({ onBack }: { onBack: () => void })
   const save = () => {
     if (!editing || !draftName.trim() || !draftStart.trim() || !draftEnd.trim()) return;
     const next: Schedule = { ...editing, name: draftName.trim(), start: draftStart.trim(), end: draftEnd.trim(), days: draftDays };
-    setSchedules((prev) => {
-      const exists = prev.some((s) => s.id === next.id);
-      return exists ? prev.map((s) => (s.id === next.id ? next : s)) : [...prev, next];
-    });
+    const exists = schedules.some((s) => s.id === next.id);
+    onChange(exists ? schedules.map((s) => (s.id === next.id ? next : s)) : [...schedules, next]);
     setEditing(null);
   };
 
   const remove = (id: string) => {
-    setSchedules((prev) => prev.filter((s) => s.id !== id));
+    onChange(schedules.filter((s) => s.id !== id));
     if (editing?.id === id) setEditing(null);
   };
 

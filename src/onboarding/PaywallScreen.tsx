@@ -26,13 +26,34 @@ function Feature({ icon, title, desc }: { icon: string; title: string; desc: str
   );
 }
 
-export default function PaywallScreen({ onContinue }: { onContinue: () => void }) {
+export default function PaywallScreen({
+  onContinue,
+  onDecline,
+  name,
+  personalLine,
+  hoursBack = 2,
+}: {
+  onContinue: () => void;
+  /** "Not now" — the discount retention offer (DiscountPaywallScreen) is
+   *  only ever shown from here, never unconditionally in the funnel. */
+  onDecline?: () => void;
+  name?: string;
+  /** A line built from the user's own onboarding answers — this is what
+   *  makes the paywall feel built for them instead of generic. */
+  personalLine?: string;
+  hoursBack?: number;
+}) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.Text entering={FadeInDown.duration(450)} style={styles.heading}>
-          Start Your Free Week And Gain{'\n'}
-          <Text style={styles.headingAccent}>2+ Hours</Text> Back
+        {personalLine ? (
+          <Animated.Text entering={FadeInDown.duration(400)} style={styles.eyebrow}>
+            {personalLine}
+          </Animated.Text>
+        ) : null}
+        <Animated.Text entering={FadeInDown.delay(80).duration(450)} style={styles.heading}>
+          {name ? `${name}, start` : 'Start'} Your Free Week And Gain{'\n'}
+          <Text style={styles.headingAccent}>{hoursBack}+ Hours</Text> Back
         </Animated.Text>
 
         <Animated.View entering={FadeIn.delay(200).duration(600)} style={styles.chartWrap}>
@@ -85,6 +106,11 @@ export default function PaywallScreen({ onContinue }: { onContinue: () => void }
 
       <View style={styles.ctaWrap}>
         <GradientButton label="Continue" onPress={onContinue} />
+        {onDecline && (
+          <Text style={styles.declineLink} onPress={onDecline}>
+            Not now
+          </Text>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -101,6 +127,13 @@ const styles = StyleSheet.create({
     lineHeight: 33,
   },
   headingAccent: { color: colors.accent },
+  eyebrow: {
+    color: colors.accent,
+    fontSize: 13.5,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   chartWrap: { marginTop: 24, alignItems: 'center', height: CHART_H },
   regularPill: {
     position: 'absolute',
@@ -133,4 +166,5 @@ const styles = StyleSheet.create({
   stars: { color: '#FFC94A', fontSize: 17, letterSpacing: 3, textAlign: 'center' },
   reviews: { color: colors.text, fontSize: 14.5, fontWeight: '700', textAlign: 'center', marginTop: 6 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14, paddingTop: 8 },
+  declineLink: { color: colors.textDim, fontSize: 14, textAlign: 'center', marginTop: 14, fontWeight: '600' },
 });

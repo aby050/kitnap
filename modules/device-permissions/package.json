@@ -1,0 +1,10 @@
+{
+  "name": "device-permissions",
+  "version": "1.0.0",
+  "description": "Local Expo module: overlay/accessibility/notification-listener permission checks for the real (non-mock) unlock-enforcement path.",
+  "main": "index.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react-native": "*"
+  }
+}

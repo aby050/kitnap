@@ -1,26 +1,56 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { colors } from '../theme';
+import {
+  ACHIEVEMENTS,
+  AchievementCategory,
+  AchievementDef,
+  ProgressState,
+  achievementProgress,
+  daysSinceJoin,
+  formatPrettyDate,
+  shareMessage,
+  totals,
+} from '../data/progress';
+import Medal from './profile/Medal';
 
-const MILESTONES = [
-  { name: 'Invested', sub: '1/3 days' },
-  { name: 'Steadfast', sub: '1/7 days' },
-  { name: 'Radiant', sub: '1/30 days' },
-  { name: 'Prismatic', sub: '1/60 days' },
-  { name: 'Legendary', sub: '1/90 days' },
-  { name: 'Consistent', sub: '1/100 days' },
-  { name: 'Disciplined', sub: '1/150 days' },
-  { name: 'Intentional', sub: '1/200 days' },
-  { name: 'Dedicated', sub: '1/300 days' },
-  { name: 'Tenacious', sub: '1/365 days' },
-  { name: 'Transcendent', sub: '1/500 days' },
-  { name: 'Immortal', sub: '1/1000 days' },
+const CATEGORIES: { key: AchievementCategory | 'all'; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'streak', label: 'Streaks' },
+  { key: 'focus', label: 'Focus' },
+  { key: 'saved', label: 'Saved' },
+  { key: 'behavior', label: 'Behavior' },
 ];
 
-export default function MilestonesScreen({ onBack }: { onBack: () => void }) {
-  const [showRating, setShowRating] = useState(true);
+export default function MilestonesScreen({
+  onBack,
+  progress,
+  firstOpenDate,
+}: {
+  onBack: () => void;
+  progress: ProgressState;
+  firstOpenDate: string;
+}) {
+  const [filter, setFilter] = useState<AchievementCategory | 'all'>('all');
+  const joinedDays = daysSinceJoin(firstOpenDate);
+  const earnedMap = new Map(progress.achievements.map((a) => [a.id, a.earnedAt]));
+  const earnedCount = progress.achievements.length;
+  const t = totals(progress);
+  const list = ACHIEVEMENTS.filter((a) => filter === 'all' || a.category === filter);
+
+  async function share(def: AchievementDef) {
+    if (!earnedMap.has(def.id)) return;
+    try {
+      await Share.share({
+        message: shareMessage(def, `Best streak ${progress.bestStreak} · ${Math.round(t.focusMinutes / 60)}h focused.`),
+        title: def.name,
+      });
+    } catch {
+      // User cancelled or share is unavailable.
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -28,11 +58,11 @@ export default function MilestonesScreen({ onBack }: { onBack: () => void }) {
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
           <Text style={styles.headerGlyph}>‹</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>MileStones</Text>
+        <Text style={styles.headerTitle}>Awards</Text>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={styles.collected}>1/30 collected</Text>
+          <Text style={styles.collected}>{earnedCount}/{ACHIEVEMENTS.length} collected</Text>
           <View style={styles.collectedTrack}>
-            <View style={styles.collectedBar} />
+            <View style={[styles.collectedBar, { width: `${Math.max(8, (earnedCount / ACHIEVEMENTS.length) * 100)}%` }]} />
           </View>
         </View>
       </View>
@@ -41,47 +71,51 @@ export default function MilestonesScreen({ onBack }: { onBack: () => void }) {
         <Animated.View entering={FadeInDown.duration(400)} style={styles.streakRow}>
           <View style={styles.flameWrap}>
             <Text style={styles.flame}>🔥</Text>
-            <Text style={styles.flameCount}>1</Text>
+            <Text style={styles.flameCount}>{progress.currentStreak}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.streakTitle}>Day Streak</Text>
-            <Text style={styles.streakSub}>Days in a row you focused</Text>
+            <Text style={styles.streakSub}>
+              {progress.currentStreak > 0
+                ? `${progress.currentStreak} days in a row you focused. Best: ${progress.bestStreak}.`
+                : progress.bestStreak > 0
+                  ? `Paused for now. Best streak is still ${progress.bestStreak} days.`
+                  : 'Your first focused day lights the streak.'}
+            </Text>
           </View>
         </Animated.View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {CATEGORIES.map((c) => (
+            <Pressable key={c.key} onPress={() => setFilter(c.key)} style={[styles.filterChip, filter === c.key && styles.filterChipOn]}>
+              <Text style={[styles.filterText, filter === c.key && styles.filterTextOn]}>{c.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
 
         <View style={styles.grid}>
-          {MILESTONES.map((m, i) => (
-            <Animated.View key={m.name} entering={FadeIn.delay(i * 40).duration(320)} style={styles.gridItem}>
-              <View style={styles.rawGem} />
-              <View style={styles.pedestal} />
-              <Text style={styles.gemName}>{m.name}</Text>
-              <Text style={styles.gemSub}>{m.sub}</Text>
-            </Animated.View>
-          ))}
+          {list.map((m, i) => {
+            const earnedAt = earnedMap.get(m.id);
+            const pct = achievementProgress(m, progress, joinedDays);
+            return (
+              <Animated.View key={m.id} entering={FadeIn.delay(i * 30).duration(280)} style={styles.gridItem}>
+                <Pressable onPress={() => share(m)} style={{ alignItems: 'center' }}>
+                  <Medal medal={m.medal} locked={!earnedAt} id={m.id} />
+                  <Text style={styles.gemName} numberOfLines={1}>{m.name}</Text>
+                  <Text style={styles.gemSub} numberOfLines={2}>
+                    {earnedAt ? formatPrettyDate(earnedAt) : m.description}
+                  </Text>
+                  {!earnedAt && (
+                    <View style={styles.miniTrack}>
+                      <View style={[styles.miniBar, { width: `${pct * 100}%` }]} />
+                    </View>
+                  )}
+                </Pressable>
+              </Animated.View>
+            );
+          })}
         </View>
       </ScrollView>
-
-      {showRating && (
-        <Animated.View entering={FadeIn.duration(400)} style={styles.ratingOverlay}>
-          <View style={styles.ratingCard}>
-            <View style={styles.ratingIcon}>
-              <Text style={styles.ratingIconGlyph}>◯</Text>
-            </View>
-            <Text style={styles.ratingTitle}>Enjoying the app?</Text>
-            <Text style={styles.ratingSub}>Tap a star to rate it on the App Store.</Text>
-            <View style={styles.starsRow}>
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Pressable key={i} onPress={() => setShowRating(false)} hitSlop={6}>
-                  <Text style={styles.star}>☆</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Pressable onPress={() => setShowRating(false)} style={styles.notNowBtn}>
-              <Text style={styles.notNowText}>Not Now</Text>
-            </Pressable>
-          </View>
-        </Animated.View>
-      )}
     </SafeAreaView>
   );
 }
@@ -108,52 +142,36 @@ const styles = StyleSheet.create({
     marginTop: 5,
     overflow: 'hidden',
   },
-  collectedBar: { width: '12%', height: '100%', backgroundColor: colors.accent },
+  collectedBar: { height: '100%', backgroundColor: colors.accent },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
-  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 20, marginBottom: 30 },
+  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 20, marginBottom: 18 },
   flameWrap: { alignItems: 'center', justifyContent: 'center' },
   flame: { fontSize: 46 },
   flameCount: { position: 'absolute', bottom: 2, color: '#f5c542', fontSize: 19, fontWeight: '900' },
   streakTitle: { color: '#f5c542', fontSize: 23, fontWeight: '800' },
-  streakSub: { color: '#e8d9a8', fontSize: 14.5, marginTop: 3 },
+  streakSub: { color: '#e8d9a8', fontSize: 14.5, marginTop: 3, lineHeight: 20 },
+  filterRow: { gap: 8, paddingBottom: 18 },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  filterChipOn: { backgroundColor: 'rgba(124,245,176,0.14)', borderColor: 'rgba(124,245,176,0.4)' },
+  filterText: { color: colors.textDim, fontWeight: '700', fontSize: 13 },
+  filterTextOn: { color: colors.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  gridItem: { width: '33.33%', alignItems: 'center', marginBottom: 32 },
-  rawGem: { width: 44, height: 60, borderRadius: 10, backgroundColor: '#3d3d3d', transform: [{ rotate: '6deg' }] },
-  pedestal: { width: 38, height: 6, borderRadius: 3, backgroundColor: '#0d0d0d', marginTop: 2 },
-  gemName: { color: colors.text, fontSize: 14.5, fontWeight: '700', marginTop: 10 },
-  gemSub: { color: colors.textDim, fontSize: 12.5, marginTop: 2 },
-  ratingOverlay: {
-    ...StyleSheet.absoluteFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 26,
-  },
-  ratingCard: {
-    width: '100%',
-    backgroundColor: 'rgba(38,38,38,0.98)',
-    borderRadius: 26,
-    padding: 22,
-  },
-  ratingIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 15,
-    backgroundColor: '#0a0a0a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
-  },
-  ratingIconGlyph: { color: '#fff', fontSize: 30 },
-  ratingTitle: { color: colors.text, fontSize: 21, fontWeight: '700' },
-  ratingSub: { color: colors.textDim, fontSize: 15, marginTop: 8 },
-  starsRow: { flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 26, marginBottom: 22 },
-  star: { color: '#3b82f6', fontSize: 34 },
-  notNowBtn: {
+  gridItem: { width: '33.33%', alignItems: 'center', marginBottom: 28, paddingHorizontal: 4 },
+  gemName: { color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+  gemSub: { color: colors.textDim, fontSize: 11.5, marginTop: 3, textAlign: 'center', lineHeight: 15 },
+  miniTrack: {
+    width: 54,
+    height: 4,
+    borderRadius: 2,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 18,
-    paddingVertical: 15,
-    alignItems: 'center',
+    marginTop: 8,
+    overflow: 'hidden',
   },
-  notNowText: { color: colors.text, fontSize: 17, fontWeight: '600' },
+  miniBar: { height: '100%', backgroundColor: colors.accent },
 });

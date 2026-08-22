@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SplashFlow from './src/onboarding/SplashFlow';
@@ -20,6 +20,7 @@ import PaywallScreen from './src/onboarding/PaywallScreen';
 import GroundRulesScreen from './src/onboarding/GroundRulesScreen';
 import DiscountPaywallScreen from './src/onboarding/DiscountPaywallScreen';
 import AppPickerScreen from './src/onboarding/AppPickerScreen';
+import IOSAppPickerScreen from './src/onboarding/IOSAppPickerScreen';
 import ProposedRulesScreen from './src/onboarding/ProposedRulesScreen';
 import ReferralScreen from './src/onboarding/ReferralScreen';
 import WelcomeScreen from './src/onboarding/WelcomeScreen';
@@ -28,22 +29,42 @@ import PersistentBackground from './src/components/PersistentBackground';
 import { IntensityKey, ThemeKey } from './src/data/themes';
 import { EMPTY_GOAL, GoalData } from './src/data/goal';
 import { DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
+import { recommendIntensity, suggestTheme } from './src/data/evaluation';
+import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
+
+const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
+  gentle: 'gentle',
+  steady: 'balanced',
+  strict: 'strict',
+};
 import { colors } from './src/theme';
+
+/** wend://shield?package=com.instagram.android — fired by the native
+ *  Accessibility Service when a blocked app comes to the foreground. */
+function parseShieldDeepLink(url: string | null): string | null {
+  if (!url || !url.startsWith('wend://shield')) return null;
+  try {
+    const query = url.split('?')[1] ?? '';
+    const params = new URLSearchParams(query);
+    return params.get('package');
+  } catch {
+    return null;
+  }
+}
 
 type Stage =
   | 'loading'
   | 'splash'
-  | 'eduDesigned'
-  | 'eduWillpower'
+  | 'education'
   | 'onboarding'
   | 'momentum'
-  | 'eduSpiral'
   | 'post'
   | 'trust'
   | 'goal'
   | 'theme'
   | 'groundRules'
   | 'appPicker'
+  | 'iosAppPicker'
   | 'intensity'
   | 'proposedRules'
   | 'futureSelf'
@@ -78,6 +99,7 @@ export default function App() {
 
   const [persisted, setPersisted] = useState<PersistedState>(DEFAULT_STATE);
   const [loaded, setLoaded] = useState(false);
+  const [pendingShieldPackage, setPendingShieldPackage] = useState<string | null>(null);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -109,10 +131,53 @@ export default function App() {
     if (loaded) saveState(persisted);
   }, [loaded, persisted]);
 
+  // Keep the native Accessibility Service's blocked-package list in sync —
+  // it can't read PersistedState directly, so this is the one bridge point.
+  useEffect(() => {
+    if (loaded) setBlockedPackages(persisted.blockedPackages);
+  }, [loaded, persisted.blockedPackages]);
+
+  // Battery/responsiveness follows the same intensity dial the user already
+  // sets for unlock friction — no separate setting to expose, and it stays
+  // in sync automatically if intensity changes via the 7-day check-in.
+  useEffect(() => {
+    if (loaded) setMonitoringLevel(INTENSITY_TO_MONITORING_LEVEL[persisted.intensityKey]);
+  }, [loaded, persisted.intensityKey]);
+
+  // Catches the deep link the Accessibility Service fires when a blocked
+  // app opens, whether Wend was already running or cold-started by it.
+  useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      const pkg = parseShieldDeepLink(url);
+      if (pkg) setPendingShieldPackage(pkg);
+    };
+    Linking.getInitialURL().then(handleUrl);
+    const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
+    return () => sub.remove();
+  }, []);
+
   const patch = (partial: Partial<PersistedState>) => setPersisted((s) => ({ ...s, ...partial }));
 
   const name = answers.name?.value ?? '';
   const screentimeHours = SCREENTIME_HOURS[answers.screentime?.value ?? ''] ?? 4;
+
+  // Built from their own onboarding answers so the paywall reflects what
+  // they actually said, not generic copy — this is what conversion research
+  // on quiz-funnel apps consistently points to as the highest-leverage lever.
+  const aspiration = answers.aspiration?.value?.trim();
+  const cost = answers.costText?.value?.trim();
+  const loseTime = answers.loseTime?.label;
+  const paywallPersonalLine = aspiration
+    ? `You said: "${aspiration}"`
+    : cost
+      ? `You told us you miss: ${cost}`
+      : loseTime
+        ? `Built around where you lose time most — ${loseTime.toLowerCase()}`
+        : undefined;
+  const paywallHoursBack = Math.max(2, Math.round(screentimeHours * 0.3));
+
+  const intensityRecommendation = recommendIntensity(answers, screentimeHours);
+  const suggestedTheme = suggestTheme(answers.interests?.value);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -121,14 +186,10 @@ export default function App() {
           <PersistentBackground />
           <StatusBar style="light" />
 
-          {stage === 'splash' && <SplashFlow onDone={() => setStage('eduDesigned')} />}
+          {stage === 'splash' && <SplashFlow onDone={() => setStage('education')} />}
 
-          {stage === 'eduDesigned' && (
-            <EducationScreen slide="designed" onContinue={() => setStage('eduWillpower')} />
-          )}
-
-          {stage === 'eduWillpower' && (
-            <EducationScreen slide="willpower" onContinue={() => setStage('onboarding')} />
+          {stage === 'education' && (
+            <EducationScreen onContinue={() => setStage('onboarding')} />
           )}
 
           {stage === 'onboarding' && (
@@ -137,6 +198,7 @@ export default function App() {
                 setAnswers(a);
                 setStage('momentum');
               }}
+              onAccountSignedIn={(account) => patch({ account })}
             />
           )}
 
@@ -144,11 +206,9 @@ export default function App() {
             <AffirmationScreen
               headline="Momentum unlocked."
               body="That's the first step to reclaiming your time. Now let's look at what it's actually costing you."
-              onContinue={() => setStage('eduSpiral')}
+              onContinue={() => setStage('post')}
             />
           )}
-
-          {stage === 'eduSpiral' && <EducationScreen slide="spiral" onContinue={() => setStage('post')} />}
 
           {stage === 'post' && (
             <PostOnboardingFlow
@@ -171,6 +231,7 @@ export default function App() {
 
           {stage === 'theme' && (
             <ThemePickerScreen
+              suggested={suggestedTheme}
               onContinue={(k) => {
                 setThemeKey(k);
                 setStage('groundRules');
@@ -180,10 +241,16 @@ export default function App() {
 
           {stage === 'groundRules' && <GroundRulesScreen onContinue={() => setStage('appPicker')} />}
 
-          {stage === 'appPicker' && <AppPickerScreen onContinue={() => setStage('intensity')} />}
+          {stage === 'appPicker' && (
+            <AppPickerScreen onContinue={() => setStage(Platform.OS === 'ios' ? 'iosAppPicker' : 'intensity')} />
+          )}
+
+          {stage === 'iosAppPicker' && <IOSAppPickerScreen onContinue={() => setStage('intensity')} />}
 
           {stage === 'intensity' && (
             <IntensityScreen
+              recommended={intensityRecommendation.key}
+              recommendedReasons={intensityRecommendation.reasons}
               onContinue={(k) => {
                 setIntensityKey(k);
                 setStage('proposedRules');
@@ -210,10 +277,20 @@ export default function App() {
 
           {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('paywall')} />}
 
-          {stage === 'paywall' && <PaywallScreen onContinue={() => setStage('trial')} />}
+          {stage === 'paywall' && (
+            <PaywallScreen
+              onContinue={() => setStage('trial')}
+              onDecline={() => setStage('discount')}
+              name={name}
+              personalLine={paywallPersonalLine}
+              hoursBack={paywallHoursBack}
+            />
+          )}
 
-          {stage === 'trial' && <TrialTimelineScreen onStart={() => setStage('discount')} />}
+          {stage === 'trial' && <TrialTimelineScreen onStart={() => setStage('referral')} />}
 
+          {/* Last-chance retention offer — reachable only by declining the
+              main paywall above, never shown to someone who already said yes. */}
           {stage === 'discount' && (
             <DiscountPaywallScreen
               onStart={() => setStage('referral')}
@@ -234,6 +311,7 @@ export default function App() {
                   intensityKey,
                   futureSelfMessage,
                   goal,
+                  onboardingAnswers: answers,
                 });
                 setStage('app');
               }}
@@ -248,6 +326,8 @@ export default function App() {
               goal={goal}
               persisted={persisted}
               onPatch={patch}
+              pendingShieldPackage={pendingShieldPackage}
+              onShieldConsumed={() => setPendingShieldPackage(null)}
             />
           )}
         </View>

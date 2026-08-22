@@ -10,18 +10,29 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { buildGate, GateQuestion } from '../data/gateQuestions';
+import { buildFinalChallenge, buildGate, GateQuestion } from '../data/gateQuestions';
 import { Intensity } from '../data/themes';
 import { colors } from '../theme';
+import BreathingExercise from './BreathingExercise';
+import ActivityChallenge from './ActivityChallenge';
+import { success, tapLight } from '../ui/haptics';
 
 type Props = {
   unlockNumber: number;
   intensity: Intensity;
   futureSelfMessage: string;
   goalLine?: string;
+  healthLimited?: boolean;
   onGranted: (minutes: number) => void;
   onAbandoned: () => void;
   onEmergency: () => void;
+  /** Called for each typed answer so it can be replayed later in Reflection
+   *  and by Family D gate questions. `unlocked` is filled in by the caller
+   *  once the outcome of the whole gate is known. */
+  onReflection?: (prompt: string, text: string) => void;
+  /** Real things they typed at previous gates, newest last — played back by
+   *  Family D instead of invented example quotes. */
+  pastReflections?: { date: string; text: string; unlocked: boolean }[];
 };
 
 function DwellQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'dwell' }>; onDone: () => void }) {
@@ -90,19 +101,107 @@ function HoldQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'hold' }
   );
 }
 
+function MathQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'math' }>; onDone: () => void }) {
+  const [input, setInput] = useState('');
+  const [wrong, setWrong] = useState(false);
+  const answer = q.op === '+' ? q.a + q.b : q.op === '−' ? q.a - q.b : q.a * q.b;
+
+  const submit = () => {
+    if (Number(input.trim()) === answer) onDone();
+    else {
+      setWrong(true);
+      setInput('');
+      setTimeout(() => setWrong(false), 900);
+    }
+  };
+
+  return (
+    <View style={styles.qBody}>
+      <Text style={styles.prompt}>{q.prompt}</Text>
+      <Text style={styles.mathExpr}>
+        {q.a} {q.op} {q.b} = ?
+      </Text>
+      <TextInput
+        value={input}
+        onChangeText={setInput}
+        keyboardType="number-pad"
+        placeholder="Your answer"
+        placeholderTextColor={colors.textFaint}
+        style={[styles.input, wrong && styles.inputWrong]}
+        autoFocus
+      />
+      {wrong && <Text style={styles.wrongText}>Not quite — try again.</Text>}
+      <Pressable disabled={input.trim().length === 0} onPress={submit} style={[styles.cta, input.trim().length === 0 && styles.ctaDisabled]}>
+        <Text style={styles.ctaText}>Continue</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function QuizQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'quiz' }>; onDone: () => void }) {
+  const [chosen, setChosen] = useState<number | null>(null);
+
+  return (
+    <View style={styles.qBody}>
+      <Text style={styles.prompt}>{q.prompt}</Text>
+      <View style={styles.options}>
+        {q.options.map((opt, i) => {
+          const isChosen = chosen === i;
+          const isCorrect = i === q.correctIndex;
+          const showState = chosen !== null && (isChosen || isCorrect);
+          return (
+            <Pressable
+              key={opt}
+              disabled={chosen !== null}
+              onPress={() => setChosen(i)}
+              style={[
+                styles.option,
+                showState && isCorrect && styles.optionCorrect,
+                showState && isChosen && !isCorrect && styles.optionWrong,
+              ]}
+            >
+              <Text style={styles.optionText}>{opt}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {chosen !== null && (
+        <Animated.View entering={FadeIn.duration(250)} style={{ alignItems: 'center', gap: 14 }}>
+          <Text style={styles.hint}>{q.explain}</Text>
+          <Pressable onPress={onDone} style={styles.cta}>
+            <Text style={styles.ctaText}>Continue</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+
 export default function GateScreen({
   unlockNumber,
   intensity,
   futureSelfMessage,
   goalLine = '',
+  healthLimited = false,
   onGranted,
   onAbandoned,
   onEmergency,
+  onReflection,
+  pastReflections = [],
 }: Props) {
-  const questions = useMemo(
-    () => buildGate(unlockNumber, intensity.ladderStartsAt, intensity.maxQuestions, goalLine),
-    [unlockNumber],
-  );
+  const questions = useMemo(() => {
+    const base = buildGate(
+      intensity.key,
+      unlockNumber,
+      intensity.ladderStartsAt,
+      intensity.maxQuestions,
+      goalLine,
+      pastReflections,
+    );
+    const step = unlockNumber - intensity.ladderStartsAt + 1;
+    const final = buildFinalChallenge(intensity.key, step, intensity.maxQuestions, healthLimited);
+    return final ? [...base, final] : base;
+  }, [unlockNumber]);
   const [index, setIndex] = useState(0);
   const [text, setText] = useState('');
 
@@ -112,8 +211,13 @@ export default function GateScreen({
 
   const next = () => {
     setText('');
-    if (index >= questions.length - 1) onGranted(intensity.grantMinutes);
-    else setIndex(index + 1);
+    if (index >= questions.length - 1) {
+      success();
+      onGranted(intensity.grantMinutes);
+    } else {
+      tapLight();
+      setIndex(index + 1);
+    }
   };
 
   if (!futureSelfSeen) {
@@ -192,7 +296,10 @@ export default function GateScreen({
             </Text>
             <Pressable
               disabled={text.trim().length < q.minChars}
-              onPress={next}
+              onPress={() => {
+                onReflection?.(q.prompt, text.trim());
+                next();
+              }}
               style={[styles.cta, text.trim().length < q.minChars && styles.ctaDisabled]}
             >
               <Text style={styles.ctaText}>Continue</Text>
@@ -212,6 +319,10 @@ export default function GateScreen({
 
         {q.kind === 'dwell' && <DwellQuestion q={q} onDone={next} />}
         {q.kind === 'hold' && <HoldQuestion q={q} onDone={next} />}
+        {q.kind === 'breathe' && <BreathingExercise q={q} onDone={next} />}
+        {q.kind === 'math' && <MathQuestion q={q} onDone={next} />}
+        {q.kind === 'quiz' && <QuizQuestion q={q} onDone={next} />}
+        {q.kind === 'activity' && <ActivityChallenge q={q} onDone={next} />}
       </Animated.View>
     </SafeAreaView>
   );
@@ -242,6 +353,11 @@ const styles = StyleSheet.create({
   optionDontKnow: { paddingVertical: 22, backgroundColor: 'rgba(255,255,255,0.13)', borderColor: 'rgba(255,255,255,0.3)' },
   optionText: { color: colors.text, fontSize: 16, fontWeight: '500' },
   optionDontKnowText: { fontSize: 18, fontWeight: '700' },
+  optionCorrect: { backgroundColor: 'rgba(124,245,176,0.15)', borderColor: colors.accent },
+  optionWrong: { backgroundColor: 'rgba(255,107,107,0.12)', borderColor: 'rgba(255,107,107,0.5)' },
+  mathExpr: { color: colors.accent, fontSize: 30, fontWeight: '800' },
+  inputWrong: { borderWidth: 1, borderColor: 'rgba(255,107,107,0.6)' },
+  wrongText: { color: 'rgba(255,107,107,0.85)', fontSize: 13, marginTop: -10 },
   textArea: {
     width: '100%',
     maxWidth: 320,
@@ -254,6 +370,17 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   counter: { color: colors.textFaint, fontSize: 13, marginTop: -10 },
+  input: {
+    width: '100%',
+    maxWidth: 300,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    backgroundColor: colors.pillBg,
+    color: colors.text,
+    fontSize: 18,
+    textAlign: 'center',
+  },
   dwellTrack: { width: '100%', maxWidth: 300, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' },
   dwellBar: { height: '100%', backgroundColor: colors.accent },
   holdCount: { color: colors.accent, fontSize: 40, fontWeight: '800' },
