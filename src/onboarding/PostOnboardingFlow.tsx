@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AppState, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
@@ -12,17 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { colors } from '../theme';
-import {
-  canDrawOverlays,
-  isAccessibilityServiceEnabled,
-  isIgnoringBatteryOptimizations,
-  isNotificationListenerEnabled,
-  openAccessibilitySettings,
-  openBatteryOptimizationSettings,
-  openNotificationListenerSettings,
-  openOverlaySettings,
-} from 'device-permissions';
-import { checkUsageAccessPermission, openUsageAccessSettings, queryDailyUsage } from '../data/androidUsage';
+import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import Icon from '../ui/Icon';
 
@@ -82,25 +72,19 @@ function ContinueButton({ label = 'Continue', onPress }: { label?: string; onPre
 export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: Props) {
   const [step, setStep] = useState(0);
   const [analyzingLine, setAnalyzingLine] = useState(0);
-  const [displayOverApps, setDisplayOverApps] = useState(false);
   const [screenTimeAccess, setScreenTimeAccess] = useState(false);
-  const [accessibilityAccess, setAccessibilityAccess] = useState(false);
-  const [notificationAccess, setNotificationAccess] = useState(false);
-  const [batteryUnrestricted, setBatteryUnrestricted] = useState(false);
   const [removedApps, setRemovedApps] = useState<string[]>([]);
   const [notifSub, setNotifSub] = useState(0);
   const [realHours, setRealHours] = useState<number | null>(null);
   const [realApps, setRealApps] = useState<typeof FALLBACK_DISTRACTION_APPS>([]);
 
-  // Each toggle reflects real OS permission state — checked on mount and
-  // again whenever the app regains focus (the only way to know if the user
-  // granted something in Settings, since none of these fire a JS event).
+  // Screen-time access is granted upfront now (PermissionBoardingPassScreen,
+  // before onboarding even starts) — this just re-reads that real state so
+  // the usage-stats effect below knows whether it can fetch real numbers.
+  // Checked on mount and again on foreground, the only way to know if the
+  // user changed it in Settings since it fires no JS event.
   const refreshPermissions = useCallback(async () => {
     if (Platform.OS !== 'android') return;
-    setDisplayOverApps(canDrawOverlays());
-    setAccessibilityAccess(isAccessibilityServiceEnabled());
-    setNotificationAccess(isNotificationListenerEnabled());
-    setBatteryUnrestricted(isIgnoringBatteryOptimizations());
     const hasUsageAccess = await checkUsageAccessPermission();
     setScreenTimeAccess(hasUsageAccess);
   }, []);
@@ -167,7 +151,10 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
       const t = setTimeout(() => setAnalyzingLine((v) => v + 1), 750);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setStep(1), 900);
+    // Permissions are all asked upfront now (PermissionBoardingPassScreen,
+    // before onboarding even starts) — this used to land on step 1, a
+    // second permission-request screen; that step no longer exists.
+    const t = setTimeout(() => setStep(2), 900);
     return () => clearTimeout(t);
   }, [step, analyzingLine]);
 
@@ -179,50 +166,6 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
         {step === 0 && (
           <Animated.View entering={FadeIn.duration(300)} style={styles.centerBlock}>
             <Text style={styles.heading}>{ANALYZING_LINES[analyzingLine]}</Text>
-          </Animated.View>
-        )}
-
-        {/* Display-over-apps and Screen-time access are asked earlier, mid-
-            onboarding (PermissionCheckpointScreen in App.tsx) — this step
-            only asks the two permissions that make sense to ask once the
-            user already knows what the app does: Accessibility and
-            notification access. */}
-        {step === 1 && (
-          <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
-            <Text style={styles.heading}>
-              Almost set{name ? `, ${name}` : ''}.{'\n\n'}
-              <Text style={styles.headingBold}>A few more permissions and I can start actually helping.</Text>
-            </Text>
-
-            <View style={{ height: 30 }} />
-
-            <PermissionRow
-              title="Accessibility"
-              desc="Lets the app notice when a distracting app opens. It never reads what's on your screen."
-              value={accessibilityAccess}
-              onChange={() => {
-                if (!accessibilityAccess) openAccessibilitySettings();
-              }}
-            />
-            <PermissionRow
-              title="Notification access"
-              desc="Lets the app notice notifications from distracting apps, so it can nudge you before you open them."
-              value={notificationAccess}
-              onChange={() => {
-                if (!notificationAccess) openNotificationListenerSettings();
-              }}
-            />
-            <PermissionRow
-              title="Uninterrupted sessions"
-              desc="Stops Android's battery saver from pausing the block mid-session."
-              value={batteryUnrestricted}
-              onChange={() => {
-                if (!batteryUnrestricted) openBatteryOptimizationSettings();
-              }}
-            />
-
-            <View style={{ height: 24 }} />
-            <ContinueButton onPress={next} />
           </Animated.View>
         )}
 
@@ -436,32 +379,6 @@ function BigNumber({ value }: { value: string }) {
   );
 }
 
-function PermissionRow({
-  title,
-  desc,
-  value,
-  onChange,
-}: {
-  title: string;
-  desc: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <View style={styles.permRow}>
-      <View style={{ flex: 1, paddingRight: 12 }}>
-        <Text style={styles.permTitle}>{title}</Text>
-        <Text style={styles.permDesc}>{desc}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ true: colors.accent, false: 'rgba(255,255,255,0.2)' }}
-        thumbColor="#fff"
-      />
-    </View>
-  );
-}
 
 function SummaryRow({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
