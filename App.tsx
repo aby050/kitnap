@@ -253,13 +253,10 @@ export default function App() {
               recommendedReasons={intensityRecommendation.reasons}
               onContinue={(k) => {
                 setIntensityKey(k);
-                setStage('proposedRules');
+                // ProposedRulesScreen removed from the funnel — straight to Future Self.
+                setStage('futureSelf');
               }}
             />
-          )}
-
-          {stage === 'proposedRules' && (
-            <ProposedRulesScreen name={name} onContinue={() => setStage('futureSelf')} />
           )}
 
           {stage === 'futureSelf' && (
@@ -275,32 +272,10 @@ export default function App() {
             <WorldSeedScreen themeKey={themeKey} onContinue={() => setStage('benefits')} />
           )}
 
-          {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('paywall')} />}
-
-          {stage === 'paywall' && (
-            <PaywallScreen
-              onContinue={() => setStage('trial')}
-              onDecline={() => setStage('discount')}
-              name={name}
-              personalLine={paywallPersonalLine}
-              hoursBack={paywallHoursBack}
-            />
-          )}
-
-          {stage === 'trial' && <TrialTimelineScreen onStart={() => setStage('referral')} />}
-
-          {/* Last-chance retention offer — reachable only by declining the
-              main paywall above, never shown to someone who already said yes. */}
-          {stage === 'discount' && (
-            <DiscountPaywallScreen
-              onStart={() => setStage('referral')}
-              onClose={() => setStage('referral')}
-            />
-          )}
-
-          {stage === 'referral' && (
-            <ReferralScreen onShare={() => setStage('welcome')} onSkip={() => setStage('welcome')} />
-          )}
+          {/* Paywall (and its trial/discount retention offshoots) and the
+              friend-referral screen are hidden from the funnel for now —
+              straight from Benefits to Welcome. */}
+          {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('welcome')} />}
 
           {stage === 'welcome' && (
             <WelcomeScreen

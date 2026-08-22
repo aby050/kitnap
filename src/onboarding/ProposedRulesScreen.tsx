@@ -219,11 +219,6 @@ export default function ProposedRulesScreen({ name, onContinue }: { name: string
         </ScrollView>
       </View>
 
-      {/* Social proof subtext */}
-      <Text style={styles.socialProof}>
-        <Text style={styles.socialIcon}>👥 </Text>Works for 97% of users like you
-      </Text>
-
       {/* Continue CTA Button */}
       <View style={styles.ctaWrap}>
         <GradientButton label="Continue" onPress={onContinue} />
