@@ -177,31 +177,20 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
           </Animated.View>
         )}
 
+        {/* Display-over-apps and Screen-time access are asked earlier, mid-
+            onboarding (PermissionCheckpointScreen in App.tsx) — this step
+            only asks the two permissions that make sense to ask once the
+            user already knows what the app does: Accessibility and
+            notification access. */}
         {step === 1 && (
           <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
             <Text style={styles.heading}>
-              I can help with that{name ? `, ${name}` : ''}.{'\n\n'}
-              <Text style={styles.headingBold}>But to change your habits, I'm going to need your permission.</Text>
+              Almost set{name ? `, ${name}` : ''}.{'\n\n'}
+              <Text style={styles.headingBold}>Two more permissions and I can start actually helping.</Text>
             </Text>
 
             <View style={{ height: 30 }} />
 
-            <PermissionRow
-              title="Display over other apps"
-              desc="So the app can gently help you pause before opening distracting apps."
-              value={displayOverApps}
-              onChange={() => {
-                if (!displayOverApps) openOverlaySettings();
-              }}
-            />
-            <PermissionRow
-              title="Screen time"
-              desc="Lets the app show you your daily screen time and progress."
-              value={screenTimeAccess}
-              onChange={() => {
-                if (!screenTimeAccess) openUsageAccessSettings();
-              }}
-            />
             <PermissionRow
               title="Accessibility"
               desc="Lets the app notice when a distracting app opens. It never reads what's on your screen."

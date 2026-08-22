@@ -6,7 +6,7 @@ import OpalOrb from '../components/OpalOrb';
 import QuestionBlock from './QuestionBlock';
 import HistoryItem from './HistoryItem';
 import LoginScreen from '../main/LoginScreen';
-import { QUESTIONS, resolvePrompt } from './questions';
+import { Question, resolvePrompt } from './questions';
 import { Account } from '../data/store';
 import { colors } from '../theme';
 
@@ -14,21 +14,30 @@ type Answer = { value: string; label: string };
 type HistoryEntry = { id: string; prompt: string; label: string };
 
 export default function OnboardingFlow({
+  questions,
+  initialAnswers = {},
+  initialHistory = [],
   onComplete,
   onAccountSignedIn,
 }: {
+  /** Which slice of the question set this mount runs — lets App.tsx split
+   *  the flow across permission checkpoints while answers/history carry
+   *  forward between mounts via initialAnswers/initialHistory. */
+  questions: Question[];
+  initialAnswers?: Record<string, Answer>;
+  initialHistory?: HistoryEntry[];
   onComplete: (answers: Record<string, Answer>) => void;
   onAccountSignedIn?: (account: Account) => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
+  const [answers, setAnswers] = useState<Record<string, Answer>>(initialAnswers);
   // "Yes, sign in" interrupts the question stack with a real sign-in step;
   // "I'm new here" just continues — nothing to authenticate yet.
   const [showLogin, setShowLogin] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  const rawQuestion = QUESTIONS[stepIndex];
+  const rawQuestion = questions[stepIndex];
   const question = { ...rawQuestion, prompt: resolvePrompt(rawQuestion.prompt, answers) };
 
   const handleAnswer = (value: string, label: string) => {
@@ -49,7 +58,7 @@ export default function OnboardingFlow({
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
     });
 
-    if (stepIndex < QUESTIONS.length - 1) {
+    if (stepIndex < questions.length - 1) {
       setStepIndex(stepIndex + 1);
     } else {
       setTimeout(() => onComplete(nextAnswers), 350);

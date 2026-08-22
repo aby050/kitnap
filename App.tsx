@@ -5,6 +5,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SplashFlow from './src/onboarding/SplashFlow';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
+import PermissionCheckpointScreen from './src/onboarding/PermissionCheckpointScreen';
+import { ONBOARDING_QUESTIONS_1, ONBOARDING_QUESTIONS_2 } from './src/onboarding/questions';
 import PostOnboardingFlow from './src/onboarding/PostOnboardingFlow';
 import TrustPromiseScreen from './src/onboarding/TrustPromiseScreen';
 import GoalScreen from './src/onboarding/GoalScreen';
@@ -30,7 +32,14 @@ import { IntensityKey, ThemeKey } from './src/data/themes';
 import { EMPTY_GOAL, GoalData } from './src/data/goal';
 import { DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
-import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
+import {
+  canDrawOverlays,
+  MonitoringLevel,
+  openOverlaySettings,
+  setBlockedPackages,
+  setMonitoringLevel,
+} from './modules/device-permissions';
+import { checkUsageAccessPermission, openUsageAccessSettings } from './src/data/androidUsage';
 
 const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
   gentle: 'gentle',
@@ -57,6 +66,8 @@ type Stage =
   | 'splash'
   | 'education'
   | 'onboarding'
+  | 'permCheckpoint1'
+  | 'onboarding2'
   | 'momentum'
   | 'post'
   | 'trust'
@@ -92,6 +103,13 @@ const SCREENTIME_HOURS: Record<string, number> = {
 export default function App() {
   const [stage, setStage] = useState<Stage>('loading');
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  // Holds onboarding's answers between the two OnboardingFlow mounts (split
+  // by the permission checkpoint below) — merged into `answers` for real
+  // once part 2 finishes. The on-screen question history intentionally
+  // restarts empty for part 2 rather than carrying forward.
+  const [midAnswers, setMidAnswers] = useState<Record<string, Answer>>({});
+  const [ck1DisplayOverApps, setCk1DisplayOverApps] = useState(false);
+  const [ck1ScreenTimeAccess, setCk1ScreenTimeAccess] = useState(false);
   const [themeKey, setThemeKey] = useState<ThemeKey>('quiet');
   const [goal, setGoal] = useState<GoalData>(EMPTY_GOAL);
   const [intensityKey, setIntensityKey] = useState<IntensityKey>('steady');
@@ -194,11 +212,56 @@ export default function App() {
 
           {stage === 'onboarding' && (
             <OnboardingFlow
+              questions={ONBOARDING_QUESTIONS_1}
+              onComplete={(a) => {
+                setMidAnswers(a);
+                setStage('permCheckpoint1');
+              }}
+              onAccountSignedIn={(account) => patch({ account })}
+            />
+          )}
+
+          {/* First permission checkpoint — dropped mid-onboarding instead of
+              bundling all four asks into one screen at the end. Display-over-
+              apps + Screen-time are asked here specifically so real usage
+              data is available for the rest of onboarding and for
+              PostOnboardingFlow's projections. */}
+          {stage === 'permCheckpoint1' && (
+            <PermissionCheckpointScreen
+              heading="Quick permission check before we keep going."
+              items={[
+                {
+                  key: 'overlay',
+                  title: 'Display over other apps',
+                  desc: 'So the app can gently help you pause before opening distracting apps.',
+                  granted: ck1DisplayOverApps,
+                  onRequest: openOverlaySettings,
+                },
+                {
+                  key: 'usage',
+                  title: 'Screen time',
+                  desc: "Lets the app read your real screen time instead of asking you to guess it.",
+                  granted: ck1ScreenTimeAccess,
+                  onRequest: openUsageAccessSettings,
+                },
+              ]}
+              checkAll={() => {
+                if (Platform.OS !== 'android') return;
+                setCk1DisplayOverApps(canDrawOverlays());
+                checkUsageAccessPermission().then(setCk1ScreenTimeAccess);
+              }}
+              onContinue={() => setStage('onboarding2')}
+            />
+          )}
+
+          {stage === 'onboarding2' && (
+            <OnboardingFlow
+              questions={ONBOARDING_QUESTIONS_2}
+              initialAnswers={midAnswers}
               onComplete={(a) => {
                 setAnswers(a);
                 setStage('momentum');
               }}
-              onAccountSignedIn={(account) => patch({ account })}
             />
           )}
 
