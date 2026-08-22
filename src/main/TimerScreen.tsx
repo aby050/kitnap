@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Icon from '../ui/Icon';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 
 const { width } = Dimensions.get('window');
@@ -253,13 +254,13 @@ export default function TimerScreen({
           onPress={() => setShowCancelConfirm(true)}
           hitSlop={10}
         >
-          <Text style={styles.lockedCornerIcon}>✕</Text>
+          <Icon name="close" size={15} color="rgba(255,255,255,0.7)" />
         </TouchableOpacity>
 
         <View style={styles.lockedCornerRight}>
           {onOpenShield && (
             <TouchableOpacity style={styles.lockedShieldBtn} activeOpacity={0.7} onPress={onOpenShield} hitSlop={10}>
-              <Text style={styles.lockedShieldIcon}>🛡</Text>
+              <Icon name="shield" size={16} color="#ffffff" />
             </TouchableOpacity>
           )}
           {onOpenEssentials && (
@@ -405,7 +406,7 @@ export default function TimerScreen({
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Select Apps to Block</Text>
                   <TouchableOpacity onPress={handleCancelStart} style={styles.modalCloseBtn} hitSlop={10}>
-                    <Text style={styles.modalCloseIcon}>✕</Text>
+                    <Icon name="close" size={16} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
 

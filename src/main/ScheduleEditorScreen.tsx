@@ -5,6 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { Schedule } from '../data/store';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
 /** Rules were display-only before this — this is where you actually add or
  *  edit a recurring block window. Schedules are persisted by the caller, so
@@ -132,7 +133,7 @@ export default function ScheduleEditorScreen({
               </Text>
             </Pressable>
             <Pressable onPress={() => remove(s.id)} style={styles.removeBtn} hitSlop={8}>
-              <Text style={styles.removeIcon}>✕</Text>
+              <Icon name="close" size={12} color={colors.textDim} />
             </Pressable>
           </Animated.View>
         ))}

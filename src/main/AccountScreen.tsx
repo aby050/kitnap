@@ -6,6 +6,7 @@ import { GradientButton } from '../components/ui';
 import LoginScreen from './LoginScreen';
 import { Account } from '../data/store';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
 const METHOD_LABEL: Record<Account['method'], string> = {
   apple: 'Apple',
@@ -94,7 +95,9 @@ export default function AccountScreen({
         )}
 
         <View style={styles.syncCard}>
-          <Text style={styles.syncGlyph}>🔒</Text>
+          <View style={{ marginBottom: 8 }}>
+            <Icon name="lock" size={20} color={colors.text} strokeWidth={1.8} />
+          </View>
           <Text style={styles.syncTitle}>Cloud sync — coming soon</Text>
           <Text style={styles.syncBody}>
             Signing in only saves an identity on this device — your progress still lives here, not on a

@@ -6,6 +6,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { getInstalledApps } from 'device-permissions';
 import { GradientButton } from '../components/ui';
 import { colors } from '../theme';
+import Icon from '../ui/Icon';
 
 type Entry = { id: string; name: string; tint: string; group?: string; expandable?: boolean };
 
@@ -345,7 +346,8 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Title Header */}
       <Text style={styles.hint}>
-        Use <Text style={styles.hintIconHighlight}>🔍</Text> Search or tap <Text style={styles.hintIconHighlight}>›</Text> to select apps/websites
+        Use <Text style={styles.hintIconHighlight}>Search</Text> or tap{' '}
+        <Text style={styles.hintIconHighlight}>›</Text> to select apps/websites
       </Text>
 
       {/* Main card list */}
@@ -366,9 +368,7 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
                   style={styles.radioContainer}
                 >
                   <View style={[styles.radio, isSelected && styles.radioOn]}>
-                    {isSelected ? (
-                      <Text style={styles.radioTick}>✓</Text>
-                    ) : null}
+                    {isSelected ? <Icon name="check" size={12} color="#0a1a10" /> : null}
                   </View>
                 </TouchableOpacity>
                 
@@ -397,7 +397,7 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
 
         {/* Search input field inside the card container at bottom */}
         <View style={styles.searchWrap}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Icon name="search" size={14} color="rgba(255,255,255,0.4)" />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -405,7 +405,7 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
             placeholderTextColor="rgba(255,255,255,0.3)"
             style={styles.searchInput}
           />
-          <Text style={styles.micIcon}>🎙</Text>
+          <Icon name="mic" size={14} color="rgba(255,255,255,0.4)" />
         </View>
       </Animated.View>
 
