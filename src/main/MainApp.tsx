@@ -200,7 +200,6 @@ export default function MainApp({
 
   const theme = getTheme(activeThemeKey);
   const intensity = getIntensity(activeIntensityKey);
-  const ladderActive = unlockNumber >= intensity.ladderStartsAt;
   const isBedtime = isWithinBedtime(new Date(), persisted.bedtime ?? DEFAULT_BEDTIME);
 
   // Real Home-screen figures, replacing what used to be hardcoded copy.
@@ -291,7 +290,6 @@ export default function MainApp({
         theme={theme}
         goal={goal}
         unlockNumber={unlockNumber}
-        ladderActive={ladderActive}
         isBedtime={isBedtime}
         onNotNow={() => {
           // Closing without unlocking is what actually credits the world.
@@ -302,7 +300,7 @@ export default function MainApp({
           ]);
           setBlock(null);
         }}
-        onNeedIt={() => setBlock(ladderActive ? 'gate' : 'grant')}
+        onNeedIt={() => setBlock('gate')}
         onEmergency={() => {
           setGrantIsEmergency(true);
           setGrantExpiresAt(Date.now() + 15 * 60000);
@@ -315,16 +313,24 @@ export default function MainApp({
   if (block === 'gate') {
     return (
       <GateScreen
-        unlockNumber={unlockNumber}
         intensity={intensity}
         futureSelfMessage={futureSelf}
-        goalLine={goal.line}
         healthLimited={!!persisted.onboardingAnswers?.healthLimit?.value}
-        onReflection={(prompt, text) => setPendingReflection({ prompt, text })}
-        pastReflections={gateReflections}
+        tokenBalance={emergencyTokens}
+        onSkipWithToken={() => {
+          const nextTokens = Math.max(0, emergencyTokens - 1);
+          setEmergencyTokens(nextTokens);
+          onPatch({ emergencyTokens: nextTokens });
+          if (Platform.OS === 'ios' && hasBlockedSelection()) grantTemporaryAccess(intensity.grantMinutes);
+          setGrantMinutes(intensity.grantMinutes);
+          setGrantIsEmergency(false);
+          setGrantExpiresAt(Date.now() + intensity.grantMinutes * 60000);
+          setUnlockNumber((n) => n + 1);
+          applyProgress([{ type: 'hardUnlock' }]);
+          setBlock('grant');
+        }}
         onGranted={(m) => {
           if (Platform.OS === 'ios' && hasBlockedSelection()) grantTemporaryAccess(m);
-          commitReflection(true);
           setGrantMinutes(m);
           setGrantIsEmergency(false);
           setGrantExpiresAt(Date.now() + m * 60000);
@@ -333,7 +339,6 @@ export default function MainApp({
           setBlock('grant');
         }}
         onAbandoned={() => {
-          commitReflection(false);
           setUnlockNumber((n) => n + 1);
           applyProgress([{ type: 'lockSession' }, { type: 'blocked' }]);
           setBlock(null);

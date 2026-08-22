@@ -87,53 +87,39 @@ export const THEMES: AppTheme[] = [
 
 export const getTheme = (key: ThemeKey) => THEMES.find((t) => t.key === key) ?? THEMES[0];
 
-export type IntensityKey = 'gentle' | 'steady' | 'strict';
+export type IntensityKey = 'steady' | 'strict';
 
 export type Intensity = {
   key: IntensityKey;
   name: string;
-  /** Unlock number at which the friction ladder begins. */
-  ladderStartsAt: number;
-  maxQuestions: number;
   grantMinutes: number;
   settingsDelay: string;
   dailyCap: string;
-  /** What buildGate()/buildFinalChallenge() in gateQuestions.ts actually
-   *  draw from for this tier — kept here as a single source of truth so the
-   *  Intensity screen can show it honestly instead of drifting out of sync. */
+  /** 'quiz' = math/quiz/breathing rotation, 'activity' = physical movement
+   *  (or a 'quiz'-style fallback if the user flagged a health limitation).
+   *  Single source of truth for gateQuestions.ts's pickChallenge(). */
+  challengeKind: 'quiz' | 'activity';
   challengeTypes: string;
 };
 
 export const INTENSITIES: Intensity[] = [
   {
-    key: 'gentle',
-    name: 'Gentle',
-    ladderStartsAt: 4,
-    maxQuestions: 3,
-    grantMinutes: 15,
-    settingsDelay: 'Instant',
-    dailyCap: 'None',
-    challengeTypes: 'Tap a reason · short wait · breathing',
-  },
-  {
     key: 'steady',
     name: 'Steady',
-    ladderStartsAt: 2,
-    maxQuestions: 5,
     grantMinutes: 5,
     settingsDelay: '1 hour delay',
     dailyCap: 'Soft warning',
-    challengeTypes: 'Tap · type a reason · short wait · breathing',
+    challengeKind: 'quiz',
+    challengeTypes: 'A quick math problem, quiz question, or breathing pause — every unlock',
   },
   {
     key: 'strict',
     name: 'Strict',
-    ladderStartsAt: 1,
-    maxQuestions: 5,
     grantMinutes: 3,
     settingsDelay: '24 hour delay',
     dailyCap: 'Hard stop',
-    challengeTypes: 'All of Steady, plus a final math/quiz or physical challenge (push-ups, squats)',
+    challengeKind: 'activity',
+    challengeTypes: 'Physical movement (push-ups, squats) — every unlock',
   },
 ];
 

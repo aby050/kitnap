@@ -12,8 +12,6 @@ type Props = {
   theme: AppTheme;
   goal: GoalData;
   unlockNumber: number;
-  /** Shown only once the ladder has started, so the user learns its shape. */
-  ladderActive: boolean;
   isBedtime?: boolean;
   onNotNow: () => void;
   onNeedIt: () => void;
@@ -26,7 +24,6 @@ export default function ShieldScreen({
   theme,
   goal,
   unlockNumber,
-  ladderActive,
   isBedtime = false,
   onNotNow,
   onNeedIt,
@@ -70,11 +67,9 @@ export default function ShieldScreen({
             {line}
           </Animated.Text>
 
-          {ladderActive && (
-            <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.ladderPill}>
-              <Text style={styles.ladderText}>Unlock #{unlockNumber} today</Text>
-            </Animated.View>
-          )}
+          <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.ladderPill}>
+            <Text style={styles.ladderText}>Unlock #{unlockNumber} today</Text>
+          </Animated.View>
         </View>
 
         <View style={styles.actions}>

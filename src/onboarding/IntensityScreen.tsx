@@ -10,9 +10,7 @@ import { colors } from '../theme';
 const { width } = Dimensions.get('window');
 
 const ROWS: { label: string; get: (i: (typeof INTENSITIES)[number]) => string }[] = [
-  { label: 'Friction starts at', get: (i) => `Unlock #${i.ladderStartsAt}` },
-  { label: 'Most questions', get: (i) => `${i.maxQuestions}` },
-  { label: 'Challenge types', get: (i) => i.challengeTypes },
+  { label: 'Challenge', get: (i) => i.challengeTypes },
   { label: 'An unlock grants', get: (i) => `${i.grantMinutes} min` },
   { label: 'Loosening a rule', get: (i) => i.settingsDelay },
   { label: 'Daily cap', get: (i) => i.dailyCap },
@@ -57,8 +55,8 @@ export default function IntensityScreen({
           How hard should this push back?
         </Animated.Text>
         <Text style={styles.sub}>
-          Friction grows with how much you've already used today — never with the clock. Your first unlock is
-          always cheap.
+          Every unlock takes the same real challenge — no free early opens. If you'd rather not, an emergency
+          token skips it instantly.
         </Text>
 
         {/* Segmented Row Selector */}
