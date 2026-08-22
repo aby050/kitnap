@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Dimensions } from 'react-native';
 import Animated, {
   FadeIn,
-  FadeOut,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -57,7 +56,7 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
 
   return (
     <Pressable style={styles.container} onPress={advance}>
-      <Animated.View key={index} entering={FadeIn.duration(500)} exiting={FadeOut.duration(300)} style={styles.slideBody}>
+      <Animated.View key={index} entering={FadeIn.duration(500)} style={styles.slideBody}>
         <Text style={styles.heading}>{slide.text}</Text>
         <View style={styles.orbWrap}>
           <OpalOrb size={160} awake={slide.awake} />

@@ -234,18 +234,27 @@ function StoppingPointArtwork() {
 }
 
 // 7. Setup Intro Artwork
-function SetupIntroArtwork() {
+function SetupIntroArtwork({ lifting }: { lifting: boolean }) {
+  const lift = useSharedValue(0);
+  useEffect(() => {
+    if (lifting) {
+      lift.value = withTiming(-140, { duration: 380 });
+    }
+  }, [lifting]);
+  const liftStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.value }],
+  }));
   return (
     <View style={styles.artworkContainer}>
-      <View style={styles.setupIntroWrap}>
+      <Animated.View style={[styles.setupIntroWrap, liftStyle]}>
         <OpalOrb size={100} awake />
         <View style={styles.pedestal} />
-      </View>
+      </Animated.View>
     </View>
   );
 }
 
-function Artwork({ kind }: { kind: ArtKind }) {
+function Artwork({ kind, lifting }: { kind: ArtKind; lifting: boolean }) {
   switch (kind) {
     case 'waves':
       return <WavesArtwork />;
@@ -260,7 +269,7 @@ function Artwork({ kind }: { kind: ArtKind }) {
     case 'stoppingPoint':
       return <StoppingPointArtwork />;
     case 'setupIntro':
-      return <SetupIntroArtwork />;
+      return <SetupIntroArtwork lifting={lifting} />;
     default:
       return null;
   }
@@ -286,16 +295,22 @@ export default function EducationScreen({
   onContinue: () => void;
 }) {
   const [slideIndex, setSlideIndex] = useState(0);
+  const [lifting, setLifting] = useState(false);
   const scale = useSharedValue(1);
 
   const currentSlide = SLIDES[slideIndex];
+  const isLastSlide = slideIndex === SLIDES.length - 1;
 
   const handleNext = () => {
-    if (slideIndex < SLIDES.length - 1) {
+    if (!isLastSlide) {
       setSlideIndex(slideIndex + 1);
-    } else {
-      onContinue();
+      return;
     }
+    // Last slide's orb lifts off the pedestal before handing off to
+    // OnboardingFlow, whose own mascot slides up into view on mount — the
+    // two together read as one continuous motion across the screen change.
+    setLifting(true);
+    setTimeout(onContinue, 380);
   };
 
   const btnAnimatedStyle = useAnimatedStyle(() => ({
@@ -307,7 +322,7 @@ export default function EducationScreen({
       <View style={styles.body}>
         {/* We key by slideIndex to trigger animations on slide change */}
         <Animated.View key={`art-${slideIndex}`} entering={FadeIn.duration(500)}>
-          <Artwork kind={currentSlide.art} />
+          <Artwork kind={currentSlide.art} lifting={lifting} />
         </Animated.View>
 
         <Animated.Text key={`title-${slideIndex}`} entering={FadeInDown.delay(120).duration(400)} style={styles.title}>

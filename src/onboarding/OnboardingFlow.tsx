@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import OpalOrb from '../components/OpalOrb';
 import QuestionBlock from './QuestionBlock';
 import HistoryItem from './HistoryItem';
@@ -55,12 +56,6 @@ export default function OnboardingFlow({
     }
   };
 
-  const goBack = () => {
-    if (stepIndex === 0) return;
-    setHistory((prev) => prev.filter((h) => h.id !== QUESTIONS[stepIndex - 1].id));
-    setStepIndex(stepIndex - 1);
-  };
-
   if (showLogin) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -84,14 +79,11 @@ export default function OnboardingFlow({
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={goBack} hitSlop={10}>
-          <Text style={styles.backIcon}>‹</Text>
-        </Pressable>
-      </View>
-      <View style={styles.mascotWrap}>
+      {/* Slides up + fades in to continue the motion of the orb from the
+          last EducationScreen slide, which lifts off before this mounts. */}
+      <Animated.View entering={FadeInUp.duration(500)} style={styles.mascotWrap}>
         <OpalOrb size={40} awake />
-      </View>
+      </Animated.View>
 
       <View style={styles.historyWrap}>
         <ScrollView
@@ -118,28 +110,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  header: {
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  backBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    color: colors.text,
-    fontSize: 22,
-    marginTop: -2,
-  },
   mascotWrap: {
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 18,
     marginBottom: 8,
   },
   // Fixed pixel height + explicit clipping — a percentage maxHeight here

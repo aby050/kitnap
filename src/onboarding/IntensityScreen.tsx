@@ -12,6 +12,7 @@ const { width } = Dimensions.get('window');
 const ROWS: { label: string; get: (i: (typeof INTENSITIES)[number]) => string }[] = [
   { label: 'Friction starts at', get: (i) => `Unlock #${i.ladderStartsAt}` },
   { label: 'Most questions', get: (i) => `${i.maxQuestions}` },
+  { label: 'Challenge types', get: (i) => i.challengeTypes },
   { label: 'An unlock grants', get: (i) => `${i.grantMinutes} min` },
   { label: 'Loosening a rule', get: (i) => i.settingsDelay },
   { label: 'Daily cap', get: (i) => i.dailyCap },
@@ -201,26 +202,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
-  row: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingVertical: 16, 
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingVertical: 16,
     paddingHorizontal: 20,
+    gap: 14,
   },
-  rowBorder: { 
-    borderBottomWidth: 1, 
+  rowBorder: {
+    borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
-  rowLabel: { 
-    color: 'rgba(255,255,255,0.5)', 
+  rowLabel: {
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 15,
     fontWeight: '500',
   },
-  rowValue: { 
-    color: '#ffffff', 
-    fontSize: 15.5, 
+  rowValue: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 15.5,
     fontWeight: '700',
+    textAlign: 'right',
   },
   recommendBox: {
     marginTop: 18,
