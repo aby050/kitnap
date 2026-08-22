@@ -213,8 +213,8 @@ export default function BlocksScreen({
 
   // Suggestions to display if they are not already active
   const suggestions = [
-    { name: 'Facebook', packageName: 'com.facebook.katana', mockLimit: '1h 20m Limit' },
-    { name: 'Instagram', packageName: 'com.instagram.android', mockLimit: '1h Limit' },
+    { name: 'Facebook', packageName: 'com.facebook.katana' },
+    { name: 'Instagram', packageName: 'com.instagram.android' },
   ];
 
   return (
@@ -227,11 +227,7 @@ export default function BlocksScreen({
           </Pressable>
           <Text style={styles.headerTitle}>Blocks</Text>
         </View>
-
-        <Pressable style={styles.helpBtn} onPress={() => {}} hitSlop={8}>
-          <Text style={styles.helpIcon}>💬</Text>
-          <Text style={styles.helpText}>Help</Text>
-        </Pressable>
+        {/* Help button removed until there's a real support destination to send it to. */}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
@@ -279,7 +275,7 @@ export default function BlocksScreen({
                 <AppIcon type={sug.packageName} />
                 <View style={styles.appRowMiddle}>
                   <Text style={styles.appName}>{sug.name}</Text>
-                  <Text style={styles.appLimitTextMock}>{sug.mockLimit}</Text>
+                  <Text style={styles.appLimitTextMock}>No limit set</Text>
                 </View>
                 <Pressable
                   onPress={() => openAppConfig(sug.name, sug.packageName)}
@@ -307,9 +303,11 @@ export default function BlocksScreen({
             <View key={app.name} style={styles.solidCardRow}>
               <AppIcon type={app.iconType} />
               <Text style={styles.solidCardName}>{app.name}</Text>
-              <Pressable style={styles.actionBtnAdd} onPress={() => {}}>
-                <Text style={styles.actionTextAdd}>+ Add</Text>
-              </Pressable>
+              {/* Pro feature, not built yet — honest "coming soon" rather
+                  than a button that silently does nothing when tapped. */}
+              <View style={[styles.actionBtnAdd, styles.actionBtnDisabled]}>
+                <Text style={styles.actionTextDisabled}>Soon</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -328,9 +326,9 @@ export default function BlocksScreen({
           <View style={styles.solidCardRow}>
             <AppIcon type="websites" />
             <Text style={styles.solidCardName}>Block Websites</Text>
-            <Pressable style={styles.actionBtnAdd} onPress={() => {}}>
-              <Text style={styles.actionTextAdd}>+ Add</Text>
-            </Pressable>
+            <View style={[styles.actionBtnAdd, styles.actionBtnDisabled]}>
+              <Text style={styles.actionTextDisabled}>Soon</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -677,6 +675,14 @@ const styles = StyleSheet.create({
   },
   actionTextAdd: {
     color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  actionBtnDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  actionTextDisabled: {
+    color: 'rgba(255,255,255,0.35)',
     fontSize: 13,
     fontWeight: '700',
   },
