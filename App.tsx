@@ -242,7 +242,21 @@ export default function App() {
           {stage === 'groundRules' && <GroundRulesScreen onContinue={() => setStage('appPicker')} />}
 
           {stage === 'appPicker' && (
-            <AppPickerScreen onContinue={() => setStage(Platform.OS === 'ios' ? 'iosAppPicker' : 'intensity')} />
+            <AppPickerScreen
+              onContinue={(selected) => {
+                // The picker's `selected` list mixes real Android package
+                // names with cosmetic category/"all" ids used only for its
+                // own bulk-select bookkeeping (and, on the iOS fallback
+                // path, non-package placeholder ids) — only ids that look
+                // like a real package name (contain a dot) are ever
+                // persisted as something the Accessibility Service blocks.
+                if (Platform.OS === 'android') {
+                  const packages = selected.filter((id) => id.includes('.'));
+                  patch({ blockedPackages: packages });
+                }
+                setStage(Platform.OS === 'ios' ? 'iosAppPicker' : 'intensity');
+              }}
+            />
           )}
 
           {stage === 'iosAppPicker' && <IOSAppPickerScreen onContinue={() => setStage('intensity')} />}
