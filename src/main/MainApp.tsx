@@ -9,6 +9,7 @@ import ProfileScreen from './ProfileScreen';
 import MilestonesScreen from './MilestonesScreen';
 import SettingsScreen from './SettingsScreen';
 import TimerScreen from './TimerScreen';
+import EmergencyTokensScreen from './EmergencyTokensScreen';
 import ReflectionScreen from './ReflectionScreen';
 import EssentialsScreen from './EssentialsScreen';
 // World feature — deprioritized per product decision (Opal-style apps don't
@@ -77,7 +78,8 @@ type Overlay =
   | 'blockedApps'
   | 'difficulty'
   | 'weeklyInsight'
-  | 'blocks';
+  | 'blocks'
+  | 'emergencyTokens';
 type Block = null | 'shield' | 'gate' | 'grant' | 'emergency';
 type TimerPreset = { minutes: number; label: string; autoStart: boolean };
 
@@ -143,6 +145,7 @@ export default function MainApp({
   const [schedules, setSchedules] = useState(persisted.schedules);
   const [gateReflections, setGateReflections] = useState(persisted.gateReflections);
   const [appLimits, setAppLimits] = useState<AppLimit[]>(persisted.appLimits ?? []);
+  const [emergencyTokens, setEmergencyTokens] = useState(persisted.emergencyTokens ?? 2);
   // Held until the gate resolves, so we can record whether they actually
   // went through with the unlock alongside what they wrote.
   const [pendingReflection, setPendingReflection] = useState<{ prompt: string; text: string } | null>(null);
@@ -417,6 +420,13 @@ export default function MainApp({
           onBack={() => setOverlay(null)}
         />
       );
+    if (overlay === 'emergencyTokens')
+      return (
+        <EmergencyTokensScreen
+          tokenBalance={emergencyTokens}
+          onBack={() => setOverlay(null)}
+        />
+      );
     if (overlay === 'difficulty')
       return (
         <IntensityScreen
@@ -637,6 +647,14 @@ export default function MainApp({
                 setBlockedPackagesState(next);
                 onPatch({ blockedPackages: next });
               }}
+              tokenBalance={emergencyTokens}
+              onSpendTokenToCancel={() => {
+                const next = Math.max(0, emergencyTokens - 1);
+                setEmergencyTokens(next);
+                onPatch({ emergencyTokens: next });
+              }}
+              onOpenShield={() => setOverlay('blockedApps')}
+              onOpenTokenInfo={() => setOverlay('emergencyTokens')}
             />
           )}
         </Animated.View>

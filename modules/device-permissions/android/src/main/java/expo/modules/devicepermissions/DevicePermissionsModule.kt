@@ -1,8 +1,10 @@
 package expo.modules.devicepermissions
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -84,6 +86,25 @@ class DevicePermissionsModule : Module() {
       val ctx = appContext.reactContext ?: return@Function
       val parsed = runCatching { MonitoringLevel.valueOf(level.uppercase()) }.getOrDefault(MonitoringLevel.BALANCED)
       MonitoringConfigStore.set(ctx, parsed)
+    }
+
+    // "Battery optimization" is Android's own system that can pause a
+    // background app's work to save power — including our Accessibility
+    // Service, which would silently stop enforcing an active session.
+    // Exempting the app is what "Uninterrupted sessions" actually grants.
+    Function("isIgnoringBatteryOptimizations") {
+      val ctx = appContext.reactContext ?: return@Function false
+      val pm = ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager
+      pm?.isIgnoringBatteryOptimizations(ctx.packageName) ?: false
+    }
+
+    Function("openBatteryOptimizationSettings") {
+      val ctx = appContext.reactContext ?: return@Function
+      val intent = Intent(
+        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+        Uri.parse("package:${ctx.packageName}"),
+      ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      ctx.startActivity(intent)
     }
 
     Function("getInstalledApps") {

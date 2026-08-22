@@ -15,8 +15,10 @@ import { colors } from '../theme';
 import {
   canDrawOverlays,
   isAccessibilityServiceEnabled,
+  isIgnoringBatteryOptimizations,
   isNotificationListenerEnabled,
   openAccessibilitySettings,
+  openBatteryOptimizationSettings,
   openNotificationListenerSettings,
   openOverlaySettings,
 } from 'device-permissions';
@@ -84,6 +86,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
   const [screenTimeAccess, setScreenTimeAccess] = useState(false);
   const [accessibilityAccess, setAccessibilityAccess] = useState(false);
   const [notificationAccess, setNotificationAccess] = useState(false);
+  const [batteryUnrestricted, setBatteryUnrestricted] = useState(false);
   const [removedApps, setRemovedApps] = useState<string[]>([]);
   const [notifSub, setNotifSub] = useState(0);
   const [realHours, setRealHours] = useState<number | null>(null);
@@ -97,6 +100,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
     setDisplayOverApps(canDrawOverlays());
     setAccessibilityAccess(isAccessibilityServiceEnabled());
     setNotificationAccess(isNotificationListenerEnabled());
+    setBatteryUnrestricted(isIgnoringBatteryOptimizations());
     const hasUsageAccess = await checkUsageAccessPermission();
     setScreenTimeAccess(hasUsageAccess);
   }, []);
@@ -187,7 +191,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
           <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
             <Text style={styles.heading}>
               Almost set{name ? `, ${name}` : ''}.{'\n\n'}
-              <Text style={styles.headingBold}>Two more permissions and I can start actually helping.</Text>
+              <Text style={styles.headingBold}>A few more permissions and I can start actually helping.</Text>
             </Text>
 
             <View style={{ height: 30 }} />
@@ -206,6 +210,14 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
               value={notificationAccess}
               onChange={() => {
                 if (!notificationAccess) openNotificationListenerSettings();
+              }}
+            />
+            <PermissionRow
+              title="Uninterrupted sessions"
+              desc="Stops Android's battery saver from pausing the block mid-session."
+              value={batteryUnrestricted}
+              onChange={() => {
+                if (!batteryUnrestricted) openBatteryOptimizationSettings();
               }}
             />
 
