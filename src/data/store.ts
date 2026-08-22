@@ -36,6 +36,11 @@ export type PersistedState = {
   gateReflections: GateReflection[];
   schedules: Schedule[];
   appLimits?: AppLimit[];
+  /** Emergency tokens — every user starts with 2 free, spent one at a time
+   *  to end a locked focus session early. Never taken away, never expire;
+   *  more can only be bought, never earned or reset, so the free 2 stay
+   *  meaningfully free rather than a bait-and-switch trial. */
+  emergencyTokens: number;
 };
 
 export type AppLimit = {
@@ -110,6 +115,7 @@ export const DEFAULT_STATE: PersistedState = {
   gateReflections: [],
   schedules: DEFAULT_SCHEDULES,
   appLimits: [],
+  emergencyTokens: 2,
 };
 
 export async function loadState(): Promise<PersistedState> {

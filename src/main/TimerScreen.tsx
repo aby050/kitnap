@@ -52,6 +52,7 @@ export default function TimerScreen({
   onOpenShield,
   tokenBalance = 0,
   onSpendTokenToCancel,
+  onOpenTokenInfo,
   blockedPackages = [],
   onUpdateBlockedPackages,
 }: {
@@ -64,6 +65,8 @@ export default function TimerScreen({
   onFocusComplete?: (minutes: number) => void;
   tokenBalance?: number;
   onSpendTokenToCancel?: () => void;
+  /** Opens the "what are emergency tokens" explainer + store screen. */
+  onOpenTokenInfo?: () => void;
   blockedPackages?: string[];
   onUpdateBlockedPackages?: (packages: string[]) => void;
 }) {
@@ -307,6 +310,17 @@ export default function TimerScreen({
               <TouchableOpacity style={styles.confirmKeepBtn} activeOpacity={0.8} onPress={() => setShowCancelConfirm(false)}>
                 <Text style={styles.confirmKeepText}>Keep going</Text>
               </TouchableOpacity>
+              {onOpenTokenInfo && (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setShowCancelConfirm(false);
+                    onOpenTokenInfo();
+                  }}
+                >
+                  <Text style={styles.confirmInfoLink}>What are emergency tokens?</Text>
+                </TouchableOpacity>
+              )}
             </Animated.View>
           </View>
         </Modal>
@@ -371,6 +385,19 @@ export default function TimerScreen({
             <View style={{ flex: 1 }}>
               <Text style={styles.essentialsTitle}>Essentials &amp; emergency access</Text>
               <Text style={styles.essentialsSub}>Never blocked. Never charged.</Text>
+            </View>
+            <Text style={styles.essentialsChevron}>›</Text>
+          </TouchableOpacity>
+        )}
+
+        {onOpenTokenInfo && (
+          <TouchableOpacity style={styles.tokenRow} activeOpacity={0.8} onPress={onOpenTokenInfo}>
+            <View style={styles.tokenBadge}>
+              <Text style={styles.tokenBadgeText}>{tokenBalance}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.essentialsTitle}>Emergency tokens</Text>
+              <Text style={styles.essentialsSub}>Spend one to end a locked session early.</Text>
             </View>
             <Text style={styles.essentialsChevron}>›</Text>
           </TouchableOpacity>
@@ -925,6 +952,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     marginTop: 14,
   },
+  tokenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginTop: 10,
+  },
+  tokenBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: ORANGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tokenBadgeText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
   sosBadge: {
     width: 32,
     height: 32,
@@ -1086,6 +1136,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontSize: 15,
     fontWeight: '600',
+  },
+  confirmInfoLink: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12.5,
+    fontWeight: '600',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    marginTop: 4,
   },
 
   /* ── App Select Modal Styles ── */

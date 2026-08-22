@@ -27,7 +27,8 @@
         "android.permission.CAMERA",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-        "android.permission.QUERY_ALL_PACKAGES"
+        "android.permission.QUERY_ALL_PACKAGES",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ],
       "package": "com.abhay050.wend"
     },

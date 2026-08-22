@@ -9,6 +9,8 @@ type Native = {
   openNotificationListenerSettings(): void;
   setBlockedPackages(packages: string[]): void;
   setMonitoringLevel(level: string): void;
+  isIgnoringBatteryOptimizations(): boolean;
+  openBatteryOptimizationSettings(): void;
 };
 
 export type MonitoringLevel = 'gentle' | 'balanced' | 'strict';
@@ -34,6 +36,9 @@ export const openAccessibilitySettings = () => native?.openAccessibilitySettings
 
 export const isNotificationListenerEnabled = () => native?.isNotificationListenerEnabled() ?? false;
 export const openNotificationListenerSettings = () => native?.openNotificationListenerSettings();
+
+export const isIgnoringBatteryOptimizations = () => native?.isIgnoringBatteryOptimizations() ?? false;
+export const openBatteryOptimizationSettings = () => native?.openBatteryOptimizationSettings();
 
 export const setBlockedPackages = (packages: string[]) => native?.setBlockedPackages(packages);
 
