@@ -40,12 +40,6 @@ export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: (
         <Feature icon="🗓" title="Own your time." desc="And fill your days with more intention." />
         <Feature icon="👥" title="Be fully present." desc="Because life isn't happening on your screen." />
 
-        <View style={{ height: 10 }} />
-        <View style={styles.reviewRow}>
-          <Text style={styles.stars}>★★★★★</Text>
-          <Text style={styles.reviewText}>150k+ reviews · 8M users</Text>
-        </View>
-
         <View style={{ height: 22 }} />
 
         <View>

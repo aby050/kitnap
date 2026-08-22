@@ -68,37 +68,9 @@ export default function SettingsScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(400)}>
-          <Text style={styles.planTitle}>You're on a Free Plan</Text>
-          <Text style={styles.planSub}>
-            Upgrade to focus better with <Text style={styles.planAccent}>⚡ Pro</Text>
-          </Text>
+        {/* Pro upsell card — hidden while the paywall is hidden. */}
 
-          <View style={styles.proCard}>
-            <LinearGradient
-              colors={['rgba(60,90,70,0.35)', 'rgba(0,0,0,0)']}
-              start={{ x: 0.2, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            {PRO_FEATURES.map((f) => (
-              <View key={f.title} style={styles.proRow}>
-                <Text style={styles.proIcon}>{f.icon}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.proTitle}>{f.title}</Text>
-                  {f.sub ? <Text style={styles.proSub}>{f.sub}</Text> : null}
-                </View>
-              </View>
-            ))}
-            <View style={{ height: 8 }} />
-            <GradientButton label="Try for ₹1,149" onPress={() => {}} />
-          </View>
-        </Animated.View>
-
-        <GroupLabel>Account</GroupLabel>
-        <Group>
-          <SettingRow icon="👤" title="My Account" value={accountLabel ?? 'Not signed in'} onPress={onOpenAccount} last />
-        </Group>
+        {/* Account / sign-in row — login & signup disabled for now. */}
 
         <GroupLabel>Personalize</GroupLabel>
         <Group>

@@ -38,9 +38,11 @@ export default function OnboardingFlow({
       setHistory((prev) => [...prev, { id: question.id, prompt: question.prompt, label }]);
     }
 
-    if (question.id === 'returning' && value === 'Yes, sign in') {
-      setShowLogin(true);
-    }
+    // Login/signup disabled for now — "Yes, sign in" just continues like any
+    // other answer instead of opening LoginScreen.
+    // if (question.id === 'returning' && value === 'Yes, sign in') {
+    //   setShowLogin(true);
+    // }
 
     requestAnimationFrame(() => {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
@@ -91,16 +93,18 @@ export default function OnboardingFlow({
         <OpalOrb size={40} awake />
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.historyArea}
-        contentContainerStyle={styles.historyContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {history.map((h) => (
-          <HistoryItem key={h.id} prompt={h.prompt} label={h.label} />
-        ))}
-      </ScrollView>
+      <View style={styles.historyWrap}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.historyArea}
+          contentContainerStyle={styles.historyContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {history.map((h) => (
+            <HistoryItem key={h.id} prompt={h.prompt} label={h.label} />
+          ))}
+        </ScrollView>
+      </View>
 
       <View style={styles.currentArea}>
         <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
@@ -138,8 +142,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
   },
+  // Fixed pixel height + explicit clipping — a percentage maxHeight here
+  // silently fails to clip on React Native Web (it needs every ancestor up
+  // the tree to have a definite, non-auto height to resolve against), which
+  // let old answered questions bleed straight through into the current one.
+  historyWrap: {
+    maxHeight: 130,
+    overflow: 'hidden',
+  },
   historyArea: {
-    maxHeight: '22%',
+    maxHeight: 130,
   },
   historyContent: {
     paddingHorizontal: 28,

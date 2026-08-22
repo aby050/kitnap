@@ -100,8 +100,6 @@ export default function PaywallScreen({
         <Feature icon="👥" title="Be fully present." desc="Because life isn't happening on your screen." />
 
         <View style={{ height: 24 }} />
-        <Text style={styles.stars}>★★★★★</Text>
-        <Text style={styles.reviews}>150K+ reviews · 8M users</Text>
       </ScrollView>
 
       <View style={styles.ctaWrap}>

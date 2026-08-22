@@ -9,8 +9,8 @@ import Animated, {
   interpolate,
   Easing,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { opalGradient, rockGradient } from '../theme';
+import Svg, { Circle, Defs, G, LinearGradient, Path, Stop } from 'react-native-svg';
+import { colors, opalGradient, rockGradient } from '../theme';
 
 type Props = {
   size?: number;
@@ -21,7 +21,6 @@ type Props = {
 export default function OpalOrb({ size = 160, awake, style }: Props) {
   const progress = useSharedValue(0);
   const pulse = useSharedValue(0);
-  const rotate = useSharedValue(0);
 
   useEffect(() => {
     progress.value = withTiming(awake ? 1 : 0, { duration: 1100, easing: Easing.out(Easing.cubic) });
@@ -36,20 +35,19 @@ export default function OpalOrb({ size = 160, awake, style }: Props) {
       -1,
       false,
     );
-    rotate.value = withRepeat(withTiming(1, { duration: 6000, easing: Easing.linear }), -1, false);
   }, []);
 
-  const orbStyle = useAnimatedStyle(() => {
+  const logoStyle = useAnimatedStyle(() => {
     const scale = interpolate(progress.value, [0, 1], [1, 1.06]) + pulse.value * 0.02 * progress.value;
     return {
       opacity: interpolate(progress.value, [0, 1], [0.9, 1]),
-      transform: [{ scale }, { rotate: `${rotate.value * 360 * progress.value}deg` }],
+      transform: [{ scale }],
     };
   });
 
   const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 1], [0, 0.55]) + pulse.value * 0.15 * progress.value,
-    transform: [{ scale: 1.3 + pulse.value * 0.15 }],
+    opacity: interpolate(progress.value, [0, 1], [0, 0.45]) + pulse.value * 0.12 * progress.value,
+    transform: [{ scale: 1.25 + pulse.value * 0.12 }],
   }));
 
   const grayStyle = useAnimatedStyle(() => ({
@@ -62,6 +60,7 @@ export default function OpalOrb({ size = 160, awake, style }: Props) {
 
   return (
     <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}>
+      {/* Soft Glow behind the logo */}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -70,26 +69,63 @@ export default function OpalOrb({ size = 160, awake, style }: Props) {
             borderRadius: size,
             backgroundColor: '#7dd8ff',
             shadowColor: '#7dd8ff',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.5,
+            shadowRadius: 20,
           },
           glowStyle,
         ]}
       />
-      <Animated.View style={[{ width: size, height: size, borderRadius: size, overflow: 'hidden' }, orbStyle]}>
+
+      <Animated.View style={[{ width: size, height: size, position: 'relative' }, logoStyle]}>
+        {/* Gray/Dull Logo */}
         <Animated.View style={[StyleSheet.absoluteFill, grayStyle]}>
-          <LinearGradient
-            colors={rockGradient}
-            start={{ x: 0.3, y: 0.2 }}
-            end={{ x: 0.8, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+          <Svg width={size} height={size} viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="rockGrad" x1="0" y1="0" x2="1" y2="1">
+                {rockGradient.map((color, idx) => (
+                  <Stop
+                    key={idx}
+                    offset={`${(idx / (rockGradient.length - 1)) * 100}%`}
+                    stopColor={color}
+                  />
+                ))}
+              </LinearGradient>
+            </Defs>
+            <G fill="none" stroke="url(#rockGrad)" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M 26 29 L 41 71 L 56 32 L 71 71" />
+            </G>
+            <Circle cx="86" cy="32" r="9.5" fill="url(#rockGrad)" />
+            <Path
+              d="M 88.5 39.5 C 88.5 45.5 85.5 50.5 80.5 53.5 C 78.4 54.7 77.1 52.6 79.1 51.1 C 82.2 48.8 84.2 45.2 84.4 41 Z"
+              fill="url(#rockGrad)"
+            />
+          </Svg>
         </Animated.View>
+
+        {/* Colorful/Glowing Logo */}
         <Animated.View style={[StyleSheet.absoluteFill, colorStyle]}>
-          <LinearGradient
-            colors={opalGradient}
-            start={{ x: 0.1, y: 0.1 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+          <Svg width={size} height={size} viewBox="0 0 100 100">
+            <Defs>
+              <LinearGradient id="opalGrad" x1="0" y1="0" x2="1" y2="1">
+                {opalGradient.map((color, idx) => (
+                  <Stop
+                    key={idx}
+                    offset={`${(idx / (opalGradient.length - 1)) * 100}%`}
+                    stopColor={color}
+                  />
+                ))}
+              </LinearGradient>
+            </Defs>
+            <G fill="none" stroke="url(#opalGrad)" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round">
+              <Path d="M 26 29 L 41 71 L 56 32 L 71 71" />
+            </G>
+            <Circle cx="86" cy="32" r="9.5" fill="url(#opalGrad)" />
+            <Path
+              d="M 88.5 39.5 C 88.5 45.5 85.5 50.5 80.5 53.5 C 78.4 54.7 77.1 52.6 79.1 51.1 C 82.2 48.8 84.2 45.2 84.4 41 Z"
+              fill="url(#opalGrad)"
+            />
+          </Svg>
         </Animated.View>
       </Animated.View>
     </View>
