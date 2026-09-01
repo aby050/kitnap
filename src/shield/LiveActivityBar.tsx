@@ -10,7 +10,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 
 /** iOS can't stop the user leaving our app during a grant window, but a real
  *  build would keep this on-screen via ActivityKit — visible in the Dynamic
@@ -84,8 +84,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
-  dotEmergency: { backgroundColor: '#ff8f6b' },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.accent },
+  dotEmergency: { backgroundColor: palette.danger },
   label: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, fontWeight: '600' },
   time: { color: '#fff', fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },
 });

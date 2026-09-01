@@ -2,9 +2,17 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { colors } from '../theme';
+import Icon from '../ui/Icon';
+import { gradients, palette, radius, space, type } from '../design/tokens';
 
-/** The signature pill button: dark glass body with a soft aurora glow bleeding up from the bottom. */
+/**
+ * Legacy shared components. New screens should assemble from `design/primitives`
+ * instead — these are kept token-aligned so the onboarding flow that still
+ * imports them reads as the same product as the rest of the app.
+ */
+
+/** The signature pill button. `aurora` is the mint primary CTA; `light` a white
+ *  fill; `ghost` a quiet glass action. */
 export function GradientButton({
   label,
   onPress,
@@ -18,6 +26,7 @@ export function GradientButton({
 }) {
   const scale = useSharedValue(1);
   const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const labelColor = variant === 'aurora' ? '#04140c' : variant === 'light' ? '#000000' : palette.text;
 
   return (
     <Animated.View style={[aStyle, style]}>
@@ -28,19 +37,16 @@ export function GradientButton({
         style={styles.btnBase}
       >
         {variant === 'aurora' && (
-          <>
-            <View style={styles.btnDarkFill} />
-            <LinearGradient
-              colors={['rgba(200,255,160,0.0)', 'rgba(180,255,170,0.55)', 'rgba(140,220,255,0.55)']}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1.4 }}
-              style={StyleSheet.absoluteFill}
-            />
-          </>
+          <LinearGradient
+            colors={gradients.accent}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
         )}
         {variant === 'light' && <View style={styles.btnLightFill} />}
         {variant === 'ghost' && <View style={styles.btnGhostFill} />}
-        <Text style={[styles.btnLabel, variant === 'light' && { color: '#000' }]}>{label}</Text>
+        <Text style={[styles.btnLabel, { color: labelColor }]}>{label}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -83,7 +89,9 @@ export function SettingRow({
       </View>
       {value ? <Text style={styles.settingValue}>{value}</Text> : null}
       {right}
-      {showChevron && !right ? <Text style={styles.chevron}>›</Text> : null}
+      {showChevron && !right ? (
+        <Icon name="chevronRight" size={18} color={palette.textQuaternary} strokeWidth={2} />
+      ) : null}
     </Pressable>
   );
 }
@@ -91,32 +99,32 @@ export function SettingRow({
 const styles = StyleSheet.create({
   btnBase: {
     height: 56,
-    borderRadius: 28,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  btnDarkFill: { ...StyleSheet.absoluteFill, backgroundColor: '#1a1a1a' },
   btnLightFill: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255,255,255,0.95)' },
-  btnGhostFill: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255,255,255,0.09)' },
-  btnLabel: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  btnGhostFill: { ...StyleSheet.absoluteFill, backgroundColor: palette.glass },
+  btnLabel: { fontSize: 16.5, fontWeight: '800', letterSpacing: -0.2 },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 24,
-    padding: 16,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: radius.xl,
+    padding: space.base,
   },
-  sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '800', marginBottom: 12 },
+  sectionTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4, marginBottom: space.md },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 15,
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingHorizontal: space.base,
+    gap: space.md,
   },
-  settingRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  settingRowBorder: { borderBottomWidth: 1, borderBottomColor: palette.hairline },
   settingIconWrap: { width: 26, alignItems: 'flex-start', justifyContent: 'center' },
-  settingTitle: { color: colors.text, fontSize: 15.5, fontWeight: '600' },
-  settingSubtitle: { color: colors.textDim, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
-  settingValue: { color: colors.textDim, fontSize: 14 },
-  chevron: { color: colors.textFaint, fontSize: 20 },
+  settingTitle: { color: palette.text, fontSize: 15.5, fontWeight: '600' },
+  settingSubtitle: { color: palette.textSecondary, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
+  settingValue: { color: palette.textSecondary, fontSize: 14 },
 });

@@ -9,14 +9,14 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import OpalOrb from '../components/OpalOrb';
-import { colors } from '../theme';
+import WendOrb from '../components/WendOrb';
+import { palette } from '../design/tokens';
 
 const { height } = Dimensions.get('window');
 
 const SLIDES = [
   {
-    text: 'An Opal only reveals its fire\nto those who slow down\nenough to look.',
+    text: 'Wend only reveals its fire\nto those who slow down\nenough to look.',
     awake: false,
   },
   {
@@ -59,7 +59,7 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
       <Animated.View key={index} entering={FadeIn.duration(500)} style={styles.slideBody}>
         <Text style={styles.heading}>{slide.text}</Text>
         <View style={styles.orbWrap}>
-          <OpalOrb size={160} awake={slide.awake} />
+          <WendOrb size={160} awake={slide.awake} />
         </View>
       </Animated.View>
       <TapHint />
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 36,
   },
   heading: {
-    color: colors.text,
+    color: palette.text,
     fontSize: 26,
     fontWeight: '700',
     textAlign: 'center',
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   tapHint: {
     position: 'absolute',
     bottom: 46,
-    color: colors.textDim,
+    color: palette.textSecondary,
     fontSize: 12,
     letterSpacing: 2,
   },

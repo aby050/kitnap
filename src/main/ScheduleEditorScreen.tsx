@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { Schedule } from '../data/store';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 /** Rules were display-only before this — this is where you actually add or
@@ -59,7 +59,7 @@ export default function ScheduleEditorScreen({
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={() => setEditing(null)} style={styles.circleBtn} hitSlop={10}>
-            <Text style={styles.headerGlyph}>‹</Text>
+            <Icon name="chevronLeft" size={20} color={palette.text} />
           </Pressable>
           <Text style={styles.headerTitle}>{schedules.some((s) => s.id === editing.id) ? 'Edit rule' : 'New rule'}</Text>
           <View style={{ width: 40 }} />
@@ -70,7 +70,7 @@ export default function ScheduleEditorScreen({
             value={draftName}
             onChangeText={setDraftName}
             placeholder="Name — Work Time, Sleep, Family Time…"
-            placeholderTextColor={colors.textFaint}
+            placeholderTextColor={palette.textTertiary}
             style={styles.input}
           />
           <View style={styles.timeRow}>
@@ -78,14 +78,14 @@ export default function ScheduleEditorScreen({
               value={draftStart}
               onChangeText={setDraftStart}
               placeholder="Start — 09:00"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
               style={[styles.input, styles.timeInput]}
             />
             <TextInput
               value={draftEnd}
               onChangeText={setDraftEnd}
               placeholder="End — 17:00"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
               style={[styles.input, styles.timeInput]}
             />
           </View>
@@ -112,7 +112,7 @@ export default function ScheduleEditorScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Schedules</Text>
         <Pressable onPress={startNew} hitSlop={10}>
@@ -133,7 +133,7 @@ export default function ScheduleEditorScreen({
               </Text>
             </Pressable>
             <Pressable onPress={() => remove(s.id)} style={styles.removeBtn} hitSlop={8}>
-              <Icon name="close" size={12} color={colors.textDim} />
+              <Icon name="close" size={12} color={palette.textSecondary} />
             </Pressable>
           </Animated.View>
         ))}
@@ -153,11 +153,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
-  addLink: { color: colors.accent, fontSize: 16, fontWeight: '700' },
+  headerGlyph: { color: palette.text, fontSize: 19 },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  addLink: { color: palette.accent, fontSize: 16, fontWeight: '700' },
   scroll: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 110 },
-  empty: { color: colors.textDim, fontSize: 14.5, lineHeight: 21, textAlign: 'center', marginTop: 40 },
+  empty: { color: palette.textSecondary, fontSize: 14.5, lineHeight: 21, textAlign: 'center', marginTop: 40 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
     padding: 17,
     marginBottom: 10,
   },
-  name: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  meta: { color: colors.textDim, fontSize: 13.5, marginTop: 4 },
+  name: { color: palette.text, fontSize: 16, fontWeight: '700' },
+  meta: { color: palette.textSecondary, fontSize: 13.5, marginTop: 4 },
   removeBtn: {
     width: 30,
     height: 30,
@@ -176,14 +176,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  removeIcon: { color: colors.textDim, fontSize: 13 },
+  removeIcon: { color: palette.textSecondary, fontSize: 13 },
   form: { paddingHorizontal: 18, paddingTop: 20, gap: 12 },
   input: {
     paddingVertical: 15,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    backgroundColor: palette.glass,
+    color: palette.text,
     fontSize: 15.5,
   },
   timeRow: { flexDirection: 'row', gap: 10 },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
   },
-  dayChipActive: { backgroundColor: 'rgba(124,245,176,0.15)', borderColor: colors.accent },
-  dayChipText: { color: colors.textDim, fontSize: 13.5, fontWeight: '600' },
-  dayChipTextActive: { color: colors.accent },
+  dayChipActive: { backgroundColor: 'rgba(111,227,169,0.15)', borderColor: palette.accent },
+  dayChipText: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
+  dayChipTextActive: { color: palette.accent },
 });

@@ -371,5 +371,5 @@ export function getAchievement(id: string): AchievementDef | undefined {
 
 export function shareMessage(def: AchievementDef, extra?: string): string {
   const line = extra ? `${def.shareLine} ${extra}` : def.shareLine;
-  return `🔥 ${def.name}\n${line}\n\n— Focus`;
+  return `${def.name}\n${line}\n\n— Wend`;
 }

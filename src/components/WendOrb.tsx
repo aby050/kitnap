@@ -10,15 +10,15 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, G, LinearGradient, Path, Stop } from 'react-native-svg';
-import { colors, opalGradient, rockGradient } from '../theme';
+import { wendGradient, rockGradient } from '../theme';
 
 type Props = {
   size?: number;
-  awake: boolean; // false = dull rock, true = glowing opal
+  awake: boolean; // false = dull rock, true = glowing wend
   style?: any;
 };
 
-export default function OpalOrb({ size = 160, awake, style }: Props) {
+export default function WendOrb({ size = 160, awake, style }: Props) {
   const progress = useSharedValue(0);
   const pulse = useSharedValue(0);
 
@@ -107,23 +107,23 @@ export default function OpalOrb({ size = 160, awake, style }: Props) {
         <Animated.View style={[StyleSheet.absoluteFill, colorStyle]}>
           <Svg width={size} height={size} viewBox="0 0 100 100">
             <Defs>
-              <LinearGradient id="opalGrad" x1="0" y1="0" x2="1" y2="1">
-                {opalGradient.map((color, idx) => (
+              <LinearGradient id="wendGrad" x1="0" y1="0" x2="1" y2="1">
+                {wendGradient.map((color, idx) => (
                   <Stop
                     key={idx}
-                    offset={`${(idx / (opalGradient.length - 1)) * 100}%`}
+                    offset={`${(idx / (wendGradient.length - 1)) * 100}%`}
                     stopColor={color}
                   />
                 ))}
               </LinearGradient>
             </Defs>
-            <G fill="none" stroke="url(#opalGrad)" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round">
+            <G fill="none" stroke="url(#wendGrad)" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round">
               <Path d="M 26 29 L 41 71 L 56 32 L 71 71" />
             </G>
-            <Circle cx="86" cy="32" r="9.5" fill="url(#opalGrad)" />
+            <Circle cx="86" cy="32" r="9.5" fill="url(#wendGrad)" />
             <Path
               d="M 88.5 39.5 C 88.5 45.5 85.5 50.5 80.5 53.5 C 78.4 54.7 77.1 52.6 79.1 51.1 C 82.2 48.8 84.2 45.2 84.4 41 Z"
-              fill="url(#opalGrad)"
+              fill="url(#wendGrad)"
             />
           </Svg>
         </Animated.View>

@@ -6,7 +6,7 @@ import Svg, { Circle, Path, Rect, Line } from 'react-native-svg';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { THEMES, ThemeKey } from '../data/themes';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 
 const { width } = Dimensions.get('window');
 
@@ -196,9 +196,9 @@ export default function ThemePickerScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
-  heading: { color: colors.text, fontSize: 25, fontWeight: '800', textAlign: 'center', marginTop: 24, paddingHorizontal: 28 },
-  sub: { color: colors.textDim, fontSize: 15, textAlign: 'center', marginTop: 8, paddingHorizontal: 34, lineHeight: 21 },
-  suggestedNote: { color: colors.accent, fontSize: 12.5, fontWeight: '700', textAlign: 'center', marginTop: 8 },
+  heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', marginTop: 24, paddingHorizontal: 28 },
+  sub: { color: palette.textSecondary, fontSize: 15, textAlign: 'center', marginTop: 8, paddingHorizontal: 34, lineHeight: 21 },
+  suggestedNote: { color: palette.accent, fontSize: 12.5, fontWeight: '700', textAlign: 'center', marginTop: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, paddingTop: 20 },
   cell: { width: '50%', padding: 6 },
   card: {
@@ -211,8 +211,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   cardActive: { 
-    borderColor: '#7CF5B0', // glowing green active border outline
-    shadowColor: '#7CF5B0',
+    borderColor: palette.accent, // glowing green active border outline
+    shadowColor: palette.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.7,
     shadowRadius: 10,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
   },
-  previewLabel: { color: colors.textFaint, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' },
-  previewLine: { color: colors.accent, fontSize: 17, fontWeight: '600', textAlign: 'center', marginTop: 8, lineHeight: 24 },
+  previewLabel: { color: palette.textTertiary, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' },
+  previewLine: { color: palette.accent, fontSize: 17, fontWeight: '600', textAlign: 'center', marginTop: 8, lineHeight: 24 },
   ctaWrap: { paddingHorizontal: 22, paddingTop: 16, paddingBottom: 14 },
 });

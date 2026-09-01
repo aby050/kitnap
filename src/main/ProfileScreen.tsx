@@ -2,9 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Path, Rect, Line, Defs, LinearGradient as SvgGradient, Stop, Text as SvgText } from 'react-native-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors } from '../theme';
+import { palette, type as T, space, radius } from '../design/tokens';
+import Icon from '../ui/Icon';
 import {
   ACHIEVEMENTS,
   AchievementDef,
@@ -29,105 +29,91 @@ import {
   weeklyWindows,
 } from '../data/progress';
 import Medal from './profile/Medal';
+import {
+  GemHero,
+  IntensityBars,
+  Sparkline,
+  SegmentBar,
+  GradientMeter,
+  DotProgress,
+} from './profile/viz';
 
 const { width } = Dimensions.get('window');
-const CHART_W = Math.min(330, width - 48);
-const CHART_H = 168;
+const CONTENT_W = width - space.gutter * 2;
 
-function ProfileAvatar() {
+/** The signature headline figure — big tabular numerals with small dim units,
+ *  the way Opal renders "3h 37m". Split so the unit contrast does the work. */
+function HeroDuration({ minutes, color = palette.accent }: { minutes: number; color?: string }) {
+  const safe = Math.max(0, Math.round(minutes));
+  const h = Math.floor(safe / 60);
+  const m = safe % 60;
   return (
-    <View style={styles.avatarContainer}>
-      <Svg width={160} height={160} viewBox="0 0 160 160">
-        <Circle cx="80" cy="80" r="76" stroke="rgba(255,255,255,0.06)" strokeWidth="1" fill="none" />
-        <Circle cx="80" cy="80" r="64" stroke="rgba(255,255,255,0.04)" strokeWidth="1" strokeDasharray="3 3" fill="none" />
-        <Circle cx="80" cy="80" r="54" stroke="rgba(255,255,255,0.03)" strokeWidth="1" fill="none" />
-        <Path d="M 36 100 Q 30 96, 35 90 Q 40 96, 36 100" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 32 84 Q 26 80, 31 74 Q 37 80, 32 84" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 34 68 Q 28 64, 33 58 Q 39 64, 34 68" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 41 54 Q 36 48, 42 43 Q 48 48, 41 54" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 52 44 Q 48 38, 54 34 Q 60 38, 52 44" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 124 100 Q 130 96, 125 90 Q 120 96, 124 100" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 128 84 Q 134 80, 129 74 Q 123 80, 128 84" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 126 68 Q 132 64, 127 58 Q 121 64, 126 68" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 119 54 Q 124 48, 118 43 Q 112 48, 119 54" fill="rgba(255,255,255,0.18)" />
-        <Path d="M 108 44 Q 112 38, 106 34 Q 100 38, 108 44" fill="rgba(255,255,255,0.18)" />
-        <Path
-          d="M 80 44 L 114 53 L 118 92 L 80 112 L 42 92 L 46 53 Z"
-          fill="#0c0d0e"
-          stroke="#7CF5B0"
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-        />
-        <Circle cx="80" cy="71" r="9" fill="#7CF5B0" />
-        <Path d="M 66 94 C 66 84, 94 84, 94 94 Z" fill="#7CF5B0" />
-      </Svg>
+    <View style={styles.heroFigure}>
+      {h > 0 && (
+        <>
+          <Text style={[styles.heroNum, { color }]}>{h}</Text>
+          <Text style={styles.heroUnit}>h</Text>
+        </>
+      )}
+      <Text style={[styles.heroNum, { color }]}>{h > 0 ? String(m).padStart(2, '0') : m}</Text>
+      <Text style={styles.heroUnit}>m</Text>
     </View>
   );
 }
 
-function StatTile({
-  type,
+/** One column of the three-up stat row under the hero. */
+function StatCol({
+  icon,
   value,
   label,
   color,
 }: {
-  type: 'hours' | 'streak' | 'rank' | 'saved';
+  icon: React.ReactNode;
   value: string;
   label: string;
   color: string;
 }) {
-  const icon =
-    type === 'hours' ? (
-      <Path d="M4 2h16M4 26h16M5 2c0 8 6 10 7 12-1 2-7 4-7 12M19 2c0 8-6 10-7 12 1 2 7 4 7 12" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    ) : type === 'streak' ? (
-      <Path d="M12 2c0 0-4.5 4.5-4.5 9c0 2.5 2 4.5 4.5 4.5s4.5-2 4.5-4.5c0-4.5-4.5-9-4.5-9z" stroke={color} strokeWidth={2} />
-    ) : type === 'saved' ? (
-      <>
-        <Circle cx="12" cy="14" r="8" stroke={color} strokeWidth={2} fill="none" />
-        <Path d="M12 10v4l3 2" stroke={color} strokeWidth={2} strokeLinecap="round" />
-      </>
-    ) : (
-      <>
-        <Rect x="3" y="14" width="4" height="11" rx="1" stroke={color} strokeWidth={2} />
-        <Rect x="10" y="6" width="4" height="19" rx="1" stroke={color} strokeWidth={2} />
-        <Rect x="17" y="10" width="4" height="15" rx="1" stroke={color} strokeWidth={2} />
-      </>
-    );
-
   return (
     <View style={styles.statCol}>
-      <View style={styles.statGlowWrap}>
-        <Svg width={30} height={36} viewBox="0 0 24 28" fill="none">
-          {icon}
-        </Svg>
-      </View>
+      <View style={[styles.statIcon, { backgroundColor: color + '22' }]}>{icon}</View>
       <Text style={styles.statValue}>{value}</Text>
-      <Text style={[styles.statLabel, { color }]}>{label}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
 
-function MetricRow({ label, value, hint }: { label: string; value: string; hint?: string }) {
+/** A metric mini-card: eyebrow, big value, and a small inline visualisation. */
+function MetricCard({
+  label,
+  value,
+  sub,
+  children,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <View style={styles.metricRow}>
-      <Text style={styles.metricLabel}>{label}</Text>
+    <View style={styles.metricCard}>
+      <Text style={styles.metricEyebrow}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
+      {sub ? <Text style={styles.metricSub}>{sub}</Text> : null}
+      <View style={styles.metricViz}>{children}</View>
+    </View>
+  );
+}
+
+function DetailRow({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
       <View style={{ alignItems: 'flex-end', flex: 1 }}>
-        <Text style={styles.metricValue}>{value}</Text>
-        {hint ? <Text style={styles.metricHint}>{hint}</Text> : null}
+        <Text style={styles.detailValue}>{value}</Text>
+        {hint ? <Text style={styles.detailHint}>{hint}</Text> : null}
       </View>
     </View>
   );
-}
-
-function chartPath(values: number[]): string {
-  const max = Math.max(1, ...values);
-  return values
-    .map((v, i) => {
-      const x = (i / Math.max(1, values.length - 1)) * (CHART_W - 34);
-      const y = 12 + (1 - v / max) * 132;
-      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(' ');
 }
 
 export default function ProfileScreen({
@@ -185,16 +171,22 @@ export default function ProfileScreen({
   const monthAchievements = earnedThisMonth(progress, windows.monthStart);
   const avgDailyAll = all.focusMinutes / Math.max(1, joinedDays);
 
-  const series = useMemo(() => {
-    const start = range === 'week' ? windows.thisStart : range === 'month' ? windows.monthStart : dateKey(new Date(firstOpenDate));
-    const logs = dailySeries(progress, start > today ? today : start, today);
-    return logs.slice(-Math.max(range === 'week' ? 7 : range === 'month' ? 14 : 21));
-  }, [progress, range, windows.thisStart, windows.monthStart, firstOpenDate, today]);
+  // Streak milestone tiers reached, for the "Best streak" segment indicator.
+  const streakTiers = STREAK_MILESTONES.filter((m) => progress.bestStreak >= m).length;
+  const weekFocusSeries = dailySeries(progress, windows.thisStart, today).map((d) => d.focusMinutes);
 
-  const path = chartPath(series.map((d) => d.focusMinutes));
-  const fill = `${path} L ${CHART_W - 34} 148 L 0 148 Z`;
-  const yMax = Math.max(60, ...series.map((d) => d.focusMinutes));
-  const yLabels = [yMax, yMax * 0.66, yMax * 0.33, 0].map((n) => (n >= 60 ? `${Math.round(n / 60)}h` : `${Math.round(n)}m`));
+  // The intensity chart honours the selected range.
+  const series = useMemo(() => {
+    const days = range === 'week' ? 7 : range === 'month' ? 30 : LONG_RANGE_MONTHS[range] ? LONG_RANGE_MONTHS[range] * 30 : joinedDays;
+    const start = addDays(today, -(Math.min(days, 60) - 1));
+    const clamped = start < dateKey(new Date(firstOpenDate)) ? dateKey(new Date(firstOpenDate)) : start;
+    return dailySeries(progress, clamped > today ? today : clamped, today).slice(-60);
+  }, [progress, range, firstOpenDate, today, joinedDays]);
+
+  const barData = series.map((d) => ({ value: d.focusMinutes, flag: d.hardUnlocks > 0 }));
+  const axisMarks = series
+    .map((d, i) => ({ d, i }))
+    .filter(({ i }) => i === 0 || i === series.length - 1 || i === Math.floor(series.length / 2));
 
   async function shareAchievement(def: AchievementDef) {
     const extra =
@@ -212,8 +204,7 @@ export default function ProfileScreen({
 
   const period = range === 'week' ? week : range === 'month' ? month : { ...all, avgDailyFocus: avgDailyAll, bestFocusDay: month.bestFocusDay, span: joinedDays };
 
-  // Long-range comparison — this N-month block vs the equivalent block right
-  // before it, so "am I improving" has an actual answer past the first month.
+  // Long-range comparison — this N-month block vs the equivalent block before it.
   const longRange = useMemo(() => {
     const months = LONG_RANGE_MONTHS[range];
     if (!months) return null;
@@ -227,247 +218,236 @@ export default function ProfileScreen({
     return { current, previous, months };
   }, [range, progress, today, firstOpenDate]);
 
+  const rangeTitle = range === 'week' ? 'THIS WEEK' : range === 'month' ? 'THIS MONTH' : LONG_RANGE_MONTHS[range] ? `LAST ${LONG_RANGE_MONTHS[range]} MONTHS` : 'ALL TIME';
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
-        </Pressable>
-        <Pressable onPress={onOpenSettings} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>⚙</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.avatarWrap}>
-          <ProfileAvatar />
-          <Text style={styles.username}>{username}</Text>
-          <Text style={styles.betterLine}>Am I getting better?</Text>
-        </Animated.View>
-
-        <View style={styles.statsRow}>
-          <StatTile type="streak" value={String(progress.currentStreak)} label="DAY STREAK" color="#FFD54F" />
-          <StatTile type="hours" value={formatDuration(todayLog.focusMinutes)} label="TODAY FOCUS" color="#7CF5B0" />
-          <StatTile type="rank" value={`${rank.percent}%`} label="GLOBAL" color="#4C6FFF" />
+    <View style={styles.root}>
+      {/* Ambient ground + gem bloom, so the screen has a light source. */}
+      <LinearGradient colors={['#04140D', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
+            <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.headerWordmark}>Wend</Text>
+          <Pressable onPress={onOpenSettings} style={styles.circleBtn} hitSlop={10}>
+            <Icon name="settings" size={19} color={palette.text} strokeWidth={1.8} />
+          </Pressable>
         </View>
 
-        <View style={styles.bestRow}>
-          <Text style={styles.bestLabel}>Best streak {progress.bestStreak} days</Text>
-          <Text style={styles.bestLabel}>Saved {formatDuration(all.savedMinutes)}</Text>
-        </View>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {/* HERO — the focus crystal + today's headline figure */}
+          <Animated.View entering={FadeInDown.duration(420)} style={styles.hero}>
+            <GemHero size={196} />
+            <Text style={styles.username} numberOfLines={1}>{username}</Text>
+            <HeroDuration minutes={todayLog.focusMinutes} />
+            <Text style={styles.heroCaption}>FOCUS TODAY</Text>
+          </Animated.View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>DAY STREAK</Text>
-          <View style={styles.streakHero}>
-            <Text style={styles.flame}>🔥</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.streakNum}>{progress.currentStreak} day{progress.currentStreak === 1 ? '' : 's'}</Text>
-              {streakBroken ? (
-                <Text style={styles.streakSub}>Streak paused. Your best is still {progress.bestStreak} days — pick it back up today.</Text>
-              ) : (
-                <Text style={styles.streakSub}>
-                  Next spark: {streakGoal.next} days · {Math.max(0, streakGoal.next - progress.currentStreak)} to go
-                </Text>
-              )}
-            </View>
+          {/* THREE-UP STAT ROW */}
+          <View style={styles.statRow}>
+            <StatCol
+              icon={<Icon name="flame" size={17} color="#E9AE62" strokeWidth={2} />}
+              value={String(progress.currentStreak)}
+              label="DAY STREAK"
+              color="#E9AE62"
+            />
+            <View style={styles.statDivider} />
+            <StatCol
+              icon={<Icon name="target" size={17} color={palette.accent} strokeWidth={2} />}
+              value={`${rank.percent}%`}
+              label="FOCUS SCORE"
+              color={palette.accent}
+            />
+            <View style={styles.statDivider} />
+            <StatCol
+              icon={<Icon name="hourglass" size={17} color="#8FA9FF" strokeWidth={2} />}
+              value={formatDuration(all.savedMinutes)}
+              label="SAVED"
+              color="#8FA9FF"
+            />
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.milestoneRow}>
-            {STREAK_MILESTONES.map((m) => {
-              const hit = Math.max(progress.currentStreak, progress.bestStreak) >= m;
-              return (
-                <View key={m} style={[styles.milestoneChip, hit && styles.milestoneChipOn]}>
-                  <Text style={[styles.milestoneText, hit && styles.milestoneTextOn]}>{m}</Text>
+
+          {/* INTENSITY CHART */}
+          <Animated.View entering={FadeInDown.delay(80).duration(420)} style={styles.chartCard}>
+            <View style={styles.chartHead}>
+              <View>
+                <Text style={styles.metricEyebrow}>FOCUS RHYTHM</Text>
+                <Text style={styles.chartHeadValue}>{formatDuration(period.focusMinutes)}</Text>
+                <Text style={styles.chartHeadSub}>{rangeTitle.toLowerCase().replace('this ', 'this ')}</Text>
+              </View>
+              <View style={styles.legend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: palette.accent }]} />
+                  <Text style={styles.legendText}>Focus</Text>
                 </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: palette.danger }]} />
+                  <Text style={styles.legendText}>Slip</Text>
+                </View>
+              </View>
+            </View>
+            <IntensityBars data={barData} width={CONTENT_W - space.lg * 2} height={128} style={styles.chart} />
+            <View style={styles.chartAxis}>
+              {axisMarks.map(({ d, i }) => (
+                <Text key={`${d.date}-${i}`} style={styles.axisLabel}>
+                  {weekdayShort(d.date)}
+                </Text>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* RANGE PILLS */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rangeRow}>
+            {(['week', 'month', '3mo', '6mo', '9mo', '12mo', 'all'] as const).map((r) => (
+              <Pressable key={r} onPress={() => setRange(r)} style={[styles.rangePill, range === r && styles.rangePillActive]}>
+                <Text style={[styles.rangeText, range === r && styles.rangeTextActive]}>
+                  {r === 'week' ? 'Week' : r === 'month' ? 'Month' : r === 'all' ? 'All' : r.replace('mo', 'mo')}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {/* METRIC-VIZ GRID */}
+          <View style={styles.grid}>
+            <MetricCard label="THIS WEEK" value={formatDuration(week.focusMinutes)} sub="focus time">
+              <Sparkline values={weekFocusSeries.length ? weekFocusSeries : [0, 0]} width={(CONTENT_W - space.md) / 2 - space.lg * 2} height={38} />
+            </MetricCard>
+            <MetricCard label="FOCUS SCORE" value={`${rank.percent}%`} sub="percentile">
+              <GradientMeter progress={rank.score} colors={['#8FA9FF', palette.accent]} height={8} />
+            </MetricCard>
+            <MetricCard label="BEST STREAK" value={`${progress.bestStreak}d`} sub={`${streakGoal.next}d next milestone`}>
+              <SegmentBar level={Math.min(3, streakTiers)} segments={3} color="#E9AE62" />
+            </MetricCard>
+            <MetricCard label="CONSISTENCY" value={`${week.daysWithFocus}/7`} sub="days active this week">
+              <DotProgress filled={week.daysWithFocus} total={7} />
+            </MetricCard>
+          </View>
+
+          {/* STREAK CARD */}
+          <View style={styles.card}>
+            <Text style={styles.metricEyebrow}>DAY STREAK</Text>
+            <View style={styles.streakHero}>
+              <View style={styles.streakGlyph}>
+                <Icon name="flame" size={28} color="#E9AE62" strokeWidth={1.8} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.streakNum}>{progress.currentStreak} day{progress.currentStreak === 1 ? '' : 's'}</Text>
+                {streakBroken ? (
+                  <Text style={styles.streakSub}>Streak paused. Your best is still {progress.bestStreak} days — pick it back up today.</Text>
+                ) : (
+                  <Text style={styles.streakSub}>
+                    Next spark: {streakGoal.next} days · {Math.max(0, streakGoal.next - progress.currentStreak)} to go
+                  </Text>
+                )}
+              </View>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.milestoneRow}>
+              {STREAK_MILESTONES.map((m) => {
+                const hit = Math.max(progress.currentStreak, progress.bestStreak) >= m;
+                return (
+                  <View key={m} style={[styles.milestoneChip, hit && styles.milestoneChipOn]}>
+                    <Text style={[styles.milestoneText, hit && styles.milestoneTextOn]}>{m}</Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* TIME SAVED */}
+          <View style={styles.card}>
+            <Text style={styles.metricEyebrow}>TIME SAVED</Text>
+            <Text style={styles.savedHero}>You've saved {formatDuration(week.savedMinutes)} this week.</Text>
+            <DetailRow label="Today" value={formatDuration(todayLog.savedMinutes)} />
+            <DetailRow label="This week" value={formatDuration(week.savedMinutes)} hint={formatSignedMinutes(savedDelta) + ' vs last week'} />
+            <DetailRow label="This month" value={formatDuration(month.savedMinutes)} />
+            <DetailRow label="Since starting" value={formatDuration(all.savedMinutes)} />
+            {goalLine ? <Text style={styles.goalHint}>More room for: {goalLine}</Text> : null}
+          </View>
+
+          {/* AVERAGE FOCUS */}
+          <View style={styles.card}>
+            <Text style={styles.metricEyebrow}>AVERAGE FOCUS</Text>
+            <DetailRow label="Today" value={formatDuration(todayLog.focusMinutes)} />
+            <DetailRow
+              label="Compared with yesterday"
+              value={formatSignedMinutes(focusDelta)}
+              hint={focusDelta > 0 ? 'More than yesterday.' : focusDelta < 0 ? 'Today is still counting.' : 'Holding steady.'}
+            />
+            <DetailRow label="Daily average" value={formatDuration(avgDailyAll)} />
+            <DetailRow label="This month" value={formatDuration(month.avgDailyFocus)} hint="avg / day" />
+            <DetailRow label="Since joining" value={formatDuration(all.focusMinutes)} />
+          </View>
+
+          {longRange && (
+            <View style={styles.card}>
+              <Text style={styles.metricEyebrow}>{longRange.months}-MONTH COMPARISON</Text>
+              <Text style={styles.savedHero}>
+                {formatDuration(longRange.current.savedMinutes)} saved this block
+              </Text>
+              <DetailRow
+                label={`vs previous ${longRange.months}mo`}
+                value={formatSignedMinutes(longRange.current.savedMinutes - longRange.previous.savedMinutes)}
+                hint={
+                  longRange.current.savedMinutes >= longRange.previous.savedMinutes
+                    ? "You're saving more than the stretch before this."
+                    : 'The previous stretch was stronger — still real progress.'
+                }
+              />
+              <DetailRow label="Focus this block" value={formatDuration(longRange.current.focusMinutes)} />
+              <DetailRow label="Distractions blocked" value={String(longRange.current.distractionsBlocked)} />
+              <DetailRow label="Hard unlocks" value={String(longRange.current.hardUnlocks)} />
+            </View>
+          )}
+
+          {monthAchievements.length > 0 && (
+            <View style={[styles.card, styles.cardAccent]}>
+              <Text style={[styles.metricEyebrow, { color: palette.accent }]}>EARNED THIS MONTH</Text>
+              <Text style={styles.monthAwards}>{monthAchievements.map((a) => a.name).join(' · ')}</Text>
+            </View>
+          )}
+
+          {/* SECTION LINKS */}
+          {onOpenWeeklyInsight && <LinkRow title="Weekly insight" sub="Your last 7 days" icon="pulse" onPress={onOpenWeeklyInsight} />}
+          {onOpenRealUsage && <LinkRow title="Real device usage" sub="Android screen time" icon="bars" onPress={onOpenRealUsage} />}
+          {onOpenCalendar && <LinkRow title="Calendar" sub="Every day, by colour" icon="calendar" onPress={onOpenCalendar} />}
+          {onOpenProgressPhotos && <LinkRow title="Progress photos" sub="Your weekly check-ins" icon="camera" onPress={onOpenProgressPhotos} />}
+
+          {/* AWARDS RAIL */}
+          <Pressable onPress={onOpenMilestones} style={styles.sectionHead}>
+            <Text style={styles.sectionTitle}>Awards</Text>
+            <View style={styles.sectionLinkRow}>
+              <Text style={styles.sectionLink}>
+                {earnedDefs.length}/{ACHIEVEMENTS.length}
+              </Text>
+              <Icon name="chevronRight" size={14} color={palette.textQuaternary} strokeWidth={2} />
+            </View>
+          </Pressable>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.awardRow}>
+            {ACHIEVEMENTS.slice(0, 8).map((def) => {
+              const earned = earnedIds.has(def.id);
+              const stamp = progress.achievements.find((a) => a.id === def.id);
+              return (
+                <Pressable key={def.id} onPress={() => setShareTarget(def)} style={styles.awardCol}>
+                  <Medal medal={def.medal} locked={!earned} id={def.id} />
+                  <Text style={styles.awardName} numberOfLines={1}>{def.name}</Text>
+                  <Text style={styles.awardSub} numberOfLines={2}>
+                    {earned && stamp ? formatPrettyDate(stamp.earnedAt) : def.statLabel}
+                  </Text>
+                </Pressable>
               );
             })}
           </ScrollView>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>GLOBAL RANKING</Text>
-          <Text style={styles.rankHeadline}>You're doing better than {rank.percent}% of users.</Text>
-          <Text style={styles.rankBody}>
-            This is a percentile — not a public rank. It blends focus time, time saved, streak consistency, successful
-            lock sessions, and distractions blocked. Nobody sees your name.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>AVERAGE FOCUS HOURS</Text>
-          <MetricRow label="Today" value={formatDuration(todayLog.focusMinutes)} />
-          <MetricRow label="Yesterday" value={formatDuration(yesterdayLog.focusMinutes)} />
-          <MetricRow
-            label="Compared with yesterday"
-            value={formatSignedMinutes(focusDelta)}
-            hint={focusDelta > 0 ? 'More protected time than yesterday.' : focusDelta < 0 ? 'Today is still counting.' : 'Holding steady.'}
-          />
-          <MetricRow label="Daily average" value={formatDuration(avgDailyAll)} />
-          <MetricRow label="This week" value={formatDuration(week.avgDailyFocus)} hint="avg / day" />
-          <MetricRow label="This month" value={formatDuration(month.avgDailyFocus)} hint="avg / day" />
-          <MetricRow label="Since joining" value={formatDuration(all.focusMinutes)} />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>TIME SAVED</Text>
-          <Text style={styles.savedHero}>You've saved {formatDuration(week.savedMinutes)} this week.</Text>
-          <MetricRow label="Today" value={formatDuration(todayLog.savedMinutes)} />
-          <MetricRow label="Yesterday" value={formatDuration(yesterdayLog.savedMinutes)} />
-          <MetricRow label="This week" value={formatDuration(week.savedMinutes)} />
-          <MetricRow label="This month" value={formatDuration(month.savedMinutes)} />
-          <MetricRow label="Since starting" value={formatDuration(all.savedMinutes)} />
-          {goalLine ? <Text style={styles.goalHint}>More room for: {goalLine}</Text> : null}
-        </View>
-
-        {longRange && (
-          <View style={styles.card}>
-            <Text style={styles.cardEyebrow}>{longRange.months}-MONTH COMPARISON</Text>
-            <Text style={styles.rankHeadline}>
-              {formatDuration(longRange.current.savedMinutes)} saved this {longRange.months}mo block
-            </Text>
-            <MetricRow
-              label={`vs previous ${longRange.months}mo`}
-              value={formatSignedMinutes(longRange.current.savedMinutes - longRange.previous.savedMinutes)}
-              hint={
-                longRange.current.savedMinutes >= longRange.previous.savedMinutes
-                  ? "You're saving more than the equivalent stretch before this."
-                  : 'The previous stretch was stronger — still real progress either way.'
-              }
-            />
-            <MetricRow label="Focus hours this block" value={formatDuration(longRange.current.focusMinutes)} />
-            <MetricRow
-              label="Focus vs previous block"
-              value={formatSignedMinutes(longRange.current.focusMinutes - longRange.previous.focusMinutes)}
-            />
-            <MetricRow label="Distractions blocked" value={String(longRange.current.distractionsBlocked)} />
-            <MetricRow label="Hard unlocks completed" value={String(longRange.current.hardUnlocks)} />
-          </View>
-        )}
-
-        <View style={styles.card}>
-          <Text style={styles.cardEyebrow}>{range === 'week' ? 'WEEKLY' : range === 'month' ? 'MONTHLY' : LONG_RANGE_MONTHS[range] ? `${LONG_RANGE_MONTHS[range]}-MONTH` : 'ALL-TIME'} PROGRESS</Text>
-          <MetricRow label="Focus hours" value={formatDuration(period.focusMinutes)} />
-          <MetricRow label="Time saved" value={formatDuration(period.savedMinutes)} />
-          <MetricRow label="Avg daily focus" value={formatDuration(period.avgDailyFocus)} />
-          {range === 'week' ? (
-            <>
-              <MetricRow label="Successful lock sessions" value={String(week.lockSessions)} />
-              <MetricRow
-                label="Phone time vs last week"
-                value={formatSignedMinutes(savedDelta)}
-                hint={savedDelta >= 0 ? 'More time kept off distracting apps.' : 'Last week had a stronger save. This week is still open.'}
-              />
-              <MetricRow label="Current streak" value={`${progress.currentStreak} days`} />
-            </>
-          ) : (
-            <>
-              <MetricRow label="Screen-time reduction" value={formatDuration(month.savedMinutes)} />
-              <MetricRow
-                label="Best focus day"
-                value={month.bestFocusDay.focusMinutes > 0 ? `${weekdayShort(month.bestFocusDay.date)} · ${formatDuration(month.bestFocusDay.focusMinutes)}` : '—'}
-              />
-              <MetricRow label="Longest streak" value={`${progress.bestStreak} days`} />
-              <MetricRow
-                label="Milestones this month"
-                value={monthAchievements.length ? monthAchievements.map((a) => a.name).join(', ') : 'None yet'}
-              />
-            </>
-          )}
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rangeRow}>
-          {(['week', 'month', '3mo', '6mo', '9mo', '12mo', 'all'] as const).map((r) => (
-            <Pressable key={r} onPress={() => setRange(r)} style={[styles.rangePill, range === r && styles.rangePillActive]}>
-              <Text style={styles.rangeText}>
-                {r === 'week' ? 'Week' : r === 'month' ? 'Month' : r === 'all' ? 'All Time' : r.replace('mo', ' mo')}
-              </Text>
-            </Pressable>
-          ))}
         </ScrollView>
-
-        <View style={styles.chartWrap}>
-          <Svg width={CHART_W} height={CHART_H}>
-            <Defs>
-              <SvgGradient id="pfill" x1="0" y1="0" x2="0" y2="1">
-                <Stop offset="0" stopColor="#7CF5B0" stopOpacity="0.22" />
-                <Stop offset="1" stopColor="#7CF5B0" stopOpacity="0" />
-              </SvgGradient>
-            </Defs>
-            {[20, 62, 104, 146].map((y) => (
-              <Line key={y} x1="0" y1={y} x2={CHART_W - 34} y2={y} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-            ))}
-            <Path d={fill} fill="url(#pfill)" />
-            <Path d={path} stroke="#7CF5B0" strokeWidth="2.5" fill="none" />
-            {yLabels.map((t, i) => (
-              <SvgText key={t + i} x={CHART_W - 26} y={26 + i * 42} fill="rgba(255,255,255,0.4)" fontSize="12">
-                {t}
-              </SvgText>
-            ))}
-          </Svg>
-          <View style={styles.chartAxis}>
-            {series.filter((_, i) => i === 0 || i === series.length - 1 || i === Math.floor(series.length / 2)).map((d, i) => (
-              <Text key={`${d.date}-${i}`} style={styles.axisLabel}>
-                {weekdayShort(d.date)}
-              </Text>
-            ))}
-          </View>
-        </View>
-
-        {onOpenWeeklyInsight && (
-          <Pressable onPress={onOpenWeeklyInsight} style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Weekly insight</Text>
-            <Text style={styles.sectionLink}>This week ›</Text>
-          </Pressable>
-        )}
-
-        {onOpenRealUsage && (
-          <Pressable onPress={onOpenRealUsage} style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Real device usage</Text>
-            <Text style={styles.sectionLink}>Android ›</Text>
-          </Pressable>
-        )}
-
-        {onOpenCalendar && (
-          <Pressable onPress={onOpenCalendar} style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Calendar</Text>
-            <Text style={styles.sectionLink}>By day ›</Text>
-          </Pressable>
-        )}
-
-        {onOpenProgressPhotos && (
-          <Pressable onPress={onOpenProgressPhotos} style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Progress photos</Text>
-            <Text style={styles.sectionLink}>Weekly ›</Text>
-          </Pressable>
-        )}
-
-        <Pressable onPress={onOpenMilestones} style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>Awards</Text>
-          <Text style={styles.sectionLink}>{earnedDefs.length}/{ACHIEVEMENTS.length} ›</Text>
-        </Pressable>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.awardRow}>
-          {ACHIEVEMENTS.slice(0, 8).map((def) => {
-            const earned = earnedIds.has(def.id);
-            const stamp = progress.achievements.find((a) => a.id === def.id);
-            return (
-              <Pressable key={def.id} onPress={() => setShareTarget(def)} style={styles.awardCol}>
-                <Medal medal={def.medal} locked={!earned} id={def.id} />
-                <Text style={styles.awardName} numberOfLines={1}>{def.name}</Text>
-                <Text style={styles.awardSub} numberOfLines={2}>
-                  {earned && stamp ? formatPrettyDate(stamp.earnedAt) : def.statLabel}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </ScrollView>
+      </SafeAreaView>
 
       <Modal visible={!!shareTarget} transparent animationType="fade" onRequestClose={() => setShareTarget(null)}>
         <Pressable style={styles.modalBg} onPress={() => setShareTarget(null)}>
           <Pressable style={styles.shareCard} onPress={() => {}}>
             {shareTarget && (
               <>
-                <LinearGradient colors={['#1a2430', '#0b0d10']} style={StyleSheet.absoluteFill} />
-                <Text style={styles.shareBrand}>◯ Focus</Text>
+                <LinearGradient colors={['#12241A', '#0B0B0D']} style={StyleSheet.absoluteFill} />
+                <Text style={styles.shareBrand}>Wend</Text>
                 <Medal medal={shareTarget.medal} size={88} locked={!earnedIds.has(shareTarget.id)} id={`share-${shareTarget.id}`} />
                 <Text style={styles.shareName}>{shareTarget.name}</Text>
                 <Text style={styles.shareDesc}>{shareTarget.description}</Text>
@@ -491,106 +471,193 @@ export default function ProfileScreen({
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </View>
+  );
+}
+
+/** A tidy tappable section link, replacing the old text-only rows. */
+function LinkRow({ title, sub, icon, onPress }: { title: string; sub: string; icon: any; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.linkRow}>
+      <View style={styles.linkIcon}>
+        <Icon name={icon} size={19} color={palette.accent} strokeWidth={1.8} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.linkTitle}>{title}</Text>
+        <Text style={styles.linkSub}>{sub}</Text>
+      </View>
+      <Icon name="chevronRight" size={18} color={palette.textQuaternary} strokeWidth={2} />
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10 },
+  root: { flex: 1, backgroundColor: palette.base },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.sm },
+  headerWordmark: { color: palette.text, fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
   circleBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  scroll: { paddingHorizontal: 20, paddingBottom: 120 },
-  avatarWrap: { alignItems: 'center', marginTop: 6 },
-  avatarContainer: { width: 160, height: 160, alignItems: 'center', justifyContent: 'center' },
-  username: { color: colors.text, fontSize: 25, fontWeight: '800', marginTop: 10, letterSpacing: -0.5 },
-  betterLine: { color: colors.textDim, fontSize: 13, marginTop: 6 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 22, width: '100%' },
-  statCol: { alignItems: 'center', width: 100 },
-  statGlowWrap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  statValue: { color: '#ffffff', fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  statLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5, marginTop: 4 },
-  bestRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
-  bestLabel: { color: colors.textDim, fontSize: 12.5, fontWeight: '600' },
-  card: {
-    marginTop: 22,
-    backgroundColor: 'rgba(255,255,255,0.045)',
-    borderRadius: 22,
-    padding: 18,
+  scroll: { paddingHorizontal: space.gutter, paddingBottom: 120 },
+
+  hero: { alignItems: 'center', marginTop: space.xs },
+  username: { color: palette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, marginTop: space.xs },
+  heroFigure: { flexDirection: 'row', alignItems: 'flex-start', marginTop: space.sm },
+  heroNum: { fontFamily: T.hero.fontFamily, fontSize: 74, lineHeight: 82, fontWeight: '200', letterSpacing: -3.5, fontVariant: ['tabular-nums'] },
+  heroUnit: { color: palette.textTertiary, fontSize: 20, fontWeight: '500', marginTop: 14, marginRight: 6, marginLeft: 2 },
+  heroCaption: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 1.6, marginTop: 2 },
+
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: space.xl,
+    paddingVertical: space.base,
+    backgroundColor: palette.surface,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: palette.border,
   },
-  cardEyebrow: { color: colors.textFaint, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 10 },
-  streakHero: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  flame: { fontSize: 40 },
-  streakNum: { color: '#FFD54F', fontSize: 26, fontWeight: '800' },
-  streakSub: { color: '#e8d9a8', fontSize: 13.5, marginTop: 4, lineHeight: 18 },
-  milestoneRow: { gap: 8, marginTop: 16, paddingRight: 8 },
-  milestoneChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
+  statCol: { flex: 1, alignItems: 'center', gap: 6 },
+  statIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  statValue: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  statLabel: { color: palette.textTertiary, fontSize: 10, fontWeight: '700', letterSpacing: 0.8 },
+  statDivider: { width: 1, height: 48, backgroundColor: palette.border },
+
+  chartCard: {
+    marginTop: space.base,
+    backgroundColor: palette.surface,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: palette.border,
+    padding: space.lg,
   },
-  milestoneChipOn: { backgroundColor: 'rgba(255,213,79,0.16)', borderColor: 'rgba(255,213,79,0.4)' },
-  milestoneText: { color: colors.textDim, fontSize: 13, fontWeight: '700' },
-  milestoneTextOn: { color: '#FFD54F' },
-  rankHeadline: { color: colors.text, fontSize: 22, fontWeight: '800', lineHeight: 28 },
-  rankBody: { color: colors.textDim, fontSize: 13.5, lineHeight: 20, marginTop: 10 },
-  metricRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 8 },
-  metricLabel: { color: colors.textDim, fontSize: 14, flex: 1, paddingRight: 12 },
-  metricValue: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  metricHint: { color: colors.textFaint, fontSize: 12, marginTop: 3, textAlign: 'right' },
-  savedHero: { color: colors.accent, fontSize: 18, fontWeight: '800', marginBottom: 8 },
-  goalHint: { color: colors.textDim, fontSize: 13.5, lineHeight: 19, marginTop: 8 },
-  rangeRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  chartHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space.base },
+  chartHeadValue: { color: palette.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 4 },
+  chartHeadSub: { color: palette.textTertiary, fontSize: 12, marginTop: 1, textTransform: 'capitalize' },
+  legend: { gap: 6, alignItems: 'flex-end' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { color: palette.textSecondary, fontSize: 12, fontWeight: '600' },
+  chart: { marginTop: space.xs },
+  chartAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.sm },
+  axisLabel: { color: palette.textTertiary, fontSize: 11, fontWeight: '600' },
+
+  rangeRow: { flexDirection: 'row', gap: space.sm, marginTop: space.base, paddingRight: space.lg },
   rangePill: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: palette.border,
   },
-  rangePillActive: { backgroundColor: 'rgba(255,255,255,0.08)' },
-  rangeText: { color: colors.text, fontSize: 14.5, fontWeight: '600' },
-  chartWrap: { marginTop: 24 },
-  chartAxis: { flexDirection: 'row', justifyContent: 'space-between', paddingRight: 30, marginTop: 2 },
-  axisLabel: { color: colors.textDim, fontSize: 12.5 },
-  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 28 },
-  sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
-  sectionLink: { color: colors.accent, fontSize: 14, fontWeight: '700' },
-  awardRow: { gap: 16, paddingRight: 12, marginTop: 14 },
+  rangePillActive: { backgroundColor: palette.accentSoft, borderColor: palette.accentBorder },
+  rangeText: { color: palette.textSecondary, fontSize: 14, fontWeight: '600' },
+  rangeTextActive: { color: palette.accent },
+
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md, marginTop: space.base },
+  metricCard: {
+    width: (CONTENT_W - space.md) / 2,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: space.lg,
+    minHeight: 128,
+  },
+  metricEyebrow: { color: palette.textTertiary, fontSize: 10.5, fontWeight: '700', letterSpacing: 1.2 },
+  metricValue: { color: palette.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 8 },
+  metricSub: { color: palette.textTertiary, fontSize: 11.5, marginTop: 2 },
+  metricViz: { marginTop: 'auto', paddingTop: space.base },
+
+  card: {
+    marginTop: space.base,
+    backgroundColor: palette.surface,
+    borderRadius: radius.xl,
+    padding: space.lg,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  cardAccent: { backgroundColor: palette.accentSoft, borderColor: palette.accentBorder },
+  monthAwards: { color: palette.text, fontSize: 15, fontWeight: '700', marginTop: 6, lineHeight: 21 },
+
+  streakHero: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginTop: space.sm },
+  streakGlyph: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(233,174,98,0.14)', alignItems: 'center', justifyContent: 'center' },
+  streakNum: { color: '#E9AE62', fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+  streakSub: { color: palette.textSecondary, fontSize: 13, marginTop: 3, lineHeight: 18 },
+  milestoneRow: { gap: space.sm, marginTop: space.base, paddingRight: space.sm },
+  milestoneChip: {
+    minWidth: 38,
+    alignItems: 'center',
+    paddingHorizontal: space.md,
+    paddingVertical: 7,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  milestoneChipOn: { backgroundColor: 'rgba(233,174,98,0.16)', borderColor: 'rgba(233,174,98,0.4)' },
+  milestoneText: { color: palette.textTertiary, fontSize: 13, fontWeight: '700' },
+  milestoneTextOn: { color: '#E9AE62' },
+
+  savedHero: { color: palette.accent, fontSize: 18, fontWeight: '800', marginTop: 6, marginBottom: 8, letterSpacing: -0.3 },
+  goalHint: { color: palette.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 10 },
+
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 9, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.hairline },
+  detailLabel: { color: palette.textSecondary, fontSize: 14, flex: 1, paddingRight: 12 },
+  detailValue: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  detailHint: { color: palette.textTertiary, fontSize: 11.5, marginTop: 3, textAlign: 'right' },
+
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    marginTop: space.md,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: space.base,
+  },
+  linkIcon: { width: 42, height: 42, borderRadius: radius.md, backgroundColor: palette.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  linkTitle: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
+  linkSub: { color: palette.textTertiary, fontSize: 12.5, marginTop: 2 },
+
+  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: space.xxl },
+  sectionTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  sectionLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  sectionLink: { color: palette.accent, fontSize: 14, fontWeight: '700' },
+  awardRow: { gap: space.base, paddingRight: space.md, marginTop: space.base },
   awardCol: { width: 96, alignItems: 'center' },
-  awardName: { color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 8, textAlign: 'center' },
-  awardSub: { color: colors.textDim, fontSize: 11.5, marginTop: 3, textAlign: 'center' },
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center', padding: 22 },
+  awardName: { color: palette.text, fontSize: 13, fontWeight: '700', marginTop: space.sm, textAlign: 'center' },
+  awardSub: { color: palette.textTertiary, fontSize: 11.5, marginTop: 3, textAlign: 'center' },
+
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', padding: space.xl },
   shareCard: {
     width: '100%',
-    borderRadius: 26,
-    padding: 24,
+    borderRadius: radius.xxl,
+    padding: space.xl,
     alignItems: 'center',
     overflow: 'hidden',
     minHeight: 320,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
-  shareBrand: { color: colors.accent, fontSize: 13, fontWeight: '800', letterSpacing: 1, marginBottom: 16, alignSelf: 'flex-start' },
-  shareName: { color: '#fff', fontSize: 24, fontWeight: '800', marginTop: 10 },
-  shareDesc: { color: 'rgba(255,255,255,0.7)', fontSize: 15, textAlign: 'center', marginTop: 8, lineHeight: 21 },
-  shareStat: { color: '#7CF5B0', fontSize: 13, fontWeight: '700', marginTop: 14 },
-  sharePrivacy: { color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 17 },
+  shareBrand: { color: palette.accent, fontSize: 15, fontWeight: '800', letterSpacing: 0.5, marginBottom: 16, alignSelf: 'flex-start' },
+  shareName: { color: palette.text, fontSize: 24, fontWeight: '800', marginTop: 12 },
+  shareDesc: { color: palette.textSecondary, fontSize: 15, textAlign: 'center', marginTop: 8, lineHeight: 21 },
+  shareStat: { color: palette.accent, fontSize: 13, fontWeight: '700', marginTop: 14 },
+  sharePrivacy: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', marginTop: 16, lineHeight: 17 },
   shareBtn: {
     marginTop: 18,
-    backgroundColor: '#7CF5B0',
-    borderRadius: 16,
+    backgroundColor: palette.accent,
+    borderRadius: radius.base,
     paddingVertical: 13,
     paddingHorizontal: 22,
   },
-  shareBtnText: { color: '#04140c', fontSize: 15, fontWeight: '800' },
+  shareBtnText: { color: palette.textInverse, fontSize: 15, fontWeight: '800' },
 });

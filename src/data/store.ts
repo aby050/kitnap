@@ -6,6 +6,7 @@ import { BedtimeWindow, DEFAULT_BEDTIME } from './bedtime';
 import { CheckIn } from './checkin';
 import { ProgressPhoto } from './progressPhotos';
 import { DEFAULT_BLOCKED_PACKAGES } from './blockedApps';
+import { ActivitySessionResult } from '../shield/activity/types';
 
 const KEY = 'screentime.v1';
 
@@ -36,12 +37,27 @@ export type PersistedState = {
   gateReflections: GateReflection[];
   schedules: Schedule[];
   appLimits?: AppLimit[];
-  /** Emergency tokens — every user starts with 2 free, spent one at a time
-   *  to end a locked focus session early. Never taken away, never expire;
-   *  more can only be bought, never earned or reset, so the free 2 stay
-   *  meaningfully free rather than a bait-and-switch trial. */
+  /** Finished physical-unlock attempts, newest last, capped at 100. Feeds the
+   *  adaptive rep target so the difficulty tracks what this person can
+   *  actually do rather than a fixed number. */
+  activitySessions: ActivitySessionResult[];
+  /** Bailouts — every user starts with 2 free. Spent one at a time to leave
+   *  a locked focus timer early. Never taken away, never expire;
+   *  more can only be bought, never earned or reset.
+   *  In __DEV__, loadState tops the balance up to DEV_EMERGENCY_TOKEN_FLOOR
+   *  so skip/unlock flows can be exercised without buying packs. */
   emergencyTokens: number;
 };
+
+/** Production starting grant. Do not raise this for shipping builds. */
+export const FREE_EMERGENCY_TOKENS = 2;
+
+/** Dev-only floor so testers can skip gates and end locked timers. */
+export const DEV_EMERGENCY_TOKEN_FLOOR = 10;
+
+export function startingEmergencyTokens(): number {
+  return __DEV__ ? DEV_EMERGENCY_TOKEN_FLOOR : FREE_EMERGENCY_TOKENS;
+}
 
 export type AppLimit = {
   packageName: string;
@@ -84,6 +100,20 @@ export function recordGateReflection(
   return [...existing, entry].slice(-MAX_GATE_REFLECTIONS);
 }
 
+const MAX_ACTIVITY_SESSIONS = 100;
+
+/**
+ * Appends a finished physical-unlock attempt. Abandoned and token-skipped
+ * attempts are recorded too (with `completed: false`) — the difficulty model
+ * needs to see what people are walking away from, not just what they finish.
+ */
+export function recordActivitySession(
+  existing: ActivitySessionResult[],
+  entry: ActivitySessionResult,
+): ActivitySessionResult[] {
+  return [...existing, entry].slice(-MAX_ACTIVITY_SESSIONS);
+}
+
 export type Account = {
   method: 'apple' | 'google' | 'email';
   identifier: string; // email address, or Apple's opaque user id when email is withheld
@@ -115,7 +145,8 @@ export const DEFAULT_STATE: PersistedState = {
   gateReflections: [],
   schedules: DEFAULT_SCHEDULES,
   appLimits: [],
-  emergencyTokens: 2,
+  activitySessions: [],
+  emergencyTokens: startingEmergencyTokens(),
 };
 
 export async function loadState(): Promise<PersistedState> {
@@ -143,7 +174,13 @@ export async function loadState(): Promise<PersistedState> {
       parsed.progress = rollStreakForToday(parsed.progress);
     }
 
-    return { ...DEFAULT_STATE, ...parsed };
+    const merged: PersistedState = { ...DEFAULT_STATE, ...parsed };
+    // Existing installs still have the production grant of 2. Top up only
+    // while developing so the tester isn't stuck after two skips.
+    if (__DEV__ && merged.emergencyTokens < DEV_EMERGENCY_TOKEN_FLOOR) {
+      merged.emergencyTokens = DEV_EMERGENCY_TOKEN_FLOOR;
+    }
+    return merged;
   } catch {
     return DEFAULT_STATE;
   }

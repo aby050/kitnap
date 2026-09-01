@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import { AppLimit } from '../data/store';
 import Icon from '../ui/Icon';
 
@@ -81,21 +81,21 @@ function AppIcon({ type, size = 38 }: { type: string; size?: number }) {
     case 'com.google.android.youtube':
       return (
         <View style={[styles.brandIcon, { backgroundColor: '#FF0000', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.35, fontWeight: '800' }]}>▶</Text>
+          <Icon name="play" size={size * 0.4} color="#FFFFFF" />
         </View>
       );
     case 'Snapchat':
     case 'com.snapchat.android':
       return (
         <View style={[styles.brandIcon, { backgroundColor: '#FFFC00', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.45, color: '#000' }]}>👻</Text>
+          <Text style={[styles.brandText, { fontSize: size * 0.5, color: '#000', fontWeight: '800' }]}>S</Text>
         </View>
       );
     case 'Reddit':
     case 'com.reddit.frontpage':
       return (
         <View style={[styles.brandIcon, { backgroundColor: '#FF4500', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.4 }]}>👽</Text>
+          <Text style={[styles.brandText, { fontSize: size * 0.5, fontWeight: '800' }]}>R</Text>
         </View>
       );
     case 'X (Twitter)':
@@ -130,7 +130,7 @@ function AppIcon({ type, size = 38 }: { type: string; size?: number }) {
     case 'snap_spotlight':
       return (
         <View style={[styles.brandIcon, { backgroundColor: '#FFFC00', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={{ fontSize: size * 0.45 }}>👻</Text>
+          <Text style={[styles.brandText, { fontSize: size * 0.5, color: '#000', fontWeight: '800' }]}>S</Text>
         </View>
       );
     case 'fb_reels':
@@ -224,7 +224,7 @@ export default function BlocksScreen({
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Pressable onPress={onBack} style={styles.backBtn} hitSlop={12}>
-            <Text style={styles.backGlyph}>‹</Text>
+            <Icon name="chevronLeft" size={20} color={palette.text} />
           </Pressable>
           <Text style={styles.headerTitle}>Blocks</Text>
         </View>
@@ -443,7 +443,7 @@ function AppLimitModal({
               <Text style={styles.sheetTitle}>{app.name} limit</Text>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-              <Icon name="close" size={14} color={colors.textDim} />
+              <Icon name="close" size={14} color={palette.textSecondary} />
             </Pressable>
           </View>
 
@@ -452,7 +452,7 @@ function AppLimitModal({
             {/* Limit Selector Row */}
             <Pressable onPress={() => setShowLimitPicker(!showLimitPicker)} style={styles.sheetRow}>
               <Text style={styles.sheetLabel}>Limit</Text>
-              <Text style={styles.sheetValue}>{getLimitLabel()}  ›</Text>
+              <Text style={styles.sheetValue}>{getLimitLabel()}</Text>
             </Pressable>
 
             {/* Presets dropdown inline */}
@@ -500,7 +500,7 @@ function AppLimitModal({
             {/* Show reminders */}
             <Pressable onPress={() => setShowReminders(!showReminders)} style={styles.sheetRow}>
               <Text style={styles.sheetLabel}>Show reminders before limit</Text>
-              <Text style={styles.sheetValue}>{showReminders ? 'Yes' : 'No'}  ›</Text>
+              <Text style={styles.sheetValue}>{showReminders ? 'Yes' : 'No'}</Text>
             </Pressable>
 
             {/* Strict Mode */}
@@ -519,7 +519,7 @@ function AppLimitModal({
               <Switch
                 value={strictMode}
                 onValueChange={setStrictMode}
-                trackColor={{ true: colors.accent, false: '#2C2C2E' }}
+                trackColor={{ true: palette.accent, false: '#2C2C2E' }}
                 thumbColor="#ffffff"
               />
             </View>
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   addAppText: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 14,
     fontWeight: '700',
   },
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   appLimitText: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 13,
     fontWeight: '600',
     marginTop: 2,
@@ -688,13 +688,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   actionBtnActive: {
-    backgroundColor: 'rgba(124, 245, 176, 0.12)',
+    backgroundColor: 'rgba(111, 227, 169, 0.12)',
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: 16,
   },
   actionTextActive: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 13,
     fontWeight: '700',
   },
@@ -876,8 +876,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   presetBtnActive: {
-    backgroundColor: 'rgba(124, 245, 176, 0.12)',
-    borderColor: 'rgba(124, 245, 176, 0.3)',
+    backgroundColor: 'rgba(111, 227, 169, 0.12)',
+    borderColor: 'rgba(111, 227, 169, 0.3)',
   },
   presetText: {
     color: 'rgba(255,255,255,0.6)',
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   presetTextActive: {
-    color: colors.accent,
+    color: palette.accent,
   },
   counterContainer: {
     flexDirection: 'row',

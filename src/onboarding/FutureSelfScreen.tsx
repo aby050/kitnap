@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 /** Plays back at unlock #4 and above. A user's own voice at 11pm beats every
  *  motivational quote ever written, and no competitor can clone it. Doubles as
@@ -26,7 +27,7 @@ export default function FutureSelfScreen({
       {editing && (
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-            <Text style={styles.headerGlyph}>‹</Text>
+            <Icon name="chevronLeft" size={20} color={palette.text} />
           </Pressable>
           <Text style={styles.headerTitle}>Message to future you</Text>
           <View style={{ width: 40 }} />
@@ -52,7 +53,7 @@ export default function FutureSelfScreen({
             onChangeText={setText}
             multiline
             placeholder="e.g. please just go to sleep, you'll hate yourself tomorrow"
-            placeholderTextColor={colors.textFaint}
+            placeholderTextColor={palette.textTertiary}
             style={styles.input}
             autoFocus={editing}
           />
@@ -87,24 +88,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: 26, gap: 18 },
-  heading: { color: colors.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
-  sub: { color: colors.textDim, fontSize: 16, textAlign: 'center', lineHeight: 23 },
+  heading: { color: palette.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
+  sub: { color: palette.textSecondary, fontSize: 16, textAlign: 'center', lineHeight: 23 },
   inputWrap: { marginTop: 10 },
   input: {
     minHeight: 130,
     borderRadius: 22,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    backgroundColor: palette.glass,
+    color: palette.text,
     fontSize: 16,
     padding: 18,
     lineHeight: 23,
     textAlignVertical: 'top',
   },
-  hint: { color: colors.textFaint, fontSize: 13.5, textAlign: 'center' },
+  hint: { color: palette.textTertiary, fontSize: 13.5, textAlign: 'center' },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 12 },
   skipBtn: { alignItems: 'center', paddingVertical: 14 },
-  skipText: { color: colors.textDim, fontSize: 15, fontWeight: '600' },
+  skipText: { color: palette.textSecondary, fontSize: 15, fontWeight: '600' },
 });

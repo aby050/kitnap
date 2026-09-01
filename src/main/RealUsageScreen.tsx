@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   AppUsage,
@@ -9,17 +10,24 @@ import {
   queryTodayUsage,
   usageStatsAvailable,
 } from '../data/androidUsage';
-import { colors } from '../theme';
+import { palette, space, radius } from '../design/tokens';
+import Icon from '../ui/Icon';
+import { Donut, AppGlyphTile } from './profile/viz';
 
-/** Package names aren't display names — brighthustle's module doesn't expose
- *  the app label/icon, only what UsageStatsManager gives Android apps:
- *  package id + foreground time. Strips the common prefix so
- *  "com.instagram.android" reads as "instagram.android" instead of full
- *  reverse-DNS noise. A real app-name lookup needs a second native call
- *  (PackageManager.getApplicationLabel) not wired here yet. */
-function readableName(pkg: string): string {
+/** Fixed, high-contrast segment colours — assigned by rank so the donut, its
+ *  legend and the breakdown rows all speak the same colour for a given app.
+ *  Everything past the top five collapses into one neutral "Other" wedge. */
+const SEG = ['#6FE3A9', '#8FA9FF', '#E9AE62', '#C79BFF', '#5FE0D6'];
+const OTHER = 'rgba(255,255,255,0.22)';
+
+/** Package names aren't display names — UsageStatsManager exposes only the
+ *  package id + foreground time, no label or icon. We take the meaningful
+ *  segment of the reverse-DNS id and title-case it ("com.instagram.android"
+ *  → "Instagram"). A true label needs a PackageManager call not wired here. */
+function appLabel(pkg: string): string {
   const parts = pkg.split('.');
-  return parts.length > 2 ? parts.slice(2).join('.') : pkg;
+  const core = parts.length > 2 ? parts[2] : parts[parts.length - 1];
+  return core ? core.charAt(0).toUpperCase() + core.slice(1) : pkg;
 }
 
 function formatMs(ms: number): string {
@@ -58,109 +66,234 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
   }, [refresh]);
 
   const totalMs = usage.reduce((sum, u) => sum + u.totalTimeInForeground, 0);
+  const ranked = usage.map((u, i) => ({
+    ...u,
+    label: appLabel(u.packageName),
+    color: i < SEG.length ? SEG[i] : OTHER,
+  }));
+  const top = ranked.slice(0, SEG.length);
+  const restMs = ranked.slice(SEG.length).reduce((s, u) => s + u.totalTimeInForeground, 0);
+  const segments = [
+    ...top.map((u) => ({ value: u.totalTimeInForeground, color: u.color })),
+    ...(restMs > 0 ? [{ value: restMs, color: OTHER }] : []),
+  ];
+  const legend = [
+    ...top,
+    ...(restMs > 0 ? [{ packageName: '__other', label: 'Other apps', color: OTHER, totalTimeInForeground: restMs, lastTimeUsed: 0 }] : []),
+  ];
+  const maxMs = Math.max(1, ...ranked.map((u) => u.totalTimeInForeground));
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Real device usage</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={styles.root}>
+      <LinearGradient colors={['#04140D', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
+            <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Screen time</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {!usageStatsAvailable() ? (
-          <View style={styles.notice}>
-            <Text style={styles.noticeTitle}>Android-only, and needs a real build</Text>
-            <Text style={styles.noticeBody}>
-              This reads Android's actual UsageStatsManager — real per-app screen time from the OS, not a mock. It
-              only works in a native build with the usage-stats module compiled in, not in Expo Go or the web
-              preview.
-            </Text>
-          </View>
-        ) : granted === false ? (
-          <View style={styles.notice}>
-            <Text style={styles.noticeTitle}>Usage Access isn't granted yet</Text>
-            <Text style={styles.noticeBody}>
-              Android treats this as a special permission — there's no in-app prompt for it. You'll be sent to
-              Settings; find Wend in the list and turn the toggle on, then come back here.
-            </Text>
-            <Pressable style={styles.grantBtn} onPress={openUsageAccessSettings}>
-              <Text style={styles.grantBtnText}>Open Usage Access settings</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <>
-            <Animated.View entering={FadeInDown.duration(360)} style={styles.totalCard}>
-              <Text style={styles.totalLabel}>Today, on this device</Text>
-              <Text style={styles.totalValue}>{formatMs(totalMs)}</Text>
-              {loading && <Text style={styles.loadingHint}>Refreshing…</Text>}
-            </Animated.View>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {!usageStatsAvailable() ? (
+            <StateCard
+              icon="phone"
+              title="Android-only, and needs a real build"
+              body="This reads Android's actual UsageStatsManager — real per-app screen time from the OS, not a mock. It only works in a native build with the usage-stats module compiled in, not in Expo Go or the web preview."
+            />
+          ) : granted === false ? (
+            <StateCard
+              icon="lock"
+              title="Usage Access isn't granted yet"
+              body="Android treats this as a special permission — there's no in-app prompt for it. You'll be sent to Settings; find Wend in the list and turn the toggle on, then come back here."
+            >
+              <Pressable style={styles.grantBtn} onPress={openUsageAccessSettings}>
+                <Icon name="arrowUpRight" size={17} color={palette.accent} strokeWidth={2} />
+                <Text style={styles.grantBtnText}>Open Usage Access settings</Text>
+              </Pressable>
+            </StateCard>
+          ) : usage.length === 0 ? (
+            <StateCard
+              icon="clock"
+              title={loading ? 'Reading device usage…' : 'Nothing recorded yet today'}
+              body={loading ? 'Fetching the latest foreground time from Android.' : 'No foreground app usage has been logged on this device so far today.'}
+            />
+          ) : (
+            <>
+              {/* Screen time today — donut + legend */}
+              <Animated.View entering={FadeInDown.duration(380)} style={styles.card}>
+                <Text style={styles.eyebrow}>SCREEN TIME TODAY</Text>
+                <View style={styles.donutWrap}>
+                  <Donut segments={segments} size={168} thickness={20}>
+                    <View style={styles.donutCenter}>
+                      <Text style={styles.donutTotal}>{formatMs(totalMs)}</Text>
+                      <Text style={styles.donutCaption}>{usage.length} apps</Text>
+                    </View>
+                  </Donut>
+                </View>
 
-            {usage.length === 0 && !loading && (
-              <Text style={styles.empty}>No foreground app usage recorded yet today.</Text>
-            )}
-
-            {usage.map((u, i) => (
-              <Animated.View key={u.packageName} entering={FadeInDown.delay(i * 40).duration(320)} style={styles.row}>
-                <Text style={styles.rowName} numberOfLines={1}>
-                  {readableName(u.packageName)}
-                </Text>
-                <Text style={styles.rowValue}>{formatMs(u.totalTimeInForeground)}</Text>
+                <View style={styles.legend}>
+                  {legend.map((u) => {
+                    const pct = Math.round((u.totalTimeInForeground / Math.max(1, totalMs)) * 100);
+                    return (
+                      <View key={u.packageName} style={styles.legendRow}>
+                        <View style={[styles.legendDot, { backgroundColor: u.color }]} />
+                        <Text style={styles.legendName} numberOfLines={1}>{u.label}</Text>
+                        <Text style={styles.legendPct}>{pct}%</Text>
+                        <Text style={styles.legendVal}>{formatMs(u.totalTimeInForeground)}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+                {loading && <Text style={styles.loadingHint}>Refreshing…</Text>}
               </Animated.View>
-            ))}
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+
+              {/* Most used */}
+              {top.length > 0 && (
+                <>
+                  <Text style={styles.sectionTitle}>Most used</Text>
+                  <View style={styles.tileRow}>
+                    {top.slice(0, 3).map((u) => (
+                      <View key={u.packageName} style={styles.tile}>
+                        <AppGlyphTile label={u.label} color={u.color} size={46} />
+                        <Text style={styles.tileName} numberOfLines={1}>{u.label}</Text>
+                        <Text style={styles.tileVal}>{formatMs(u.totalTimeInForeground)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {/* Full breakdown */}
+              <Text style={styles.sectionTitle}>All apps</Text>
+              <View style={styles.list}>
+                {ranked.map((u, i) => (
+                  <Animated.View key={u.packageName} entering={FadeInDown.delay(Math.min(i, 10) * 30).duration(300)} style={styles.row}>
+                    <AppGlyphTile label={u.label} color={u.color} size={38} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowName} numberOfLines={1}>{u.label}</Text>
+                      <View style={styles.rowTrack}>
+                        <View style={[styles.rowBar, { width: `${Math.max(4, (u.totalTimeInForeground / maxMs) * 100)}%`, backgroundColor: u.color }]} />
+                      </View>
+                    </View>
+                    <Text style={styles.rowValue}>{formatMs(u.totalTimeInForeground)}</Text>
+                  </Animated.View>
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function StateCard({
+  icon,
+  title,
+  body,
+  children,
+}: {
+  icon: React.ComponentProps<typeof Icon>['name'];
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <Animated.View entering={FadeInDown.duration(360)} style={styles.notice}>
+      <View style={styles.noticeGlyph}>
+        <Icon name={icon} size={26} color={palette.accent} strokeWidth={1.7} />
+      </View>
+      <Text style={styles.noticeTitle}>{title}</Text>
+      <Text style={styles.noticeBody}>{body}</Text>
+      {children}
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 8 },
-  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 100, gap: 10 },
+  root: { flex: 1, backgroundColor: palette.base },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.sm },
+  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.glass, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  scroll: { paddingHorizontal: space.gutter, paddingTop: space.xs, paddingBottom: 110 },
+
   notice: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-    padding: 20,
-    gap: 10,
-  },
-  noticeTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  noticeBody: { color: colors.textDim, fontSize: 13.5, lineHeight: 20 },
-  grantBtn: {
-    marginTop: 6,
-    paddingVertical: 14,
-    borderRadius: 20,
-    backgroundColor: 'rgba(124,245,176,0.15)',
+    alignItems: 'center',
+    backgroundColor: palette.surface,
+    borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.accent,
-    alignItems: 'center',
+    borderColor: palette.border,
+    padding: space.xl,
+    marginTop: space.base,
+    gap: space.sm,
   },
-  grantBtnText: { color: colors.accent, fontSize: 14.5, fontWeight: '700' },
-  totalCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 6,
+  noticeGlyph: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1, borderColor: palette.accentBorder,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: space.xs,
   },
-  totalLabel: { color: colors.textDim, fontSize: 13, fontWeight: '600' },
-  totalValue: { color: colors.text, fontSize: 32, fontWeight: '800', marginTop: 6 },
-  loadingHint: { color: colors.textFaint, fontSize: 12, marginTop: 4 },
-  empty: { color: colors.textFaint, fontSize: 13.5, textAlign: 'center', marginTop: 20 },
+  noticeTitle: { color: palette.text, fontSize: 17, fontWeight: '800', textAlign: 'center', letterSpacing: -0.3 },
+  noticeBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 20, textAlign: 'center' },
+  grantBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: space.sm,
+    paddingVertical: 13, paddingHorizontal: space.lg,
+    borderRadius: radius.pill,
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1, borderColor: palette.accentBorder,
+  },
+  grantBtnText: { color: palette.accent, fontSize: 14.5, fontWeight: '800' },
+
+  card: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: space.lg,
+    marginTop: space.base,
+  },
+  eyebrow: { color: palette.textTertiary, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  donutWrap: { alignItems: 'center', marginTop: space.lg, marginBottom: space.lg },
+  donutCenter: { alignItems: 'center' },
+  donutTotal: { color: palette.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.8 },
+  donutCaption: { color: palette.textTertiary, fontSize: 12, fontWeight: '600', marginTop: 2 },
+
+  legend: { gap: space.sm },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendName: { flex: 1, color: palette.text, fontSize: 14, fontWeight: '600' },
+  legendPct: { color: palette.textTertiary, fontSize: 12.5, fontWeight: '700', width: 40, textAlign: 'right' },
+  legendVal: { color: palette.textSecondary, fontSize: 13, fontWeight: '700', width: 62, textAlign: 'right' },
+  loadingHint: { color: palette.textTertiary, fontSize: 12, marginTop: space.md, textAlign: 'center' },
+
+  sectionTitle: { color: palette.text, fontSize: 16, fontWeight: '800', letterSpacing: -0.3, marginTop: space.xl, marginBottom: space.md },
+  tileRow: { flexDirection: 'row', gap: space.sm },
+  tile: {
+    flex: 1, alignItems: 'center',
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: palette.border,
+    paddingVertical: space.base, paddingHorizontal: space.sm,
+    gap: 8,
+  },
+  tileName: { color: palette.text, fontSize: 12.5, fontWeight: '700', maxWidth: '100%' },
+  tileVal: { color: palette.textSecondary, fontSize: 12, fontWeight: '700' },
+
+  list: { gap: space.sm },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.035)',
-    borderRadius: 16,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', gap: space.md,
+    backgroundColor: palette.surface,
+    borderRadius: radius.base,
+    borderWidth: 1, borderColor: palette.hairline,
+    paddingVertical: space.md, paddingHorizontal: space.md,
   },
-  rowName: { color: colors.text, fontSize: 14.5, fontWeight: '600', flex: 1, marginRight: 10 },
-  rowValue: { color: colors.accent, fontSize: 14.5, fontWeight: '700' },
+  rowName: { color: palette.text, fontSize: 14, fontWeight: '700' },
+  rowTrack: { height: 5, borderRadius: 3, backgroundColor: palette.surfaceHigh, marginTop: 6, overflow: 'hidden' },
+  rowBar: { height: '100%', borderRadius: 3 },
+  rowValue: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '800' },
 });

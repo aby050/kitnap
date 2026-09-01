@@ -1,19 +1,25 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { GateQuestion, pickChallenge } from '../data/gateQuestions';
 import { Intensity } from '../data/themes';
-import { colors } from '../theme';
-import Icon from '../ui/Icon';
+import { Button, Card, IconButton, Screen } from '../design/primitives';
+import { palette, radius, space, type } from '../design/tokens';
 import BreathingExercise from './BreathingExercise';
 import ActivityChallenge from './ActivityChallenge';
+import { ActivityKind, ActivitySessionResult } from './activity/types';
 import { success } from '../ui/haptics';
 
 type Props = {
   intensity: Intensity;
   futureSelfMessage: string;
   healthLimited?: boolean;
+  /** Resolves the adaptive rep target for a given movement. Undefined leaves
+   *  Family G's built-in defaults alone. */
+  repsFor?: (activity: ActivityKind) => number;
+  /** Reports a finished (or abandoned) physical attempt, for the difficulty
+   *  model. Never fires for a token skip — that isn't a workout. */
+  onActivityComplete?: (session: ActivitySessionResult) => void;
   onGranted: (minutes: number) => void;
   onAbandoned: () => void;
   onEmergency: () => void;
@@ -49,14 +55,14 @@ function MathQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'math' }
         onChangeText={setInput}
         keyboardType="number-pad"
         placeholder="Your answer"
-        placeholderTextColor={colors.textFaint}
+        placeholderTextColor={palette.textTertiary}
         style={[styles.input, wrong && styles.inputWrong]}
         autoFocus
       />
       {wrong && <Text style={styles.wrongText}>Not quite — try again.</Text>}
-      <Pressable disabled={input.trim().length === 0} onPress={submit} style={[styles.cta, input.trim().length === 0 && styles.ctaDisabled]}>
-        <Text style={styles.ctaText}>Continue</Text>
-      </Pressable>
+      <View style={styles.ctaWrap}>
+        <Button label="Continue" variant="primary" disabled={input.trim().length === 0} onPress={submit} />
+      </View>
     </View>
   );
 }
@@ -89,11 +95,11 @@ function QuizQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'quiz' }
         })}
       </View>
       {chosen !== null && (
-        <Animated.View entering={FadeIn.duration(250)} style={{ alignItems: 'center', gap: 14 }}>
+        <Animated.View entering={FadeIn.duration(250)} style={styles.quizFoot}>
           <Text style={styles.hint}>{q.explain}</Text>
-          <Pressable onPress={onDone} style={styles.cta}>
-            <Text style={styles.ctaText}>Continue</Text>
-          </Pressable>
+          <View style={styles.ctaWrap}>
+            <Button label="Continue" variant="primary" onPress={onDone} />
+          </View>
         </Animated.View>
       )}
     </View>
@@ -104,15 +110,20 @@ export default function GateScreen({
   intensity,
   futureSelfMessage,
   healthLimited = false,
+  repsFor,
+  onActivityComplete,
   onGranted,
   onAbandoned,
   onEmergency,
   tokenBalance,
   onSkipWithToken,
 }: Props) {
-  // One challenge, chosen fresh each time this screen mounts — not
-  // recomputed on every render, so retrying doesn't reroll the question.
-  const q = useMemo(() => pickChallenge(intensity.key, healthLimited), [intensity.key, healthLimited]);
+  // One challenge, chosen once per mount. Lazy initial state rather than a
+  // useMemo: the adaptive rep target is derived from state that can change
+  // while this screen is up (a finished session is recorded before the grant
+  // lands), and with that in a dependency list the question would reroll out
+  // from under a user who had just finished it.
+  const [q] = useState<GateQuestion>(() => pickChallenge(intensity.key, healthLimited, repsFor));
   const [showFutureSelf, setShowFutureSelf] = useState(!!futureSelfMessage);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
@@ -123,25 +134,23 @@ export default function GateScreen({
 
   if (showFutureSelf) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Screen edges={['top', 'bottom']} bloom>
         <Animated.View entering={FadeIn.duration(500)} style={styles.qBody}>
-          <Text style={styles.eyebrow}>FROM YOU, EARLIER</Text>
+          <Text style={[type.overline, styles.eyebrow]}>From you, earlier</Text>
           <Text style={styles.futureSelf}>“{futureSelfMessage}”</Text>
-          <Pressable onPress={() => setShowFutureSelf(false)} style={styles.cta}>
-            <Text style={styles.ctaText}>Continue</Text>
-          </Pressable>
+          <View style={styles.ctaWrap}>
+            <Button label="Continue" variant="primary" onPress={() => setShowFutureSelf(false)} />
+          </View>
         </Animated.View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable onPress={onAbandoned} hitSlop={10}>
-          <Icon name="close" size={16} color={colors.textDim} />
-        </Pressable>
-        <Text style={styles.challengeLabel}>
+        <IconButton name="close" size={18} color={palette.textSecondary} onPress={onAbandoned} accessibilityLabel="Cancel unlock" />
+        <Text style={[type.overline, styles.challengeLabel]}>
           {intensity.key === 'strict' && q.kind === 'activity' ? 'Physical unlock' : 'Quick unlock'}
         </Text>
         <Pressable onPress={onEmergency} hitSlop={10}>
@@ -149,156 +158,113 @@ export default function GateScreen({
         </Pressable>
       </View>
 
-      <Animated.View entering={FadeInUp.duration(380)} style={{ flex: 1 }}>
+      <Animated.View entering={FadeInUp.duration(380)} style={styles.flex}>
         {q.kind === 'breathe' && <BreathingExercise q={q} onDone={grant} />}
         {q.kind === 'math' && <MathQuestion q={q} onDone={grant} />}
         {q.kind === 'quiz' && <QuizQuestion q={q} onDone={grant} />}
-        {q.kind === 'activity' && <ActivityChallenge q={q} onDone={grant} />}
+        {q.kind === 'activity' && (
+          <ActivityChallenge q={q} onDone={grant} onComplete={onActivityComplete} />
+        )}
       </Animated.View>
 
       <View style={styles.skipWrap}>
         <Pressable onPress={() => setShowSkipConfirm(true)} hitSlop={10}>
           <Text style={styles.skipLink}>
-            {tokenBalance > 0 ? 'Skip with a token instead' : 'No tokens left to skip'}
+            {tokenBalance > 0 ? 'Skip with a Bailout instead' : 'No Bailouts left to skip'}
           </Text>
         </Pressable>
       </View>
 
       {showSkipConfirm && (
         <View style={styles.confirmOverlay}>
-          <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
-            <Text style={styles.confirmTitle}>Skip this challenge?</Text>
-            <Text style={styles.confirmBody}>
-              Spend 1 emergency token and unlock instantly, no challenge. You have {tokenBalance} token
-              {tokenBalance === 1 ? '' : 's'}.
-            </Text>
-            <Pressable
-              disabled={tokenBalance <= 0}
-              onPress={() => {
-                setShowSkipConfirm(false);
-                success();
-                onSkipWithToken();
-              }}
-              style={[styles.confirmSpendBtn, tokenBalance <= 0 && styles.ctaDisabled]}
-            >
-              <Text style={styles.ctaText}>Spend 1 token and skip</Text>
-            </Pressable>
-            <Pressable onPress={() => setShowSkipConfirm(false)} style={styles.confirmKeepBtn}>
-              <Text style={styles.confirmKeepText}>Never mind, I'll do it</Text>
-            </Pressable>
+          <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBoxWrap}>
+            <Card raised style={styles.confirmBox}>
+              <Text style={styles.confirmTitle}>Skip this challenge?</Text>
+              <Text style={styles.confirmBody}>
+                Use 1 Bailout and unlock instantly, no challenge. You have {tokenBalance}{' '}
+                {tokenBalance === 1 ? 'Bailout' : 'Bailouts'}.
+              </Text>
+              <Button
+                label="Use 1 Bailout and skip"
+                variant="primary"
+                disabled={tokenBalance <= 0}
+                onPress={() => {
+                  setShowSkipConfirm(false);
+                  success();
+                  onSkipWithToken();
+                }}
+                style={styles.confirmSpend}
+              />
+              <Button label="Never mind, I'll do it" variant="ghost" onPress={() => setShowSkipConfirm(false)} />
+            </Card>
           </Animated.View>
         </View>
       )}
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 },
-  close: { color: colors.textDim, fontSize: 20 },
-  challengeLabel: { color: colors.textDim, fontSize: 13, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
-  skipWrap: { alignItems: 'center', paddingBottom: 22 },
-  skipLink: { color: 'rgba(255,255,255,0.4)', fontSize: 13.5, fontWeight: '600', textDecorationLine: 'underline' },
+  flex: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: space.xs },
+  challengeLabel: { color: palette.textTertiary },
+  emergency: { ...type.sub, color: palette.textTertiary, fontWeight: '600' },
+
+  skipWrap: { alignItems: 'center', paddingBottom: space.xl },
+  skipLink: { ...type.sub, color: palette.textTertiary, fontWeight: '600', textDecorationLine: 'underline' },
+
   confirmOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: palette.scrim,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: space.xxl,
   },
-  confirmBox: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: '#141517',
-    borderRadius: 26,
-    padding: 24,
-    gap: 14,
-  },
-  confirmTitle: { color: '#ffffff', fontSize: 19, fontWeight: '800', textAlign: 'center' },
-  confirmBody: { color: 'rgba(255,255,255,0.65)', fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  confirmSpendBtn: {
-    paddingVertical: 15,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  confirmKeepBtn: { paddingVertical: 13, alignItems: 'center' },
-  confirmKeepText: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: '600' },
-  emergency: { color: 'rgba(255,255,255,0.45)', fontSize: 13, fontWeight: '600' },
-  dots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)' },
-  dotOn: { backgroundColor: colors.accent },
-  qBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 20 },
-  eyebrow: { color: colors.textDim, fontSize: 12, letterSpacing: 2, textTransform: 'uppercase' },
-  prompt: { color: colors.text, fontSize: 23, fontWeight: '700', textAlign: 'center', lineHeight: 31, maxWidth: 320 },
-  futureSelf: { color: colors.accent, fontSize: 22, fontWeight: '600', textAlign: 'center', lineHeight: 32, maxWidth: 320 },
-  recallBody: { color: colors.accent, fontSize: 21, fontWeight: '600', textAlign: 'center', lineHeight: 30, maxWidth: 320 },
-  options: { width: '100%', maxWidth: 320, gap: 10 },
+  confirmBoxWrap: { width: '100%', maxWidth: 360 },
+  confirmBox: { gap: space.md },
+  confirmTitle: { ...type.title3, textAlign: 'center' },
+  confirmBody: { ...type.callout, color: palette.textSecondary, textAlign: 'center', lineHeight: 21 },
+  confirmSpend: { marginTop: space.xs },
+
+  qBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xxl, gap: space.lg },
+  eyebrow: { color: palette.textTertiary },
+  futureSelf: { ...type.editorial, color: palette.accent, textAlign: 'center', maxWidth: 320 },
+  prompt: { ...type.title2, textAlign: 'center', lineHeight: 31, maxWidth: 320 },
+  mathExpr: { ...type.hero, fontSize: 34, color: palette.accent, letterSpacing: -0.5 },
+
+  options: { width: '100%', maxWidth: 320, gap: space.sm },
   option: {
-    paddingVertical: 16,
-    borderRadius: 24,
+    paddingVertical: space.base,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.cardBg,
+    borderColor: palette.border,
+    backgroundColor: palette.surfaceRaised,
     alignItems: 'center',
   },
-  optionDontKnow: { paddingVertical: 22, backgroundColor: 'rgba(255,255,255,0.13)', borderColor: 'rgba(255,255,255,0.3)' },
-  optionText: { color: colors.text, fontSize: 16, fontWeight: '500' },
-  optionDontKnowText: { fontSize: 18, fontWeight: '700' },
-  optionCorrect: { backgroundColor: 'rgba(124,245,176,0.15)', borderColor: colors.accent },
-  optionWrong: { backgroundColor: 'rgba(255,107,107,0.12)', borderColor: 'rgba(255,107,107,0.5)' },
-  mathExpr: { color: colors.accent, fontSize: 30, fontWeight: '800' },
-  inputWrong: { borderWidth: 1, borderColor: 'rgba(255,107,107,0.6)' },
-  wrongText: { color: 'rgba(255,107,107,0.85)', fontSize: 13, marginTop: -10 },
-  textArea: {
-    width: '100%',
-    maxWidth: 320,
-    minHeight: 110,
-    borderRadius: 20,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
-    fontSize: 16,
-    padding: 18,
-    textAlignVertical: 'top',
-  },
-  counter: { color: colors.textFaint, fontSize: 13, marginTop: -10 },
+  optionText: { ...type.body },
+  optionCorrect: { backgroundColor: palette.accentSoft, borderColor: palette.accentBorder },
+  optionWrong: { backgroundColor: 'rgba(240,96,74,0.12)', borderColor: palette.danger },
+  quizFoot: { width: '100%', alignItems: 'center', gap: space.base },
+  hint: { ...type.sub, color: palette.textTertiary, textAlign: 'center', maxWidth: 300 },
+
   input: {
     width: '100%',
     maxWidth: 300,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 24,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    paddingVertical: space.base,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surfaceRaised,
+    color: palette.text,
     fontSize: 18,
     textAlign: 'center',
   },
-  dwellTrack: { width: '100%', maxWidth: 300, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.12)', overflow: 'hidden' },
-  dwellBar: { height: '100%', backgroundColor: colors.accent },
-  holdCount: { color: colors.accent, fontSize: 40, fontWeight: '800' },
-  holdPad: {
-    width: '100%',
-    maxWidth: 300,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  holdFill: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(124,245,176,0.28)', right: undefined },
-  holdLabel: { color: colors.text, fontSize: 17, fontWeight: '700' },
-  hint: { color: colors.textFaint, fontSize: 13 },
-  cta: {
-    width: '100%',
-    maxWidth: 300,
-    paddingVertical: 16,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center',
-  },
-  ctaDisabled: { opacity: 0.3 },
-  ctaText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  inputWrong: { borderColor: palette.danger },
+  wrongText: { ...type.sub, color: palette.danger, marginTop: -space.sm },
+  ctaWrap: { width: '100%', maxWidth: 300 },
 });

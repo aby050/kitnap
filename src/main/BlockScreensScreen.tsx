@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { THEMES, ThemeKey } from '../data/themes';
-import { colors } from '../theme';
+import Icon from '../ui/Icon';
+import { palette } from '../design/tokens';
 
 /** What the shield actually shows. Themes stay swappable independent of
  *  onboarding — changing your mind later shouldn't mean redoing setup. */
@@ -25,7 +26,7 @@ export default function BlockScreensScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Block Screens</Text>
         <View style={{ width: 40 }} />
@@ -40,7 +41,9 @@ export default function BlockScreensScreen({
               <Animated.View key={t.key} entering={FadeInDown.delay(i * 45).duration(320)} style={styles.themeCell}>
                 <Pressable onPress={() => onSelectTheme(t.key)} style={[styles.themeCard, active && styles.themeCardActive]}>
                   <LinearGradient colors={t.palette} style={StyleSheet.absoluteFill} />
-                  <Text style={styles.themeGlyph}>{t.glyph}</Text>
+                  <View style={styles.themeGlyph}>
+                    <Icon name={t.mark} size={22} color="#FFFFFF" strokeWidth={1.5} />
+                  </View>
                   <Text style={styles.themeName}>{t.name}</Text>
                 </Pressable>
               </Animated.View>
@@ -104,7 +107,7 @@ function ToggleRow({
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: colors.accent, false: 'rgba(255,255,255,0.2)' }}
+        trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
         thumbColor="#fff"
       />
     </View>
@@ -122,10 +125,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerGlyph: { color: palette.text, fontSize: 19 },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
-  sectionTitle: { color: colors.text, fontSize: 19, fontWeight: '800', marginTop: 18, marginBottom: 14 },
+  sectionTitle: { color: palette.text, fontSize: 19, fontWeight: '800', marginTop: 18, marginBottom: 14 },
   themeGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
   themeCell: { width: '50%', padding: 5 },
   themeCard: {
@@ -137,14 +140,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  themeCardActive: { borderColor: colors.accent },
-  themeGlyph: { fontSize: 20, position: 'absolute', top: 12, left: 14 },
+  themeCardActive: { borderColor: palette.accent },
+  themeGlyph: { position: 'absolute', top: 12, left: 14 },
   themeName: { color: '#fff', fontSize: 15, fontWeight: '800' },
   card: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 22, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   toggleRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
-  toggleTitle: { color: colors.text, fontSize: 15.5, fontWeight: '600' },
-  toggleDesc: { color: colors.textDim, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
+  toggleTitle: { color: palette.text, fontSize: 15.5, fontWeight: '600' },
+  toggleDesc: { color: palette.textSecondary, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
   note: { marginTop: 20, padding: 16, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)' },
-  noteText: { color: colors.textFaint, fontSize: 13, lineHeight: 19 },
+  noteText: { color: palette.textTertiary, fontSize: 13, lineHeight: 19 },
 });

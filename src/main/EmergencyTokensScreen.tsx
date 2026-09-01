@@ -3,9 +3,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
-function ParachuteGlyph({ size = 64, color = colors.accent }: { size?: number; color?: string }) {
+function ParachuteGlyph({ size = 64, color = palette.accent }: { size?: number; color?: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
@@ -19,9 +20,9 @@ function ParachuteGlyph({ size = 64, color = colors.accent }: { size?: number; c
 }
 
 const PACKS = [
-  { id: 'single', label: '1 token', desc: 'One extra emergency exit.', price: '₹49' },
-  { id: 'pair', label: '3 tokens', desc: 'Best for most people.', price: '₹99' },
-  { id: 'pack10', label: '10 tokens', desc: 'Rarely need to top up again.', price: '₹249' },
+  { id: 'single', label: '1 Bailout', desc: 'One extra way out of a locked timer.', price: '₹49' },
+  { id: 'pair', label: '3 Bailouts', desc: 'Best for most people.', price: '₹99' },
+  { id: 'pack10', label: '10 Bailouts', desc: 'Rarely need to top up again.', price: '₹249' },
 ];
 
 export default function EmergencyTokensScreen({
@@ -35,9 +36,9 @@ export default function EmergencyTokensScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.backGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Emergency tokens</Text>
+        <Text style={styles.headerTitle}>Bailouts</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -45,15 +46,14 @@ export default function EmergencyTokensScreen({
         <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
           <ParachuteGlyph size={72} />
           <Text style={styles.balanceValue}>{tokenBalance}</Text>
-          <Text style={styles.balanceLabel}>token{tokenBalance === 1 ? '' : 's'} available</Text>
+          <Text style={styles.balanceLabel}>{tokenBalance === 1 ? 'Bailout' : 'Bailouts'} available</Text>
         </Animated.View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>What is this?</Text>
           <Text style={styles.cardBody}>
-            Once a focus session is locked, it can't be stopped for free — that's the whole point. An
-            emergency token is the one way out early: spend one, and the session ends immediately, no
-            questions asked.
+            Once a focus timer is locked, it can't be stopped for free — that's the whole point. A
+            Bailout is the way out early: use one, and the session ends immediately, no questions asked.
           </Text>
         </View>
 
@@ -67,10 +67,10 @@ export default function EmergencyTokensScreen({
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tokens don't expire or reset</Text>
+          <Text style={styles.cardTitle}>Bailouts don't expire or reset</Text>
           <Text style={styles.cardBody}>
-            Unused tokens carry over indefinitely. They're only ever spent when you actively choose to end
-            a locked session early — never automatically, never without confirming first.
+            Unused Bailouts carry over indefinitely. They're only ever used when you actively choose to leave
+            a locked timer early — never automatically, never without confirming first.
           </Text>
         </View>
 
@@ -87,8 +87,8 @@ export default function EmergencyTokensScreen({
           </View>
         ))}
         <Text style={styles.purchaseNote}>
-          In-app purchases for extra tokens aren't live yet — this is the store screen ready for when they
-          are. Your 2 free tokens work today.
+          In-app purchases for extra Bailouts aren't live yet — this is the store screen ready for when they
+          are. Your 2 free Bailouts work today.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -102,41 +102,40 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  headerTitle: { color: palette.text, fontSize: 18, fontWeight: '700' },
   scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 60 },
   hero: { alignItems: 'center', gap: 4, marginBottom: 26 },
-  balanceValue: { color: colors.text, fontSize: 40, fontWeight: '800', marginTop: 12 },
-  balanceLabel: { color: colors.textDim, fontSize: 14, fontWeight: '600' },
+  balanceValue: { color: palette.text, fontSize: 40, fontWeight: '800', marginTop: 12 },
+  balanceLabel: { color: palette.textSecondary, fontSize: 14, fontWeight: '600' },
   card: {
-    backgroundColor: colors.cardBg,
+    backgroundColor: palette.surface,
     borderRadius: 20,
     padding: 18,
     marginBottom: 14,
   },
-  cardTitle: { color: colors.text, fontSize: 15.5, fontWeight: '700', marginBottom: 6 },
-  cardBody: { color: colors.textDim, fontSize: 13.5, lineHeight: 20 },
-  sectionLabel: { color: colors.textFaint, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 16, marginBottom: 10 },
+  cardTitle: { color: palette.text, fontSize: 15.5, fontWeight: '700', marginBottom: 6 },
+  cardBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 20 },
+  sectionLabel: { color: palette.textTertiary, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 16, marginBottom: 10 },
   packRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cardBg,
+    backgroundColor: palette.surface,
     borderRadius: 18,
     padding: 16,
     marginBottom: 10,
   },
-  packLabel: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  packDesc: { color: colors.textDim, fontSize: 12.5, marginTop: 2 },
+  packLabel: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  packDesc: { color: palette.textSecondary, fontSize: 12.5, marginTop: 2 },
   packBuyBtn: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: palette.glass,
   },
-  packBuyText: { color: 'rgba(255,255,255,0.45)', fontSize: 12.5, fontWeight: '700' },
-  purchaseNote: { color: colors.textFaint, fontSize: 12, lineHeight: 17, textAlign: 'center', marginTop: 8 },
+  packBuyText: { color: palette.textQuaternary, fontSize: 12.5, fontWeight: '700' },
+  purchaseNote: { color: palette.textTertiary, fontSize: 12, lineHeight: 17, textAlign: 'center', marginTop: 8 },
 });

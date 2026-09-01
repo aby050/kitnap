@@ -1,50 +1,59 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, StyleSheet, Text, View, Dimensions, TouchableOpacity, TextInput, ScrollView, Switch, Platform } from 'react-native';
+import {
+  Dimensions,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeIn,
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
   runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import Icon from '../ui/Icon';
+import { Button, Card, Divider, Editorial, IconButton, Pill, Ring, Screen } from '../design/primitives';
+import Icon, { IconName } from '../ui/Icon';
+import AppGlyph from '../ui/AppGlyph';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import { motion, palette, radius, space, type } from '../design/tokens';
 
 const { width } = Dimensions.get('window');
 
-// ── Design tokens ──
-const ORANGE = '#E8642C';
-const ORANGE_DIM = 'rgba(232, 100, 44, 0.08)';
-const CARD_BG = '#1c1c1e';
-const SELECTED_BG = '#F5EDE4';
-const SELECTED_TEXT = '#1a1a1a';
-
-// ── Quick-select presets ──
-const PRESETS = [
-  { minutes: 15, label: '15', sub: 'Minutes' },
-  { minutes: 45, label: '45', sub: 'Minutes' },
-  { minutes: 180, label: '3', sub: 'Hours', tall: true },
-  { minutes: 720, label: '12:00', sub: 'Custom', locked: true },
-] as const;
-
-// ── Vertical slider constants ──
+// Duration bounds — adjusted in 15-minute steps by the ± controls.
 const SLIDER_MIN = 5;
 const SLIDER_MAX = 720;
 const SLIDER_STEP = 15;
-const TICK_COUNT = 12;
 
-// ── Slide-to-start constants ──
+// Slide-to-start geometry.
 const SLIDE_BTN = 54;
 const SLIDE_TRACK_H = 62;
 const SLIDE_PAD = 4;
 
+/** Small square tile for a per-feature toggle inside the block sheet — a
+ *  semantic icon, never a fake brand mark. */
+function FeatureTile({ name }: { name: IconName }) {
+  return (
+    <View style={styles.featureTile}>
+      <Icon name={name} size={16} color={palette.textSecondary} strokeWidth={1.6} />
+    </View>
+  );
+}
+
+const SWITCH_TRACK = { true: palette.accent, false: palette.surfaceHigh };
+
 export default function TimerScreen({
   initialMinutes = 30,
   autoStart = false,
+  hardMode = false,
   label = 'Timer',
   motivationLine,
   onFocusComplete,
@@ -58,6 +67,8 @@ export default function TimerScreen({
 }: {
   initialMinutes?: number;
   autoStart?: boolean;
+  /** Hard mode: the session cannot be ended with a Bailout. Emergency access stays. */
+  hardMode?: boolean;
   label?: string;
   onOpenEssentials?: () => void;
   onOpenShield?: () => void;
@@ -74,7 +85,7 @@ export default function TimerScreen({
   const [showAppSelectModal, setShowAppSelectModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Track category toggle states
+  // Category toggle states (mirrored into the parent's blockedPackages on start).
   const [ytBlocked, setYtBlocked] = useState(true);
   const [ytShorts, setYtShorts] = useState(false);
   const [ytHomepage, setYtHomepage] = useState(false);
@@ -102,20 +113,16 @@ export default function TimerScreen({
     }
   }, [blockedPackages]);
 
-  // When modal opens, sync selection state
   useEffect(() => {
-    if (showAppSelectModal) {
-      syncModalStateFromProps();
-    }
+    if (showAppSelectModal) syncModalStateFromProps();
   }, [showAppSelectModal, syncModalStateFromProps]);
 
-  // ── State ──
+  // ── Timer state ──
   const [selectedMinutes, setSelectedMinutes] = useState(initialMinutes);
   const [remaining, setRemaining] = useState(autoStart ? initialMinutes * 60 : 0);
   const [running, setRunning] = useState(autoStart);
   const prevRemaining = useRef(remaining);
 
-  // ── Countdown tick ──
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {
@@ -130,7 +137,7 @@ export default function TimerScreen({
     return () => clearInterval(id);
   }, [running]);
 
-  // ── Completion callback ──
+  // Completion callback — rest sessions don't award focus credit.
   useEffect(() => {
     if (prevRemaining.current > 0 && remaining === 0) {
       const isRest = /rest/i.test(label);
@@ -139,34 +146,20 @@ export default function TimerScreen({
     prevRemaining.current = remaining;
   }, [remaining, selectedMinutes, label, onFocusComplete]);
 
-  // ── LCD display values ──
+  // ── Time display ──
   const totalSec = running || remaining > 0 ? remaining : selectedMinutes * 60;
   const dispH = Math.floor(totalSec / 3600);
   const dispM = Math.floor((totalSec % 3600) / 60);
   const dispS = totalSec % 60;
   const showHours = selectedMinutes >= 60 || dispH > 0;
-  const lcdLeft = showHours
-    ? String(dispH).padStart(2, '0')
-    : String(dispM).padStart(2, '0');
-  const lcdRight = showHours
-    ? String(dispM).padStart(2, '0')
-    : String(dispS).padStart(2, '0');
+  const lcdLeft = showHours ? String(dispH).padStart(2, '0') : String(dispM).padStart(2, '0');
+  const lcdRight = showHours ? String(dispM).padStart(2, '0') : String(dispS).padStart(2, '0');
+  const progress =
+    (running || remaining > 0) && selectedMinutes > 0
+      ? Math.max(0, Math.min(1, remaining / (selectedMinutes * 60)))
+      : 0;
 
-  // ── Preset selection ──
-  const selectPreset = (minutes: number) => {
-    if (running) return;
-    setSelectedMinutes(minutes);
-    setRemaining(0);
-  };
-
-  // ── Vertical slider position ──
-  const sliderFraction = Math.min(
-    1,
-    Math.max(0, (selectedMinutes - SLIDER_MIN) / (SLIDER_MAX - SLIDER_MIN)),
-  );
-  const activeTickIndex = Math.round(sliderFraction * (TICK_COUNT - 1));
-
-  const handleSliderStep = (dir: number) => {
+  const handleStep = (dir: number) => {
     if (running) return;
     const next = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, selectedMinutes + dir * SLIDER_STEP));
     setSelectedMinutes(next);
@@ -174,7 +167,7 @@ export default function TimerScreen({
   };
 
   // ── Slide-to-start gesture ──
-  const maxSlideX = width - 40 - SLIDE_BTN - SLIDE_PAD * 2;
+  const maxSlideX = width - space.gutter * 2 - SLIDE_BTN - SLIDE_PAD * 2;
   const slideX = useSharedValue(0);
 
   const triggerStart = useCallback(() => {
@@ -186,7 +179,6 @@ export default function TimerScreen({
     }
   }, [remaining, running, selectedMinutes]);
 
-  // Reset the slider thumb once the timer starts
   useEffect(() => {
     if (running) {
       const t = setTimeout(() => {
@@ -196,9 +188,7 @@ export default function TimerScreen({
     }
   }, [running, slideX]);
 
-  const handleSlideComplete = () => {
-    setShowAppSelectModal(true);
-  };
+  const handleSlideComplete = () => setShowAppSelectModal(true);
 
   const handleCancelStart = () => {
     setShowAppSelectModal(false);
@@ -207,19 +197,10 @@ export default function TimerScreen({
 
   const handleConfirmAndStart = () => {
     const nextPackages: string[] = [];
-
-    // 1. YouTube
-    if (ytBlocked) {
-      nextPackages.push('com.google.android.youtube');
-    }
-
-    // 2. Distracting category
+    if (ytBlocked) nextPackages.push('com.google.android.youtube');
     Object.keys(distractingAppsState).forEach((pkg) => {
-      if (distractingAppsState[pkg]) {
-        nextPackages.push(pkg);
-      }
+      if (distractingAppsState[pkg]) nextPackages.push(pkg);
     });
-
     onUpdateBlockedPackages?.(nextPackages);
     setShowAppSelectModal(false);
     triggerStart();
@@ -240,1084 +221,536 @@ export default function TimerScreen({
       }
     });
 
-  const slideAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: slideX.value }],
-  }));
+  const slideAnimStyle = useAnimatedStyle(() => ({ transform: [{ translateX: slideX.value }] }));
 
-  // ── Locked full-screen mode ──
-  // Once the timer is running it can't be paused or backed out of for free —
-  // that's the entire deterrent. The only way out is the cross button, which
-  // costs 1 token and is confirmed explicitly, never a silent tap-to-cancel.
+  // ─────────────────────────────────────────────────────────────
+  // Locked full-screen mode — running can't be paused or backed out
+  // of for free. The only exit is Bailout, which is confirmed explicitly.
+  // ─────────────────────────────────────────────────────────────
   if (running) {
     return (
-      <SafeAreaView style={styles.lockedContainer} edges={['top', 'bottom']}>
-        <TouchableOpacity
-          style={styles.lockedCornerBtnLeft}
-          activeOpacity={0.7}
-          onPress={() => setShowCancelConfirm(true)}
-          hitSlop={10}
-        >
-          <Icon name="close" size={15} color="rgba(255,255,255,0.7)" />
-        </TouchableOpacity>
-
-        <View style={styles.lockedCornerRight}>
-          {onOpenShield && (
-            <TouchableOpacity style={styles.lockedShieldBtn} activeOpacity={0.7} onPress={onOpenShield} hitSlop={10}>
-              <Icon name="shield" size={16} color="#ffffff" />
-            </TouchableOpacity>
-          )}
-          {onOpenEssentials && (
-            <TouchableOpacity style={styles.lockedEmergencyBtn} activeOpacity={0.7} onPress={onOpenEssentials} hitSlop={10}>
-              <Text style={styles.lockedEmergencyText}>Emergency</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.lockedBody}>
-          <Text style={styles.lockedLabel}>{label}</Text>
-          <Text style={styles.lockedDigits}>
-            {lcdLeft}
-            <Text style={styles.lcdColon}>:</Text>
-            {lcdRight}
-          </Text>
-          {motivationLine ? <Text style={styles.lockedMotivation}>{motivationLine}</Text> : null}
-        </View>
-
-        <Modal visible={showCancelConfirm} transparent animationType="fade" onRequestClose={() => setShowCancelConfirm(false)}>
-          <View style={styles.confirmOverlay}>
-            <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
-              <Text style={styles.confirmTitle}>End this session early?</Text>
-              <Text style={styles.confirmBody}>
-                Once started this can't be stopped for free. Ending now costs{' '}
-                <Text style={styles.confirmAccent}>1 token</Text>.{'\n'}You have {tokenBalance} token
-                {tokenBalance === 1 ? '' : 's'}.
-              </Text>
-              <TouchableOpacity
-                style={[styles.confirmSpendBtn, tokenBalance <= 0 && styles.confirmSpendBtnDisabled]}
-                disabled={tokenBalance <= 0}
-                activeOpacity={0.85}
-                onPress={() => {
-                  setShowCancelConfirm(false);
-                  setRunning(false);
-                  setRemaining(0);
-                  onSpendTokenToCancel?.();
-                }}
-              >
-                <Text style={styles.confirmSpendText}>
-                  {tokenBalance <= 0 ? 'No tokens left' : 'Spend 1 token and end now'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmKeepBtn} activeOpacity={0.8} onPress={() => setShowCancelConfirm(false)}>
-                <Text style={styles.confirmKeepText}>Keep going</Text>
-              </TouchableOpacity>
-              {onOpenTokenInfo && (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    setShowCancelConfirm(false);
-                    onOpenTokenInfo();
-                  }}
-                >
-                  <Text style={styles.confirmInfoLink}>What are emergency tokens?</Text>
-                </TouchableOpacity>
-              )}
-            </Animated.View>
+      <Screen edges={['top', 'bottom']}>
+        <View style={styles.lockedRoot}>
+        {hardMode ? (
+          <View style={styles.cornerLeft} />
+        ) : (
+          <View style={styles.cornerLeft}>
+            <Pill
+              label="Bailout"
+              icon="key"
+              tone="warn"
+              onPress={() => setShowCancelConfirm(true)}
+            />
           </View>
-        </Modal>
-      </SafeAreaView>
+        )}
+
+          <View style={styles.cornerRight}>
+            {onOpenShield && (
+              <IconButton name="shield" onPress={onOpenShield} bordered accessibilityLabel="Shield" />
+            )}
+            {onOpenEssentials && (
+              <Pill label="Emergency" icon="key" tone="danger" onPress={onOpenEssentials} />
+            )}
+          </View>
+
+          <View style={styles.lockedBody}>
+            <Text style={[type.overline, styles.lockedLabel]}>{label}</Text>
+            <Ring progress={progress} size={288} thickness={4}>
+              <Text style={styles.bigTime}>
+                {lcdLeft}
+                <Text style={styles.colon}>:</Text>
+                {lcdRight}
+              </Text>
+              <Text style={[type.unit, styles.unitLine]}>{showHours ? 'hours · minutes' : 'minutes · seconds'}</Text>
+            </Ring>
+            {motivationLine ? <Text style={[type.callout, styles.lockedMotivation]}>{motivationLine}</Text> : null}
+          </View>
+        </View>
+
+        <CancelConfirm
+          visible={showCancelConfirm}
+          tokenBalance={tokenBalance}
+          onClose={() => setShowCancelConfirm(false)}
+          onSpend={() => {
+            setShowCancelConfirm(false);
+            setRunning(false);
+            setRemaining(0);
+            onSpendTokenToCancel?.();
+          }}
+          onOpenTokenInfo={
+            onOpenTokenInfo
+              ? () => {
+                  setShowCancelConfirm(false);
+                  onOpenTokenInfo();
+                }
+              : undefined
+          }
+        />
+      </Screen>
     );
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Idle / setup mode
+  // ─────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <Screen edges={['top']} bloom>
       <View style={styles.content}>
-        {/* ── Title ── */}
         <Text style={styles.title}>{label}</Text>
-        {motivationLine ? <Text style={styles.motivation}>{motivationLine}</Text> : null}
+        <Editorial
+          lead={motivationLine ? '' : 'Set the length,'}
+          emphasis={motivationLine || 'then commit to it.'}
+          style={styles.voice}
+        />
 
-        {/* ── LCD Card, with a minimal +/- to set duration ── */}
-        <Animated.View entering={FadeIn.duration(400)} style={styles.lcdCard}>
-          <Text style={styles.lcdGhost}>88:88</Text>
-          <Text style={styles.lcdDigits}>
-            {lcdLeft}
-            <Text style={styles.lcdColon}>:</Text>
-            {lcdRight}
-          </Text>
-          <View style={styles.durationStepRow}>
-            <TouchableOpacity style={styles.chevronBtn} activeOpacity={0.7} onPress={() => handleSliderStep(-1)}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={2.5}>
-                <Path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.chevronBtn} activeOpacity={0.7} onPress={() => handleSliderStep(1)}>
-              <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={2.5}>
-                <Path d="M18 15l-6-6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
-            </TouchableOpacity>
+        <Animated.View entering={FadeIn.duration(motion.transition)} style={styles.hero}>
+          <Ring progress={progress} size={272} thickness={4}>
+            <Text style={[type.overline, styles.heroCap]}>Session length</Text>
+            <Text style={styles.bigTime}>
+              {lcdLeft}
+              <Text style={styles.colon}>:</Text>
+              {lcdRight}
+            </Text>
+            <Text style={[type.unit, styles.unitLine]}>{showHours ? 'hours · minutes' : 'minutes' }</Text>
+          </Ring>
+
+          <View style={styles.stepper}>
+            <Pressable style={styles.stepBtn} onPress={() => handleStep(-1)} hitSlop={8}>
+              <Icon name="minus" size={20} color={palette.text} />
+            </Pressable>
+            <Text style={[type.caption, styles.stepHint]}>15-min steps</Text>
+            <Pressable style={styles.stepBtn} onPress={() => handleStep(1)} hitSlop={8}>
+              <Icon name="plus" size={20} color={palette.text} />
+            </Pressable>
           </View>
         </Animated.View>
 
-        {/* Spacer pushes the slide bar to the bottom */}
-        <View style={{ flex: 1 }} />
+        <View style={styles.spacer} />
 
-        {/* ── Slide to Start ── */}
+        {/* Slide to start */}
         <View style={styles.slideTrack}>
+          <Text style={styles.slideLabel}>Slide to start</Text>
           <GestureDetector gesture={slideGesture}>
-            <Animated.View style={[styles.slideBtn, slideAnimStyle]}>
-              <Svg width={22} height={22} viewBox="0 0 24 24" fill={ORANGE}>
-                <Path d="M8 5v14l11-7z" />
-              </Svg>
+            <Animated.View style={[styles.slideThumb, slideAnimStyle]}>
+              <Icon name="chevronRight" size={22} color={palette.textInverse} strokeWidth={2.2} />
             </Animated.View>
           </GestureDetector>
-          <Text style={styles.slideLabel}>SLIDE TO START</Text>
         </View>
 
-        {/* ── Essentials & emergency access (moved here from Home) ── */}
         {onOpenEssentials && (
-          <TouchableOpacity
-            style={styles.essentialsRow}
-            activeOpacity={0.8}
-            onPress={onOpenEssentials}
-          >
-            <View style={styles.sosBadge}>
-              <Text style={styles.sosBadgeText}>SOS</Text>
+          <Card onPress={onOpenEssentials} style={styles.accessCard}>
+            <View style={styles.accessRow}>
+              <View style={styles.accessIcon}>
+                <Icon name="shield" size={18} color={palette.accent} strokeWidth={1.7} />
+              </View>
+              <View style={styles.shrink}>
+                <Text style={type.bodyStrong}>Essentials & emergency access</Text>
+                <Text style={[type.sub, styles.accessSub]}>Never blocked. Never charged.</Text>
+              </View>
+              <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.essentialsTitle}>Essentials &amp; emergency access</Text>
-              <Text style={styles.essentialsSub}>Never blocked. Never charged.</Text>
-            </View>
-            <Text style={styles.essentialsChevron}>›</Text>
-          </TouchableOpacity>
+          </Card>
         )}
 
         {onOpenTokenInfo && (
-          <TouchableOpacity style={styles.tokenRow} activeOpacity={0.8} onPress={onOpenTokenInfo}>
-            <View style={styles.tokenBadge}>
-              <Text style={styles.tokenBadgeText}>{tokenBalance}</Text>
+          <Card onPress={onOpenTokenInfo} style={styles.accessCardTight}>
+            <View style={styles.accessRow}>
+              <View style={styles.tokenBadge}>
+                <Text style={styles.tokenBadgeText}>{tokenBalance}</Text>
+              </View>
+              <View style={styles.shrink}>
+                <Text style={type.bodyStrong}>Bailouts</Text>
+                <Text style={[type.sub, styles.accessSub]}>Use one to leave a locked timer early.</Text>
+              </View>
+              <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.essentialsTitle}>Emergency tokens</Text>
-              <Text style={styles.essentialsSub}>Spend one to end a locked session early.</Text>
-            </View>
-            <Text style={styles.essentialsChevron}>›</Text>
-          </TouchableOpacity>
+          </Card>
         )}
       </View>
 
-      {/* Select Apps to Block Modal */}
-      {showAppSelectModal && (() => {
-        const distractingAppsList = DEFAULT_BLOCKED_APPS.filter(app => app.packageName !== 'com.google.android.youtube');
-        const filteredDistractingApps = distractingAppsList.filter(app =>
-          app.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        const isAnyDistractingChecked = distractingAppsList.some(app => distractingAppsState[app.packageName]);
+      {/* Select-apps sheet */}
+      {showAppSelectModal &&
+        (() => {
+          const distractingAppsList = DEFAULT_BLOCKED_APPS.filter(
+            (app) => app.packageName !== 'com.google.android.youtube',
+          );
+          const filteredDistractingApps = distractingAppsList.filter((app) =>
+            app.name.toLowerCase().includes(searchQuery.toLowerCase()),
+          );
+          const isAnyDistractingChecked = distractingAppsList.some((app) => distractingAppsState[app.packageName]);
 
-        const handleToggleDistractingMaster = (val: boolean) => {
-          const nextState: Record<string, boolean> = {};
-          distractingAppsList.forEach(app => {
-            nextState[app.packageName] = val;
-          });
-          setDistractingAppsState(nextState);
-        };
+          const handleToggleDistractingMaster = (val: boolean) => {
+            const nextState: Record<string, boolean> = {};
+            distractingAppsList.forEach((app) => {
+              nextState[app.packageName] = val;
+            });
+            setDistractingAppsState(nextState);
+          };
 
-        return (
-          <Modal
-            visible={showAppSelectModal}
-            transparent
-            animationType="slide"
-            onRequestClose={handleCancelStart}
-          >
-            <View style={styles.modalOverlay}>
-              <SafeAreaView style={styles.modalSheet} edges={['top', 'bottom']}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Select Apps to Block</Text>
-                  <TouchableOpacity onPress={handleCancelStart} style={styles.modalCloseBtn} hitSlop={10}>
-                    <Icon name="close" size={16} color="#ffffff" />
-                  </TouchableOpacity>
-                </View>
+          const q = searchQuery.toLowerCase();
 
-                {/* Search Bar */}
-                <View style={styles.searchBarContainer}>
-                  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth={2.5} style={styles.searchIcon}>
-                    <Circle cx="11" cy="11" r="8" />
-                    <Path d="M21 21l-4.3-4.3" />
-                  </Svg>
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search apps"
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    clearButtonMode="while-editing"
-                  />
-                </View>
-
-                <ScrollView contentContainerStyle={styles.modalScrollBody} showsVerticalScrollIndicator={false}>
-                  {/* Group 1: YouTube */}
-                  {('youtube'.includes(searchQuery.toLowerCase()) || searchQuery === '') && (
-                    <View style={styles.modalGroupCard}>
-                      {/* YouTube Master */}
-                      <View style={styles.groupHeaderRow}>
-                        <SelectAppIcon type="com.google.android.youtube" />
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                          <Text style={styles.groupHeaderTitle}>YouTube and YouTube (R)</Text>
-                          <Text style={styles.groupHeaderSubtitle}>Blocked completely</Text>
-                        </View>
-                        <Switch
-                          value={ytBlocked}
-                          onValueChange={setYtBlocked}
-                          trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                          thumbColor="#ffffff"
-                        />
-                      </View>
-
-                      {/* YouTube Suboptions */}
-                      <View style={styles.groupSubOptions}>
-                        <View style={styles.subOptionRow}>
-                          <SelectAppIcon type="yt_shorts" size={24} />
-                          <Text style={styles.subOptionLabel}>Block Shorts</Text>
-                          <Switch
-                            value={ytShorts}
-                            onValueChange={setYtShorts}
-                            trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                            thumbColor="#ffffff"
-                          />
-                        </View>
-                        <View style={styles.subOptionRow}>
-                          <SelectAppIcon type="homepage" size={24} />
-                          <Text style={styles.subOptionLabel}>Block homepage</Text>
-                          <Switch
-                            value={ytHomepage}
-                            onValueChange={setYtHomepage}
-                            trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                            thumbColor="#ffffff"
-                          />
-                        </View>
-                        <View style={styles.subOptionRow}>
-                          <SelectAppIcon type="channels" size={24} />
-                          <Text style={styles.subOptionLabel}>Block distracting channels</Text>
-                          <Switch
-                            value={ytChannels}
-                            onValueChange={setYtChannels}
-                            trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                            thumbColor="#ffffff"
-                          />
-                        </View>
-                      </View>
+          return (
+            <Modal visible transparent animationType="slide" onRequestClose={handleCancelStart}>
+              <View style={styles.modalOverlay}>
+                <SafeAreaView style={styles.modalSheet} edges={['bottom']}>
+                  <View style={styles.grabber} />
+                  <View style={styles.modalHeader}>
+                    <View>
+                      <Text style={type.title2}>Block during this session</Text>
+                      <Text style={[type.sub, styles.modalHeaderSub]}>What stays out of reach until the timer ends.</Text>
                     </View>
-                  )}
+                    <IconButton name="close" onPress={handleCancelStart} color={palette.textSecondary} bordered accessibilityLabel="Close" />
+                  </View>
 
-                  {/* Group 2: Browser Apps */}
-                  {('browser chrome internet'.includes(searchQuery.toLowerCase()) || searchQuery === '') && (
-                    <View style={styles.modalGroupCard}>
-                      {/* Browser Master */}
-                      <View style={styles.groupHeaderRow}>
-                        <SelectAppIcon type="chrome" />
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                          <Text style={styles.groupHeaderTitle}>Browser apps</Text>
-                          <Text style={styles.groupHeaderSubtitle}>Blocked completely</Text>
+                  <View style={styles.searchBar}>
+                    <Icon name="search" size={16} color={palette.textTertiary} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search apps"
+                      placeholderTextColor={palette.textTertiary}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      clearButtonMode="while-editing"
+                    />
+                  </View>
+
+                  <ScrollView contentContainerStyle={styles.modalScrollBody} showsVerticalScrollIndicator={false}>
+                    {/* YouTube */}
+                    {('youtube'.includes(q) || q === '') && (
+                      <View style={styles.groupCard}>
+                        <View style={styles.groupHeadRow}>
+                          <AppGlyph name="YouTube" packageName="com.google.android.youtube" size={40} />
+                          <View style={styles.groupHeadText}>
+                            <Text style={type.bodyStrong}>YouTube</Text>
+                            <Text style={[type.sub, styles.accessSub]}>Blocked completely</Text>
+                          </View>
+                          <Switch value={ytBlocked} onValueChange={setYtBlocked} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
                         </View>
-                        <Switch
-                          value={browserBlocked}
-                          onValueChange={setBrowserBlocked}
-                          trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                          thumbColor="#ffffff"
-                        />
-                      </View>
-
-                      {/* Browser Suboptions */}
-                      <View style={styles.groupSubOptions}>
-                        <View style={styles.subOptionRow}>
-                          <SelectAppIcon type="incognito" size={24} />
-                          <Text style={styles.subOptionLabel}>Block adult content</Text>
-                          <Switch
-                            value={browserAdult}
-                            onValueChange={setBrowserAdult}
-                            trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                            thumbColor="#ffffff"
-                          />
-                        </View>
-                        <View style={styles.subOptionRow}>
-                          <SelectAppIcon type="globe" size={24} />
-                          <Text style={styles.subOptionLabel}>Block distracting sites</Text>
-                          <Switch
-                            value={browserDistracting}
-                            onValueChange={setBrowserDistracting}
-                            trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                            thumbColor="#ffffff"
-                          />
-                        </View>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Group 3: Distracting Apps list */}
-                  {filteredDistractingApps.length > 0 && (
-                    <View style={styles.modalGroupCard}>
-                      {/* Category Header */}
-                      <View style={styles.categoryHeaderRow}>
-                        <TouchableOpacity
-                          onPress={() => setDistractingCollapsed(!distractingCollapsed)}
-                          style={styles.collapseToggle}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.collapseArrow}>
-                            {distractingCollapsed ? '›' : 'v'}
-                          </Text>
-                          <Text style={styles.categoryTitle}>Distracting</Text>
-                        </TouchableOpacity>
-
-                        <Switch
-                          value={isAnyDistractingChecked}
-                          onValueChange={handleToggleDistractingMaster}
-                          trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                          thumbColor="#ffffff"
-                        />
-                      </View>
-
-                      {/* Apps List (collapsible) */}
-                      {!distractingCollapsed && (
-                        <View style={styles.categoryAppsList}>
-                          {filteredDistractingApps.map((app) => (
-                            <View key={app.packageName} style={styles.appOptionRow}>
-                              <SelectAppIcon type={app.packageName} size={30} />
-                              <Text style={styles.appOptionLabel}>{app.name}</Text>
-                              <Switch
-                                value={!!distractingAppsState[app.packageName]}
-                                onValueChange={(val) => {
-                                  setDistractingAppsState((prev) => ({
-                                    ...prev,
-                                    [app.packageName]: val,
-                                  }));
-                                }}
-                                trackColor={{ true: '#7CF5B0', false: '#2C2C2E' }}
-                                thumbColor="#ffffff"
-                              />
+                        <Divider inset={0} />
+                        <View style={styles.subList}>
+                          {[
+                            { icon: 'play' as IconName, label: 'Block Shorts', value: ytShorts, set: setYtShorts },
+                            { icon: 'home' as IconName, label: 'Block homepage', value: ytHomepage, set: setYtHomepage },
+                            { icon: 'list' as IconName, label: 'Block distracting channels', value: ytChannels, set: setYtChannels },
+                          ].map((o) => (
+                            <View key={o.label} style={styles.subRow}>
+                              <FeatureTile name={o.icon} />
+                              <Text style={styles.subLabel}>{o.label}</Text>
+                              <Switch value={o.value} onValueChange={o.set} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
                             </View>
                           ))}
                         </View>
-                      )}
-                    </View>
-                  )}
-                </ScrollView>
+                      </View>
+                    )}
 
-                {/* Sticky Bottom Start Button */}
-                <View style={styles.modalCtaContainer}>
-                  <TouchableOpacity onPress={handleConfirmAndStart} style={styles.modalStartBtn} activeOpacity={0.95}>
-                    <Text style={styles.modalStartBtnText}>Start Timer</Text>
-                  </TouchableOpacity>
-                </View>
-              </SafeAreaView>
-            </View>
-          </Modal>
-        );
-      })()}
-    </SafeAreaView>
+                    {/* Browsers */}
+                    {('browser chrome internet'.includes(q) || q === '') && (
+                      <View style={styles.groupCard}>
+                        <View style={styles.groupHeadRow}>
+                          <View style={styles.browserTile}>
+                            <Icon name="globe" size={22} color={palette.textSecondary} strokeWidth={1.6} />
+                          </View>
+                          <View style={styles.groupHeadText}>
+                            <Text style={type.bodyStrong}>Browser apps</Text>
+                            <Text style={[type.sub, styles.accessSub]}>Blocked completely</Text>
+                          </View>
+                          <Switch value={browserBlocked} onValueChange={setBrowserBlocked} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
+                        </View>
+                        <Divider inset={0} />
+                        <View style={styles.subList}>
+                          {[
+                            { icon: 'eyeOff' as IconName, label: 'Block adult content', value: browserAdult, set: setBrowserAdult },
+                            { icon: 'globe' as IconName, label: 'Block distracting sites', value: browserDistracting, set: setBrowserDistracting },
+                          ].map((o) => (
+                            <View key={o.label} style={styles.subRow}>
+                              <FeatureTile name={o.icon} />
+                              <Text style={styles.subLabel}>{o.label}</Text>
+                              <Switch value={o.value} onValueChange={o.set} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Distracting apps */}
+                    {filteredDistractingApps.length > 0 && (
+                      <View style={styles.groupCard}>
+                        <View style={styles.categoryHead}>
+                          <Pressable
+                            onPress={() => setDistractingCollapsed(!distractingCollapsed)}
+                            style={styles.collapseToggle}
+                            hitSlop={6}
+                          >
+                            <Icon name={distractingCollapsed ? 'chevronRight' : 'chevronDown'} size={18} color={palette.textTertiary} />
+                            <Text style={type.bodyStrong}>Distracting apps</Text>
+                          </Pressable>
+                          <Switch
+                            value={isAnyDistractingChecked}
+                            onValueChange={handleToggleDistractingMaster}
+                            trackColor={SWITCH_TRACK}
+                            thumbColor={palette.text}
+                          />
+                        </View>
+                        {!distractingCollapsed && (
+                          <>
+                            <Divider inset={0} />
+                            <View style={styles.subList}>
+                              {filteredDistractingApps.map((app) => (
+                                <View key={app.packageName} style={styles.appRow}>
+                                  <AppGlyph name={app.name} packageName={app.packageName} size={34} />
+                                  <Text style={styles.appLabel}>{app.name}</Text>
+                                  <Switch
+                                    value={!!distractingAppsState[app.packageName]}
+                                    onValueChange={(val) =>
+                                      setDistractingAppsState((prev) => ({ ...prev, [app.packageName]: val }))
+                                    }
+                                    trackColor={SWITCH_TRACK}
+                                    thumbColor={palette.text}
+                                  />
+                                </View>
+                              ))}
+                            </View>
+                          </>
+                        )}
+                      </View>
+                    )}
+                  </ScrollView>
+
+                  <View style={styles.modalCta}>
+                    <Button label="Start focus" icon="shield" variant="accent" onPress={handleConfirmAndStart} />
+                  </View>
+                </SafeAreaView>
+              </View>
+            </Modal>
+          );
+        })()}
+    </Screen>
   );
 }
 
-function SelectAppIcon({ type, size = 32 }: { type: string; size?: number }) {
-  switch (type) {
-    case 'com.facebook.katana':
-    case 'Facebook':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#1877F2', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={{ color: '#fff', fontSize: size * 0.55, fontWeight: '800', marginTop: size * 0.05 }}>f</Text>
-        </View>
-      );
-    case 'com.instagram.android':
-    case 'Instagram':
-      return (
-        <View style={[styles.selBrandIcon, { width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }]}>
-          <LinearGradient
-            colors={['#C13584', '#E1306C', '#F77737']}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={{
-            width: size * 0.44,
-            height: size * 0.44,
-            borderRadius: size * 0.12,
-            borderWidth: 1.2,
-            borderColor: 'white',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <View style={{
-              width: size * 0.16,
-              height: size * 0.16,
-              borderRadius: size * 0.08,
-              borderWidth: 1.2,
-              borderColor: 'white'
-            }} />
-          </View>
-        </View>
-      );
-    case 'com.reddit.frontpage':
-    case 'Reddit':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#FF4500', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={{ color: '#fff', fontSize: size * 0.45 }}>👽</Text>
-        </View>
-      );
-    case 'com.google.android.youtube':
-    case 'YouTube':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#FF0000', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={{ color: '#fff', fontSize: size * 0.35, fontWeight: '800' }}>▶</Text>
-        </View>
-      );
-    case 'com.snapchat.android':
-    case 'Snapchat':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#FFFC00', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={{ fontSize: size * 0.45 }}>👻</Text>
-        </View>
-      );
-    case 'com.twitter.android':
-    case 'X':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#000000', width: size, height: size, borderRadius: size / 2, borderWidth: 0.8, borderColor: '#222' }]}>
-          <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: '800' }}>𝕏</Text>
-        </View>
-      );
-    case 'com.zhiliaoapp.musically':
-    case 'TikTok':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#000000', width: size, height: size, borderRadius: size / 2, borderWidth: 0.8, borderColor: '#222' }]}>
-          <Text style={{ color: '#00f2fe', fontSize: size * 0.45, fontWeight: '800' }}>d</Text>
-        </View>
-      );
-    case 'yt_shorts':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#1C1C1E', width: size, height: size, borderRadius: size / 2 }]}>
-          <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="rgba(255,255,255,0.7)">
-            <Path d="M17.771 9.697l-1.985-1.166 1.996-1.171c2.158-1.266 2.871-4.04 1.591-6.176-1.279-2.136-4.082-2.842-6.241-1.575l-10.793 6.337c-1.611.946-2.527 2.766-2.316 4.6.21 1.833 1.513 3.376 3.284 3.864l2.254.622-2.265 1.33c-2.158 1.267-2.871 4.041-1.591 6.177 1.28 2.135 4.083 2.841 6.241 1.574l10.792-6.337c1.611-.947 2.527-2.767 2.317-4.601-.211-1.833-1.514-3.376-3.285-3.864zM10 14.5v-5l4.5 2.5-4.5 2.5z"/>
-          </Svg>
-        </View>
-      );
-    case 'homepage':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#1C1C1E', width: size, height: size, borderRadius: size / 2 }]}>
-          <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
-            <Path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <Path d="M9 22V12h6v10" />
-          </Svg>
-        </View>
-      );
-    case 'channels':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#1C1C1E', width: size, height: size, borderRadius: size / 2 }]}>
-          <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
-            <Path d="M2 17h20M2 12h20M2 7h20" />
-          </Svg>
-        </View>
-      );
-    case 'chrome':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#F5F5F5', width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }]}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: '100%', height: '100%' }}>
-            <View style={{ width: '50%', height: '50%', backgroundColor: '#EA4335' }} />
-            <View style={{ width: '50%', height: '50%', backgroundColor: '#34A853' }} />
-            <View style={{ width: '50%', height: '50%', backgroundColor: '#4285F4' }} />
-            <View style={{ width: '50%', height: '50%', backgroundColor: '#FBBC05' }} />
-          </View>
-        </View>
-      );
-    case 'incognito':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#1C1C1E', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: size * 0.45 }}>🕵️</Text>
-        </View>
-      );
-    case 'globe':
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#1C1C1E', width: size, height: size, borderRadius: size / 2 }]}>
-          <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
-            <Circle cx="12" cy="12" r="10" />
-            <Path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10M12 2a15.3 15.3 0 0 0-4 10 15.3 15.3 0 0 0 4 10M2 12h20" />
-          </Svg>
-        </View>
-      );
-    default:
-      return (
-        <View style={[styles.selBrandIcon, { backgroundColor: '#3A3A3C', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: '800' }}>
-            {(type || '?').charAt(0).toUpperCase()}
+/** End-session-early confirm. A Bailout is the only way out of a locked timer. */
+function CancelConfirm({
+  visible,
+  tokenBalance,
+  onClose,
+  onSpend,
+  onOpenTokenInfo,
+}: {
+  visible: boolean;
+  tokenBalance: number;
+  onClose: () => void;
+  onSpend: () => void;
+  onOpenTokenInfo?: () => void;
+}) {
+  const noun = tokenBalance === 1 ? 'Bailout' : 'Bailouts';
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.confirmOverlay}>
+        <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
+          <Text style={styles.confirmTitle}>Leave this timer?</Text>
+          <Text style={styles.confirmBody}>
+            A locked session doesn't stop for free. Walking out now uses{' '}
+            <Text style={styles.confirmAccent}>1 Bailout</Text>.{'\n'}You have {tokenBalance} {noun}.
           </Text>
-        </View>
-      );
-  }
+          <Button
+            label={tokenBalance <= 0 ? 'No Bailouts left' : 'Use 1 Bailout and exit'}
+            variant="danger"
+            disabled={tokenBalance <= 0}
+            onPress={onSpend}
+          />
+          <Button label="Keep going" variant="ghost" onPress={onClose} />
+          {onOpenTokenInfo && (
+            <Pressable onPress={onOpenTokenInfo} hitSlop={8}>
+              <Text style={styles.confirmInfoLink}>What is a Bailout?</Text>
+            </Pressable>
+          )}
+        </Animated.View>
+      </View>
+    </Modal>
+  );
 }
 
-/* ──────────────────────────────────────────────────── */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    // Clears the absolutely-positioned bottom tab bar so the essentials row
-    // at the end of this screen isn't hidden underneath it.
-    paddingBottom: 110,
-  },
+  shrink: { flex: 1, minWidth: 0 },
+  content: { flex: 1, paddingHorizontal: space.gutter, paddingBottom: space.tabClearance },
 
-  /* Title */
-  title: {
-    color: '#ffffff',
-    fontSize: 30,
-    fontWeight: '800',
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  motivation: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 13.5,
-    marginBottom: 8,
-  },
+  title: { ...type.title1, marginTop: space.sm },
+  voice: { marginTop: space.xxs },
 
-  /* ── LCD Card ── */
-  lcdCard: {
-    width: '100%',
-    height: 150,
-    borderRadius: 28,
-    backgroundColor: CARD_BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 14,
-    marginBottom: 20,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  lcdGhost: {
-    position: 'absolute',
-    color: ORANGE_DIM,
-    fontSize: 80,
-    fontWeight: '800',
-    fontFamily: 'monospace',
-    letterSpacing: 8,
-  },
-  lcdDigits: {
-    color: ORANGE,
-    fontSize: 80,
-    fontWeight: '800',
-    fontFamily: 'monospace',
-    letterSpacing: 8,
-  },
-  lcdColon: {
-    color: ORANGE,
-  },
-  durationStepRow: {
-    position: 'absolute',
-    bottom: 12,
-    right: 16,
-    flexDirection: 'row',
-    gap: 8,
-  },
+  hero: { alignItems: 'center', marginTop: space.xl },
+  heroCap: { marginBottom: space.sm, color: palette.textTertiary },
+  bigTime: { ...type.hero, fontSize: 60, letterSpacing: -2, color: palette.text },
+  colon: { color: palette.textTertiary },
+  unitLine: { marginTop: space.xs },
 
-  /* ── Controls row ── */
-  controlsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  /* ── Preset grid ── */
-  presetsGrid: {
-    flex: 1,
-    gap: 10,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  presetTile: {
-    flex: 1,
-    minHeight: 82,
-    borderRadius: 20,
-    backgroundColor: CARD_BG,
-    padding: 14,
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  presetTileSel: {
-    backgroundColor: SELECTED_BG,
-  },
-  presetTileTall: {
-    minHeight: 130,
-  },
-  lockIcon: {
-    position: 'absolute',
-    top: 12,
-    left: 14,
-    fontSize: 13,
-  },
-  presetVal: {
-    color: '#ffffff',
-    fontSize: 30,
-    fontWeight: '800',
-  },
-  presetValSel: {
-    color: SELECTED_TEXT,
-  },
-  presetValBig: {
-    fontSize: 46,
-  },
-  presetSub: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 12.5,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  presetSubSel: {
-    color: 'rgba(0,0,0,0.45)',
-  },
-
-  /* ── Vertical slider ── */
-  sliderCol: {
-    width: 56,
-    alignItems: 'center',
-    gap: 10,
-  },
-  sliderTrack: {
-    width: 50,
-    flex: 1,
-    borderRadius: 16,
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.lg, marginTop: space.xl },
+  stepBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: CARD_BG,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  sliderTick: {
-    width: '100%',
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  sliderTickActive: {
-    backgroundColor: ORANGE,
-    height: 4,
-    shadowColor: ORANGE,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sliderBtns: {
-    gap: 6,
-  },
-  chevronBtn: {
-    width: 44,
-    height: 36,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: CARD_BG,
+    borderColor: palette.border,
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  stepHint: { minWidth: 76, textAlign: 'center', color: palette.textTertiary },
 
-  /* ── Slide to start ── */
+  spacer: { flex: 1, minHeight: space.xl },
+
   slideTrack: {
     width: '100%',
     height: SLIDE_TRACK_H,
     borderRadius: SLIDE_TRACK_H / 2,
-    backgroundColor: CARD_BG,
+    backgroundColor: palette.glass,
+    borderWidth: 1,
+    borderColor: palette.border,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SLIDE_PAD,
-    position: 'relative',
-    marginBottom: 8,
+    marginBottom: space.sm,
   },
-  slideBtn: {
+  slideThumb: {
     width: SLIDE_BTN,
     height: SLIDE_BTN,
     borderRadius: SLIDE_BTN / 2,
-    backgroundColor: SELECTED_BG,
+    backgroundColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
   },
-  essentialsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: CARD_BG,
-    borderRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginTop: 14,
-  },
-  tokenRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: CARD_BG,
-    borderRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginTop: 10,
-  },
-  tokenBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: ORANGE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tokenBadgeText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  sosBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#FF3B5F', // Pinkish red matching the screenshot
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sosBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  essentialsTitle: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
-  essentialsSub: { color: 'rgba(255,255,255,0.45)', fontSize: 13.5, marginTop: 3 },
-  essentialsChevron: { color: 'rgba(255,255,255,0.35)', fontSize: 20 },
   slideLabel: {
     position: 'absolute',
-    right: 0,
     left: 0,
+    right: 0,
     textAlign: 'center',
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 2.5,
-    zIndex: 1,
+    ...type.overline,
+    color: palette.textTertiary,
   },
 
-  /* ── Locked full-screen mode ── */
-  lockedContainer: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  lockedCornerBtnLeft: {
-    position: 'absolute',
-    top: 14,
-    left: 20,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 5,
-  },
-  lockedCornerIcon: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  lockedCornerRight: {
-    position: 'absolute',
-    top: 14,
-    right: 20,
-    alignItems: 'flex-end',
-    gap: 8,
-    zIndex: 5,
-  },
-  lockedShieldBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  accessCard: { marginTop: space.base },
+  accessCardTight: { marginTop: space.sm },
+  accessRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  accessIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+    backgroundColor: palette.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lockedShieldIcon: {
-    fontSize: 16,
-  },
-  lockedEmergencyBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,59,95,0.14)',
-  },
-  lockedEmergencyText: {
-    color: '#FF6B87',
-    fontSize: 12.5,
-    fontWeight: '700',
-  },
-  lockedBody: {
-    flex: 1,
+  accessSub: { marginTop: space.xxs },
+  tokenBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 30,
   },
-  lockedLabel: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  lockedDigits: {
-    color: ORANGE,
-    fontSize: 64,
-    fontWeight: '800',
-    fontFamily: 'monospace',
-    letterSpacing: 6,
-  },
-  lockedMotivation: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+  tokenBadgeText: { ...type.bodyStrong, color: palette.accent },
 
-  /* ── Cancel-for-token confirm ── */
-  confirmOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
+  // ── Locked mode ──
+  lockedRoot: { flex: 1 },
+  cornerLeft: { position: 'absolute', top: space.sm, left: space.gutter, zIndex: 5 },
+  cornerRight: { position: 'absolute', top: space.sm, right: space.gutter, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  lockedBody: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingHorizontal: space.xxl },
+  lockedLabel: { color: palette.textTertiary },
+  lockedMotivation: { color: palette.textSecondary, textAlign: 'center', maxWidth: 300 },
+
+  // ── Cancel confirm ──
+  confirmOverlay: { flex: 1, backgroundColor: palette.scrim, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xxl },
   confirmBox: {
     width: '100%',
-    maxWidth: 340,
-    backgroundColor: '#141517',
-    borderRadius: 26,
-    padding: 24,
-    gap: 14,
+    maxWidth: 344,
+    backgroundColor: palette.surfaceRaised,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: radius.xxl,
+    padding: space.xl,
+    gap: space.md,
   },
-  confirmTitle: {
-    color: '#ffffff',
-    fontSize: 19,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  confirmBody: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  confirmAccent: {
-    color: ORANGE,
-    fontWeight: '700',
-  },
-  confirmSpendBtn: {
-    paddingVertical: 15,
-    borderRadius: 22,
-    backgroundColor: ORANGE,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  confirmSpendBtnDisabled: {
-    opacity: 0.35,
-  },
-  confirmSpendText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  confirmKeepBtn: {
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-  confirmKeepText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  confirmInfoLink: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12.5,
-    fontWeight: '600',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-    marginTop: 4,
-  },
+  confirmTitle: { ...type.title3, textAlign: 'center' },
+  confirmBody: { ...type.callout, textAlign: 'center', lineHeight: 21, marginBottom: space.xs },
+  confirmAccent: { color: palette.accent, fontWeight: '700' },
+  confirmInfoLink: { ...type.sub, textAlign: 'center', textDecorationLine: 'underline', marginTop: space.xs },
 
-  /* ── App Select Modal Styles ── */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    justifyContent: 'flex-end',
-  },
+  // ── App-select sheet ──
+  modalOverlay: { flex: 1, backgroundColor: palette.scrim, justifyContent: 'flex-end' },
   modalSheet: {
-    backgroundColor: '#0c0d0e',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
     height: '92%',
-    paddingTop: 8,
+    paddingTop: space.sm,
   },
-  modalHeader: {
+  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: palette.borderStrong, marginBottom: space.sm },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: space.gutter, paddingVertical: space.md, gap: space.md },
+  modalHeaderSub: { marginTop: space.xxs, maxWidth: 240 },
+  searchBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    gap: space.sm,
+    backgroundColor: palette.glass,
+    borderRadius: radius.md,
+    marginHorizontal: space.gutter,
+    marginBottom: space.base,
+    paddingHorizontal: space.md,
+    height: 46,
   },
-  modalTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '800',
+  searchInput: { flex: 1, ...type.body, paddingVertical: 0 },
+  modalScrollBody: { paddingHorizontal: space.gutter, paddingBottom: space.huge, gap: space.base },
+  groupCard: {
+    backgroundColor: palette.surfaceRaised,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.hairline,
+    padding: space.base,
+    gap: space.md,
   },
-  modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  groupHeadRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  groupHeadText: { flex: 1, minWidth: 0 },
+  browserTile: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalCloseIcon: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  searchBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-    height: 46,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  modalScrollBody: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-    gap: 16,
-  },
-  modalGroupCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 20,
+  subList: { gap: space.sm },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.xxs },
+  featureTile: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
-    overflow: 'hidden',
-  },
-  groupHeaderRow: {
-    flexDirection: 'row',
+    borderColor: palette.hairline,
+    backgroundColor: palette.glass,
     alignItems: 'center',
-    paddingBottom: 14,
+    justifyContent: 'center',
   },
-  groupHeaderTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  groupHeaderSubtitle: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12.5,
-    marginTop: 2,
-  },
-  groupSubOptions: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 8,
-    gap: 10,
-  },
-  subOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    gap: 10,
-  },
-  subOptionLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14.5,
-    fontWeight: '600',
-    flex: 1,
-  },
-  categoryHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-  },
-  collapseToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 8,
-    paddingVertical: 4,
-  },
-  collapseArrow: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 16,
-    fontWeight: 'bold',
-    width: 14,
-  },
-  categoryTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  categoryAppsList: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 8,
-    gap: 12,
-  },
-  appOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    gap: 12,
-  },
-  appOptionLabel: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '600',
-    flex: 1,
-  },
-  modalCtaContainer: {
+  subLabel: { flex: 1, ...type.callout, color: palette.textSecondary },
+  categoryHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  collapseToggle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flex: 1, paddingVertical: space.xxs },
+  appRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.xxs },
+  appLabel: { flex: 1, ...type.body },
+  modalCta: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#0c0d0e',
+    backgroundColor: palette.surface,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 20,
-  },
-  modalStartBtn: {
-    backgroundColor: '#ffffff',
-    height: 54,
-    borderRadius: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  modalStartBtnText: {
-    color: '#000000',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  selBrandIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderTopColor: palette.hairline,
+    paddingHorizontal: space.gutter,
+    paddingTop: space.md,
+    paddingBottom: Platform.OS === 'ios' ? space.xxl : space.lg,
   },
 });

@@ -2,13 +2,12 @@ import React, { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import OpalOrb from '../components/OpalOrb';
+import WendOrb from '../components/WendOrb';
 import QuestionBlock from './QuestionBlock';
 import HistoryItem from './HistoryItem';
 import LoginScreen from '../main/LoginScreen';
 import { Question, QUESTIONS, resolvePrompt } from './questions';
 import { Account } from '../data/store';
-import { colors } from '../theme';
 
 type Answer = { value: string; label: string };
 type HistoryEntry = { id: string; prompt: string; label: string };
@@ -68,10 +67,8 @@ export default function OnboardingFlow({
   if (showLogin) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          <View style={styles.mascotWrap}>
-            <OpalOrb size={52} awake />
-          </View>
+        <View style={styles.mascotWrap}>
+          <WendOrb size={52} awake />
         </View>
         <View style={styles.loginArea}>
           <LoginScreen
@@ -91,7 +88,7 @@ export default function OnboardingFlow({
       {/* Slides up + fades in to continue the motion of the orb from the
           last EducationScreen slide, which lifts off before this mounts. */}
       <Animated.View entering={FadeInUp.duration(500)} style={styles.mascotWrap}>
-        <OpalOrb size={40} awake />
+        <WendOrb size={40} awake />
       </Animated.View>
 
       <View style={styles.historyWrap}>

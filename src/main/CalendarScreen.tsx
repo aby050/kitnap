@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { ProgressState, dateKey, formatDuration, getDay, totals } from '../data/progress';
-import { colors } from '../theme';
+import { ProgressState, dateKey, formatDuration, getDay, sumRange, totals } from '../data/progress';
+import { palette, space, radius } from '../design/tokens';
+import Icon, { IconName } from '../ui/Icon';
 
 type DayType = 'none' | 'low' | 'avg' | 'high' | 'challenge' | 'goal';
 
@@ -16,13 +18,14 @@ function classify(log: ReturnType<typeof getDay>, avgSaved: number): DayType {
   return 'avg';
 }
 
+// Aligned to the app's intensity ramp: mint (best) → lime → amber → coral.
 const TYPE_COLOR: Record<DayType, string> = {
-  none: 'rgba(255,255,255,0.05)',
-  low: 'rgba(124,245,176,0.55)',
-  avg: 'rgba(255,213,79,0.45)',
-  high: 'rgba(255,107,107,0.45)',
-  challenge: 'rgba(76,111,255,0.6)',
-  goal: 'rgba(124,245,176,0.55)',
+  none: palette.surfaceHigh,
+  low: palette.accent,
+  avg: '#B9D97A',
+  high: palette.warn,
+  challenge: palette.danger,
+  goal: palette.accent,
 };
 
 const LEGEND: { type: DayType; label: string }[] = [
@@ -60,6 +63,11 @@ export default function CalendarScreen({ progress, onBack }: { progress: Progres
     return cells;
   }, [year, month]);
 
+  const monthStats = useMemo(() => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return sumRange(progress, dateKey(new Date(year, month, 1)), dateKey(new Date(year, month, daysInMonth)));
+  }, [progress, year, month]);
+
   const goMonth = (delta: number) => {
     let m = month + delta;
     let y = year;
@@ -79,119 +87,189 @@ export default function CalendarScreen({ progress, onBack }: { progress: Progres
   const selectedType = selected ? classify(selectedLog!, avgSaved) : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Calendar</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.monthRow}>
-          <Pressable onPress={() => goMonth(-1)} style={styles.monthBtn} hitSlop={10}>
-            <Text style={styles.monthBtnText}>‹</Text>
+    <View style={styles.root}>
+      <LinearGradient colors={['#04140D', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
+            <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.monthLabel}>{monthLabel(year, month)}</Text>
-          <Pressable onPress={() => goMonth(1)} style={styles.monthBtn} hitSlop={10}>
-            <Text style={styles.monthBtnText}>›</Text>
-          </Pressable>
+          <Text style={styles.headerTitle}>Calendar</Text>
+          <View style={{ width: 40 }} />
         </View>
 
-        <View style={styles.weekdayRow}>
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((w, i) => (
-            <Text key={`${w}${i}`} style={styles.weekdayLabel}>
-              {w}
-            </Text>
-          ))}
-        </View>
-
-        <View style={styles.grid}>
-          {grid.map((cell, i) => {
-            if (!cell.day) return <View key={i} style={styles.cell} />;
-            const log = getDay(progress, cell.key!);
-            const type = classify(log, avgSaved);
-            const isSelected = selected === cell.key;
-            const isToday = cell.key === dateKey(now);
-            return (
-              <Pressable key={i} onPress={() => setSelected(cell.key)} style={styles.cell}>
-                <View
-                  style={[
-                    styles.dayDot,
-                    { backgroundColor: TYPE_COLOR[type] },
-                    isSelected && styles.dayDotSelected,
-                    isToday && styles.dayDotToday,
-                  ]}
-                >
-                  <Text style={styles.dayNum}>{cell.day}</Text>
-                </View>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <View style={styles.monthRow}>
+              <Pressable onPress={() => goMonth(-1)} style={styles.monthBtn} hitSlop={10}>
+                <Icon name="chevronLeft" size={18} color={palette.textSecondary} strokeWidth={2} />
               </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={styles.legendWrap}>
-          {LEGEND.map((l) => (
-            <View key={l.type} style={styles.legendRow}>
-              <View style={[styles.legendSwatch, { backgroundColor: TYPE_COLOR[l.type] }]} />
-              <Text style={styles.legendLabel}>{l.label}</Text>
+              <Text style={styles.monthLabel}>{monthLabel(year, month)}</Text>
+              <Pressable onPress={() => goMonth(1)} style={styles.monthBtn} hitSlop={10}>
+                <Icon name="chevronRight" size={18} color={palette.textSecondary} strokeWidth={2} />
+              </Pressable>
             </View>
-          ))}
-        </View>
 
-        {selected && selectedLog && (
-          <Animated.View entering={FadeIn.duration(280)} style={styles.detailCard}>
-            <Text style={styles.detailDate}>{new Date(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
-            {selectedType === 'none' ? (
-              <Text style={styles.detailEmpty}>No activity logged this day.</Text>
-            ) : (
-              <>
-                <Text style={styles.detailRow}>Focus: {formatDuration(selectedLog.focusMinutes)}</Text>
-                <Text style={styles.detailRow}>Time saved: {formatDuration(selectedLog.savedMinutes)}</Text>
-                <Text style={styles.detailRow}>Distractions blocked: {selectedLog.distractionsBlocked}</Text>
-                <Text style={styles.detailRow}>Lock sessions: {selectedLog.lockSessions}</Text>
-                <Text style={styles.detailRow}>Hard unlocks: {selectedLog.hardUnlocks}</Text>
-              </>
-            )}
-          </Animated.View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+            {/* Month summary */}
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryCol}>
+                <Text style={styles.summaryValue}>{formatDuration(monthStats.focusMinutes)}</Text>
+                <Text style={styles.summaryLabel}>Focused</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryCol}>
+                <Text style={styles.summaryValue}>{formatDuration(monthStats.savedMinutes)}</Text>
+                <Text style={styles.summaryLabel}>Saved</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryCol}>
+                <Text style={styles.summaryValue}>{monthStats.daysWithFocus}</Text>
+                <Text style={styles.summaryLabel}>Active days</Text>
+              </View>
+            </View>
+
+            <View style={styles.weekdayRow}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((w, i) => (
+                <Text key={`${w}${i}`} style={styles.weekdayLabel}>
+                  {w}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.grid}>
+              {grid.map((cell, i) => {
+                if (!cell.day) return <View key={i} style={styles.cell} />;
+                const log = getDay(progress, cell.key!);
+                const type = classify(log, avgSaved);
+                const isSelected = selected === cell.key;
+                const isToday = cell.key === dateKey(now);
+                const filled = type !== 'none';
+                return (
+                  <Pressable key={i} onPress={() => setSelected(cell.key)} style={styles.cell}>
+                    <View
+                      style={[
+                        styles.dayDot,
+                        { backgroundColor: TYPE_COLOR[type] },
+                        isToday && styles.dayDotToday,
+                        isSelected && styles.dayDotSelected,
+                      ]}
+                    >
+                      <Text style={[styles.dayNum, filled ? styles.dayNumOn : styles.dayNumOff]}>{cell.day}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.legendWrap}>
+            {LEGEND.map((l) => (
+              <View key={l.type} style={styles.legendRow}>
+                <View style={[styles.legendSwatch, { backgroundColor: TYPE_COLOR[l.type] }]} />
+                <Text style={styles.legendLabel}>{l.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {selected && selectedLog && (
+            <Animated.View entering={FadeIn.duration(280)} style={styles.detailCard}>
+              <Text style={styles.detailDate}>
+                {new Date(selected).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+              </Text>
+              {selectedType === 'none' ? (
+                <Text style={styles.detailEmpty}>No activity logged this day.</Text>
+              ) : (
+                <View style={styles.metricList}>
+                  <Metric icon="target" label="Focus" value={formatDuration(selectedLog.focusMinutes)} />
+                  <Metric icon="hourglass" label="Time saved" value={formatDuration(selectedLog.savedMinutes)} />
+                  <Metric icon="shield" label="Distractions blocked" value={`${selectedLog.distractionsBlocked}`} />
+                  <Metric icon="lock" label="Lock sessions" value={`${selectedLog.lockSessions}`} />
+                  <Metric icon="key" label="Hard unlocks" value={`${selectedLog.hardUnlocks}`} />
+                </View>
+              )}
+            </Animated.View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function Metric({ icon, label, value }: { icon: IconName; label: string; value: string }) {
+  return (
+    <View style={styles.metricRow}>
+      <View style={styles.metricGlyph}>
+        <Icon name={icon} size={16} color={palette.accent} strokeWidth={1.8} />
+      </View>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 8 },
-  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 100 },
-  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
-  monthBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
-  monthBtnText: { color: colors.text, fontSize: 18 },
-  monthLabel: { color: colors.text, fontSize: 17, fontWeight: '700' },
-  weekdayRow: { flexDirection: 'row', marginTop: 18 },
-  weekdayLabel: { flex: 1, textAlign: 'center', color: colors.textFaint, fontSize: 12, fontWeight: '700' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
-  cell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
-  dayDot: { width: '78%', aspectRatio: 1, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  dayDotSelected: { borderWidth: 2, borderColor: colors.accent },
-  dayDotToday: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)' },
-  dayNum: { color: colors.text, fontSize: 12.5, fontWeight: '700' },
-  legendWrap: { marginTop: 22, gap: 8 },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  legendSwatch: { width: 14, height: 14, borderRadius: 7 },
-  legendLabel: { color: colors.textDim, fontSize: 13 },
-  detailCard: {
-    marginTop: 20,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-    padding: 18,
-    gap: 6,
+  root: { flex: 1, backgroundColor: palette.base },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.sm },
+  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.glass, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  scroll: { paddingHorizontal: space.gutter, paddingTop: space.xs, paddingBottom: 110 },
+
+  card: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.xxl,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: space.lg,
+    marginTop: space.base,
   },
-  detailDate: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 },
-  detailEmpty: { color: colors.textFaint, fontSize: 13.5 },
-  detailRow: { color: colors.textDim, fontSize: 13.5 },
+  monthRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  monthBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: palette.surfaceHigh, alignItems: 'center', justifyContent: 'center' },
+  monthLabel: { color: palette.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+
+  summaryRow: { flexDirection: 'row', alignItems: 'center', marginTop: space.lg },
+  summaryCol: { flex: 1, alignItems: 'center' },
+  summaryValue: { color: palette.text, fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  summaryLabel: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 0.4, marginTop: 3, textTransform: 'uppercase' },
+  summaryDivider: { width: 1, height: 30, backgroundColor: palette.hairline },
+
+  weekdayRow: { flexDirection: 'row', marginTop: space.lg },
+  weekdayLabel: { flex: 1, textAlign: 'center', color: palette.textQuaternary, fontSize: 12, fontWeight: '800' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: space.xs },
+  cell: { width: `${100 / 7}%`, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
+  dayDot: { width: '80%', aspectRatio: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  dayDotSelected: { borderWidth: 2, borderColor: palette.text },
+  dayDotToday: { borderWidth: 1.5, borderColor: palette.accentBorder },
+  dayNum: { fontSize: 12.5, fontWeight: '800' },
+  dayNumOn: { color: '#04140c' },
+  dayNumOff: { color: palette.textTertiary },
+
+  legendWrap: {
+    marginTop: space.lg,
+    padding: space.base,
+    borderRadius: radius.lg,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.hairline,
+    gap: space.sm,
+  },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  legendSwatch: { width: 14, height: 14, borderRadius: 4 },
+  legendLabel: { color: palette.textSecondary, fontSize: 13.5 },
+
+  detailCard: {
+    marginTop: space.lg,
+    backgroundColor: palette.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: space.lg,
+  },
+  detailDate: { color: palette.text, fontSize: 16.5, fontWeight: '800', letterSpacing: -0.3, marginBottom: space.md },
+  detailEmpty: { color: palette.textTertiary, fontSize: 13.5 },
+  metricList: { gap: space.md },
+  metricRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  metricGlyph: { width: 30, height: 30, borderRadius: 10, backgroundColor: palette.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  metricLabel: { flex: 1, color: palette.textSecondary, fontSize: 14 },
+  metricValue: { color: palette.text, fontSize: 14.5, fontWeight: '800' },
 });

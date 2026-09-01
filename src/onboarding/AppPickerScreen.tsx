@@ -5,7 +5,7 @@ import Svg, { Circle, Path, Rect, Line } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { getInstalledApps } from 'device-permissions';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 type Entry = { id: string; name: string; tint: string; group?: string; expandable?: boolean };
@@ -345,10 +345,13 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Title Header */}
-      <Text style={styles.hint}>
-        Use <Text style={styles.hintIconHighlight}>Search</Text> or tap{' '}
-        <Text style={styles.hintIconHighlight}>›</Text> to select apps/websites
-      </Text>
+      <View style={styles.hintRow}>
+        <Text style={styles.hint}>Use </Text>
+        <Text style={[styles.hint, styles.hintIconHighlight]}>Search</Text>
+        <Text style={styles.hint}> or tap </Text>
+        <Icon name="chevronRight" size={16} color="#ffffff" strokeWidth={2.2} />
+        <Text style={styles.hint}> to select apps/websites</Text>
+      </View>
 
       {/* Main card list */}
       <Animated.View entering={FadeIn.duration(400)} style={styles.listCard}>
@@ -385,9 +388,12 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
                   <Text style={styles.appName}>{e.name}</Text>
                   
                   {e.expandable ? (
-                    <Text style={[styles.chevron, expanded && styles.chevronDown]}>
-                      {expanded ? '▾' : '›'}
-                    </Text>
+                    <Icon
+                      name={expanded ? 'chevronDown' : 'chevronRight'}
+                      size={18}
+                      color="rgba(255,255,255,0.4)"
+                      strokeWidth={2}
+                    />
                   ) : null}
                 </TouchableOpacity>
               </View>
@@ -421,16 +427,22 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: 'transparent',
     paddingHorizontal: 18,
+  },
+  hintRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 26,
+    marginBottom: 26,
+    paddingHorizontal: 12,
   },
   hint: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 15,
     fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 26,
-    marginBottom: 26,
     lineHeight: 22,
   },
   hintIconHighlight: {
@@ -439,12 +451,12 @@ const styles = StyleSheet.create({
   },
   listCard: {
     flex: 1,
-    backgroundColor: '#141517', // premium card dark color
-    borderRadius: 24,
+    backgroundColor: palette.surfaceRaised,
+    borderRadius: radius.xl,
     overflow: 'hidden',
     maxHeight: '62%',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: palette.hairline,
   },
   row: {
     flexDirection: 'row',
@@ -481,8 +493,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioOn: {
-    backgroundColor: '#7CF5B0', // brand green checkbox highlight
-    borderColor: '#7CF5B0',
+    backgroundColor: palette.accent,
+    borderColor: palette.accent,
   },
   radioTick: {
     color: '#0a1a10',

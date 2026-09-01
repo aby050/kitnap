@@ -11,7 +11,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import Icon from '../ui/Icon';
@@ -214,7 +214,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
                     style={styles.removeBtn}
                     hitSlop={8}
                   >
-                    <Icon name="close" size={12} color={colors.textDim} />
+                    <Icon name="close" size={12} color={palette.textSecondary} />
                   </Pressable>
                 </View>
               ))}
@@ -274,14 +274,14 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
                       <Path
                         d="M 95,160 Q 90,80 50,48"
                         fill="none"
-                        stroke="#7CF5B0"
+                        stroke="#6FE3A9"
                         strokeWidth={3.5}
                         strokeLinecap="round"
                       />
                       <Path
                         d="M 50,48 L 62,50 M 50,48 L 52,60"
                         fill="none"
-                        stroke="#7CF5B0"
+                        stroke="#6FE3A9"
                         strokeWidth={3.5}
                         strokeLinecap="round"
                       />
@@ -310,16 +310,16 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
             <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
               <Text style={styles.finalHeading}>
                 {name ? `${name},\n` : ''}
-                Wend will get you back <Text style={{ color: colors.accent }}>{reclaimedYears} years</Text>{'\n'}of your life
+                Wend will get you back <Text style={{ color: palette.accent }}>{reclaimedYears} years</Text>{'\n'}of your life
               </Text>
               <View style={{ height: 16 }} />
               
               <SummaryRow
                 icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#7CF5B0" strokeWidth={2}>
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#6FE3A9" strokeWidth={2}>
                     <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <Circle cx={12} cy={11} r={2} fill="#7CF5B0" />
-                    <Path d="M12 13v3" stroke="#7CF5B0" strokeWidth={2} />
+                    <Circle cx={12} cy={11} r={2} fill="#6FE3A9" />
+                    <Path d="M12 13v3" stroke="#6FE3A9" strokeWidth={2} />
                   </Svg>
                 }
                 title="30% less screen time"
@@ -328,7 +328,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
               
               <SummaryRow
                 icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="#7CF5B0">
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="#6FE3A9">
                     <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                   </Svg>
                 }
@@ -338,15 +338,15 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
               
               <SummaryRow
                 icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#7CF5B0" strokeWidth={2}>
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#6FE3A9" strokeWidth={2}>
                     <Rect x={3} y={4} width={18} height={18} rx={2} />
                     <Path d="M16 2v4M8 2v4M3 10h18" />
-                    <Circle cx={8} cy={14} r={1.2} fill="#7CF5B0" />
-                    <Circle cx={12} cy={14} r={1.2} fill="#7CF5B0" />
-                    <Circle cx={16} cy={14} r={1.2} fill="#7CF5B0" />
-                    <Circle cx={8} cy={18} r={1.2} fill="#7CF5B0" />
-                    <Circle cx={12} cy={18} r={1.2} fill="#7CF5B0" />
-                    <Circle cx={16} cy={18} r={1.2} fill="#7CF5B0" />
+                    <Circle cx={8} cy={14} r={1.2} fill="#6FE3A9" />
+                    <Circle cx={12} cy={14} r={1.2} fill="#6FE3A9" />
+                    <Circle cx={16} cy={14} r={1.2} fill="#6FE3A9" />
+                    <Circle cx={8} cy={18} r={1.2} fill="#6FE3A9" />
+                    <Circle cx={12} cy={18} r={1.2} fill="#6FE3A9" />
+                    <Circle cx={16} cy={18} r={1.2} fill="#6FE3A9" />
                   </Svg>
                 }
                 title={`${reclaimedDays} days back this year`}
@@ -397,43 +397,43 @@ const styles = StyleSheet.create({
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   centerBlock: { alignItems: 'center', width: '100%' },
   appSelectBlock: { alignItems: 'center', width: '100%' },
-  heading: { color: colors.text, fontSize: 22, fontWeight: '700', textAlign: 'center', lineHeight: 30, maxWidth: 320 },
-  headingBold: { fontWeight: '700', color: colors.text },
-  smallHeading: { color: colors.textDim, fontSize: 17, fontWeight: '600', textAlign: 'center', lineHeight: 24, maxWidth: 300, marginBottom: 6 },
-  accentInline: { color: colors.accent, fontWeight: '700' },
+  heading: { color: palette.text, fontSize: 22, fontWeight: '700', textAlign: 'center', lineHeight: 30, maxWidth: 320 },
+  headingBold: { fontWeight: '700', color: palette.text },
+  smallHeading: { color: palette.textSecondary, fontSize: 17, fontWeight: '600', textAlign: 'center', lineHeight: 24, maxWidth: 300, marginBottom: 6 },
+  accentInline: { color: palette.accent, fontWeight: '700' },
   bigNumber: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 46,
     fontWeight: '800',
     textAlign: 'center',
     marginVertical: 14,
-    textShadowColor: 'rgba(124,245,176,0.5)',
+    textShadowColor: 'rgba(111,227,169,0.5)',
     textShadowRadius: 24,
     textShadowOffset: { width: 0, height: 0 },
   },
-  eyebrow: { color: colors.textDim, fontSize: 12, letterSpacing: 2, textAlign: 'center', marginBottom: 10, textTransform: 'uppercase' },
+  eyebrow: { color: palette.textSecondary, fontSize: 12, letterSpacing: 2, textAlign: 'center', marginBottom: 10, textTransform: 'uppercase' },
   permRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.cardBg,
+    backgroundColor: palette.surfaceRaised,
     borderRadius: 20,
     padding: 16,
     width: '100%',
     maxWidth: 320,
     marginBottom: 12,
   },
-  permTitle: { color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  permDesc: { color: colors.textDim, fontSize: 12.5, lineHeight: 17 },
-  appList: { width: '100%', maxWidth: 340, backgroundColor: colors.cardBg, borderRadius: 22, overflow: 'hidden' },
+  permTitle: { color: palette.text, fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  permDesc: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 17 },
+  appList: { width: '100%', maxWidth: 340, backgroundColor: palette.surfaceRaised, borderRadius: 22, overflow: 'hidden' },
   appRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
   appRowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
   appIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   appIconLetter: { color: '#fff', fontWeight: '800', fontSize: 15 },
-  appName: { color: colors.text, fontSize: 15, fontWeight: '600' },
-  appUsage: { color: colors.textDim, fontSize: 12, marginTop: 2 },
+  appName: { color: palette.text, fontSize: 15, fontWeight: '600' },
+  appUsage: { color: palette.textSecondary, fontSize: 12, marginTop: 2 },
   removeBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  removeIcon: { color: colors.textDim, fontSize: 12 },
-  appsSelectedLabel: { color: colors.textDim, fontSize: 13 },
+  removeIcon: { color: palette.textSecondary, fontSize: 12 },
+  appsSelectedLabel: { color: palette.textSecondary, fontSize: 13 },
   phoneMock: {
     width: 220,
     height: 280,
@@ -510,9 +510,9 @@ const styles = StyleSheet.create({
     padding: 14,
     width: '100%',
   },
-  notifTitle: { color: colors.text, fontSize: 12, fontWeight: '700', marginBottom: 4 },
-  notifBody: { color: colors.textDim, fontSize: 11.5, lineHeight: 16 },
-  tapHint: { color: colors.textDim, fontSize: 12, letterSpacing: 2, marginTop: 40 },
+  notifTitle: { color: palette.text, fontSize: 12, fontWeight: '700', marginBottom: 4 },
+  notifBody: { color: palette.textSecondary, fontSize: 11.5, lineHeight: 16 },
+  tapHint: { color: palette.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: 40 },
   summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -528,8 +528,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  summaryTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  summaryDesc: { color: colors.textDim, fontSize: 13, lineHeight: 18 },
+  summaryTitle: { color: palette.text, fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  summaryDesc: { color: palette.textSecondary, fontSize: 13, lineHeight: 18 },
   finalHeading: {
     color: '#ffffff',
     fontSize: 26,
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   fistBumpLabel: {
-    color: colors.textDim,
+    color: palette.textSecondary,
     fontSize: 13.5,
     fontWeight: '500',
     textAlign: 'center',

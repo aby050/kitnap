@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 const SENSITIVITY = [
   { key: 'low', name: 'Low', desc: 'Only step in on your worst days.' },
@@ -24,7 +25,7 @@ export default function AutofocusScreen({ onBack }: { onBack: () => void }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Autofocus</Text>
         <View style={{ width: 40 }} />
@@ -98,7 +99,7 @@ function ToggleRow({
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: colors.accent, false: 'rgba(255,255,255,0.2)' }}
+        trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
         thumbColor="#fff"
       />
     </View>
@@ -116,20 +117,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerGlyph: { color: palette.text, fontSize: 19 },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
-  lede: { color: colors.textDim, fontSize: 14.5, lineHeight: 21, marginTop: 8 },
-  sectionTitle: { color: colors.text, fontSize: 19, fontWeight: '800', marginTop: 22, marginBottom: 14 },
+  lede: { color: palette.textSecondary, fontSize: 14.5, lineHeight: 21, marginTop: 8 },
+  sectionTitle: { color: palette.text, fontSize: 19, fontWeight: '800', marginTop: 22, marginBottom: 14 },
   segment: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 22, padding: 5 },
   segItem: { flex: 1, paddingVertical: 11, borderRadius: 18, alignItems: 'center' },
-  segItemActive: { backgroundColor: 'rgba(124,245,176,0.18)' },
-  segText: { color: colors.textDim, fontSize: 14.5, fontWeight: '600' },
-  segTextActive: { color: colors.accent, fontWeight: '800' },
-  segDesc: { color: colors.textFaint, fontSize: 13, marginTop: 10 },
+  segItemActive: { backgroundColor: 'rgba(111,227,169,0.18)' },
+  segText: { color: palette.textSecondary, fontSize: 14.5, fontWeight: '600' },
+  segTextActive: { color: palette.accent, fontWeight: '800' },
+  segDesc: { color: palette.textTertiary, fontSize: 13, marginTop: 10 },
   card: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 22, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   toggleRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
-  toggleTitle: { color: colors.text, fontSize: 15.5, fontWeight: '600' },
-  toggleDesc: { color: colors.textDim, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
+  toggleTitle: { color: palette.text, fontSize: 15.5, fontWeight: '600' },
+  toggleDesc: { color: palette.textSecondary, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
 });

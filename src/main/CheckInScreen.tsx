@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import QuestionBlock from '../onboarding/QuestionBlock';
 import { CHECKIN_QUESTIONS, CheckIn, latestCheckIn } from '../data/checkin';
 import { ProgressState, formatDuration, formatSignedMinutes, sumRange, weeklyWindows, dateKey } from '../data/progress';
 import { recommendIntensity } from '../data/evaluation';
 import { INTENSITIES, IntensityKey } from '../data/themes';
-import { colors } from '../theme';
+import { Screen } from '../design/primitives';
+import { palette } from '../design/tokens';
 
 type Answer = { value: string; label: string };
 
@@ -89,7 +89,7 @@ export default function CheckInScreen({
     const showRecommendation = recommendation.key !== currentIntensityKey;
 
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <Screen edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Animated.Text entering={FadeInDown.duration(400)} style={styles.heading}>
             Your 7-day review
@@ -152,12 +152,12 @@ export default function CheckInScreen({
             <Text style={styles.ctaText}>Continue</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <Screen edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.eyebrow}>WEEKLY CHECK-IN</Text>
         <Pressable onPress={onSkip} hitSlop={10}>
@@ -167,56 +167,55 @@ export default function CheckInScreen({
       <View style={styles.currentArea}>
         <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, height: 50 },
-  eyebrow: { color: colors.textFaint, fontSize: 12, letterSpacing: 1.5, fontWeight: '700' },
-  skipLink: { color: colors.textDim, fontSize: 14, fontWeight: '600' },
+  eyebrow: { color: palette.textTertiary, fontSize: 12, letterSpacing: 1.5, fontWeight: '700' },
+  skipLink: { color: palette.textSecondary, fontSize: 14, fontWeight: '600' },
   currentArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingBottom: 40 },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 20, gap: 14 },
-  heading: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
-  sub: { color: colors.textDim, fontSize: 14.5, textAlign: 'center', marginTop: 8, marginBottom: 10 },
+  heading: { color: palette.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
+  sub: { color: palette.textSecondary, fontSize: 14.5, textAlign: 'center', marginTop: 8, marginBottom: 10 },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.surface,
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: palette.border,
   },
-  rowLabel: { color: colors.textDim, fontSize: 13.5, fontWeight: '600' },
-  rowValue: { color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 6 },
-  rowHint: { color: colors.accent, fontSize: 13, fontWeight: '600', marginTop: 4 },
+  rowLabel: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
+  rowValue: { color: palette.text, fontSize: 24, fontWeight: '800', marginTop: 6 },
+  rowHint: { color: palette.accent, fontSize: 13, fontWeight: '600', marginTop: 4 },
   recommendCard: {
-    backgroundColor: 'rgba(124,245,176,0.06)',
+    backgroundColor: palette.accentSoft,
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(124,245,176,0.18)',
+    borderColor: palette.accentBorder,
     gap: 6,
   },
-  recommendTitle: { color: colors.accent, fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  recommendReason: { color: colors.textDim, fontSize: 13, lineHeight: 19 },
+  recommendTitle: { color: palette.accent, fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  recommendReason: { color: palette.textSecondary, fontSize: 13, lineHeight: 19 },
   recommendBtn: {
     marginTop: 12,
     paddingVertical: 13,
     borderRadius: 20,
-    backgroundColor: 'rgba(124,245,176,0.15)',
+    backgroundColor: palette.accentSoft,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: palette.accent,
     alignItems: 'center',
   },
-  recommendBtnText: { color: colors.accent, fontSize: 14.5, fontWeight: '700' },
-  recommendSkip: { color: colors.textFaint, fontSize: 12, textAlign: 'center', marginTop: 8 },
+  recommendBtnText: { color: palette.accent, fontSize: 14.5, fontWeight: '700' },
+  recommendSkip: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', marginTop: 8 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14, paddingTop: 8 },
   cta: {
     width: '100%',
     paddingVertical: 16,
     borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: palette.surfaceInverse,
     alignItems: 'center',
   },
   ctaText: { color: '#000', fontSize: 16, fontWeight: '700' },

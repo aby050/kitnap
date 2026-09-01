@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
@@ -83,7 +83,7 @@ export default function PinAccessScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>PIN code access</Text>
         <View style={{ width: 40 }} />
@@ -91,7 +91,7 @@ export default function PinAccessScreen({
 
       {stage === 'done' ? (
         <Animated.View entering={FadeIn.duration(400)} style={styles.doneBody}>
-          <Icon name="lock" size={40} color={colors.accent} strokeWidth={1.6} />
+          <Icon name="lock" size={40} color={palette.accent} strokeWidth={1.6} />
           <Text style={styles.doneTitle}>PIN set</Text>
           <Text style={styles.doneSub}>
             Opening Settings will now ask for this PIN. This never applies to Emergency access.
@@ -117,7 +117,11 @@ export default function PinAccessScreen({
                 onPress={() => press(d)}
                 style={[styles.key, d === '' && styles.keyGhost]}
               >
-                <Text style={styles.keyText}>{d}</Text>
+                {d === '⌫' ? (
+                  <Icon name="backspace" size={24} color={palette.text} strokeWidth={1.7} />
+                ) : (
+                  <Text style={styles.keyText}>{d}</Text>
+                )}
               </Pressable>
             ))}
           </View>
@@ -134,24 +138,23 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   body: { flex: 1, alignItems: 'center', paddingTop: 50 },
-  prompt: { color: colors.text, fontSize: 19, fontWeight: '700' },
+  prompt: { color: palette.text, fontSize: 19, fontWeight: '700' },
   dots: { flexDirection: 'row', gap: 16, marginTop: 30, marginBottom: 50 },
-  dot: { width: 15, height: 15, borderRadius: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)' },
-  dotFilled: { backgroundColor: colors.text, borderColor: colors.text },
-  dotError: { backgroundColor: '#ff6b6b', borderColor: '#ff6b6b' },
+  dot: { width: 15, height: 15, borderRadius: 8, borderWidth: 1.5, borderColor: palette.borderStrong },
+  dotFilled: { backgroundColor: palette.text, borderColor: palette.text },
+  dotError: { backgroundColor: palette.danger, borderColor: palette.danger },
   pad: { flexDirection: 'row', flexWrap: 'wrap', width: 260, justifyContent: 'center' },
   key: { width: 80, height: 68, alignItems: 'center', justifyContent: 'center' },
   keyGhost: {},
-  keyText: { color: colors.text, fontSize: 24, fontWeight: '600' },
+  keyText: { color: palette.text, fontSize: 24, fontWeight: '600' },
   doneBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 14 },
   doneGlyph: { fontSize: 44 },
-  doneTitle: { color: colors.text, fontSize: 22, fontWeight: '800' },
-  doneSub: { color: colors.textDim, fontSize: 14.5, textAlign: 'center', lineHeight: 21 },
+  doneTitle: { color: palette.text, fontSize: 22, fontWeight: '800' },
+  doneSub: { color: palette.textSecondary, fontSize: 14.5, textAlign: 'center', lineHeight: 21 },
 });

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop, Circle, Line } from 'react-native-svg';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const CHART_W = 340;
@@ -96,9 +96,9 @@ export default function PaywallScreen({
 
         <View style={{ height: 26 }} />
 
-        <Feature icon={<Icon name="shield" size={19} color={colors.text} />} title="Focus, uninterrupted." desc="Finally do your best work yet." />
-        <Feature icon="🗓" title="Own your time." desc="And fill your days with more intention." />
-        <Feature icon="👥" title="Be fully present." desc="Because life isn't happening on your screen." />
+        <Feature icon={<Icon name="shield" size={19} color={palette.text} />} title="Focus, uninterrupted." desc="Finally do your best work yet." />
+        <Feature icon={<Icon name="calendar" size={19} color={palette.text} />} title="Own your time." desc="And fill your days with more intention." />
+        <Feature icon={<Icon name="user" size={19} color={palette.text} />} title="Be fully present." desc="Because life isn't happening on your screen." />
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -119,15 +119,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 10 },
   heading: {
-    color: colors.text,
+    color: palette.text,
     fontSize: 25,
     fontWeight: '800',
     textAlign: 'center',
     lineHeight: 33,
   },
-  headingAccent: { color: colors.accent },
+  headingAccent: { color: palette.accent },
   eyebrow: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 13.5,
     fontWeight: '700',
     textAlign: 'center',
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 16,
   },
-  regularPillText: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  regularPillText: { color: palette.text, fontSize: 14, fontWeight: '700' },
   memberPill: {
     position: 'absolute',
     top: 108,
@@ -155,16 +155,16 @@ const styles = StyleSheet.create({
   },
   memberPillText: { color: '#0b2a14', fontSize: 14, fontWeight: '800' },
   axisRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  axisLeft: { color: colors.textDim, fontSize: 13 },
-  axisRight: { color: colors.accent, fontSize: 13, fontWeight: '600' },
+  axisLeft: { color: palette.textSecondary, fontSize: 13 },
+  axisRight: { color: palette.accent, fontSize: 13, fontWeight: '600' },
   featureRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 18 },
   featureIcon: { fontSize: 19, width: 34 },
   featureIconWrap: { width: 34, alignItems: 'flex-start', justifyContent: 'center' },
   featureText: { flex: 1, fontSize: 15, lineHeight: 22 },
-  featureTitle: { color: colors.text, fontWeight: '700' },
+  featureTitle: { color: palette.text, fontWeight: '700' },
   featureDesc: { color: 'rgba(255,255,255,0.8)' },
   stars: { color: '#FFC94A', fontSize: 17, letterSpacing: 3, textAlign: 'center' },
-  reviews: { color: colors.text, fontSize: 14.5, fontWeight: '700', textAlign: 'center', marginTop: 6 },
+  reviews: { color: palette.text, fontSize: 14.5, fontWeight: '700', textAlign: 'center', marginTop: 6 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14, paddingTop: 8 },
-  declineLink: { color: colors.textDim, fontSize: 14, textAlign: 'center', marginTop: 14, fontWeight: '600' },
+  declineLink: { color: palette.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 14, fontWeight: '600' },
 });

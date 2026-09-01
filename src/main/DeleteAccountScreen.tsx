@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 const ERASED_ITEMS = [
   'Your goal, theme, and unlock-difficulty settings',
@@ -31,7 +31,7 @@ export default function DeleteAccountScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Delete Account</Text>
         <View style={{ width: 40 }} />
@@ -39,7 +39,7 @@ export default function DeleteAccountScreen({
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.iconWrap}>
-          <Ionicons name="trash-outline" size={40} color="#FF6B6B" />
+          <Icon name="trash" size={40} color={palette.danger} strokeWidth={1.5} />
         </View>
 
         <Text style={styles.heading}>This can't be undone</Text>
@@ -52,7 +52,7 @@ export default function DeleteAccountScreen({
           <Text style={styles.cardTitle}>What gets erased</Text>
           {ERASED_ITEMS.map((item) => (
             <View key={item} style={styles.itemRow}>
-              <Ionicons name="close-circle" size={16} color="#FF6B6B" />
+              <Icon name="close" size={16} color={palette.danger} strokeWidth={2.2} />
               <Text style={styles.itemText}>{item}</Text>
             </View>
           ))}
@@ -95,48 +95,47 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 60, alignItems: 'center' },
   iconWrap: {
     width: 72,
     height: 72,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,107,107,0.12)',
+    backgroundColor: palette.dangerSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 10,
     marginBottom: 18,
   },
-  heading: { color: colors.text, fontSize: 22, fontWeight: '800', textAlign: 'center' },
-  sub: { color: colors.textDim, fontSize: 14, textAlign: 'center', lineHeight: 20, marginTop: 10, maxWidth: 320 },
+  heading: { color: palette.text, fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  sub: { color: palette.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20, marginTop: 10, maxWidth: 320 },
   card: {
     width: '100%',
-    backgroundColor: colors.cardBg,
+    backgroundColor: palette.surface,
     borderRadius: 20,
     padding: 18,
     marginTop: 26,
   },
-  cardTitle: { color: colors.text, fontSize: 14.5, fontWeight: '700', marginBottom: 12 },
+  cardTitle: { color: palette.text, fontSize: 14.5, fontWeight: '700', marginBottom: 12 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  itemText: { color: colors.textDim, fontSize: 13.5, flex: 1 },
+  itemText: { color: palette.textSecondary, fontSize: 13.5, flex: 1 },
   deleteBtn: {
     width: '100%',
     paddingVertical: 16,
     borderRadius: 24,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: palette.danger,
     alignItems: 'center',
     marginTop: 28,
   },
   deleteBtnDisabled: { opacity: 0.6 },
   deleteBtnText: { color: '#ffffff', fontSize: 15.5, fontWeight: '700' },
   confirmCard: { width: '100%', marginTop: 28, alignItems: 'center' },
-  confirmTitle: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 8 },
-  confirmBody: { color: colors.textDim, fontSize: 13.5, textAlign: 'center', lineHeight: 19, marginBottom: 4 },
+  confirmTitle: { color: palette.text, fontSize: 17, fontWeight: '800', marginBottom: 8 },
+  confirmBody: { color: palette.textSecondary, fontSize: 13.5, textAlign: 'center', lineHeight: 19, marginBottom: 4 },
   cancelBtn: { paddingVertical: 16, alignItems: 'center' },
-  cancelBtnText: { color: colors.textDim, fontSize: 15, fontWeight: '600' },
+  cancelBtnText: { color: palette.textSecondary, fontSize: 15, fontWeight: '600' },
 });

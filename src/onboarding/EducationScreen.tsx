@@ -13,8 +13,8 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import OpalOrb from '../components/OpalOrb';
-import { colors } from '../theme';
+import WendOrb from '../components/WendOrb';
+import { palette } from '../design/tokens';
 
 type SlideKey = 'designed' | 'noIcons' | 'escapeFeeds' | 'willpower' | 'spiral' | 'stoppingPoint' | 'setupIntro';
 type ArtKind = 'waves' | 'noIcons' | 'escapeFeeds' | 'tangle' | 'spiral' | 'stoppingPoint' | 'setupIntro';
@@ -247,7 +247,7 @@ function SetupIntroArtwork({ lifting }: { lifting: boolean }) {
   return (
     <View style={styles.artworkContainer}>
       <Animated.View style={[styles.setupIntroWrap, liftStyle]}>
-        <OpalOrb size={100} awake />
+        <WendOrb size={100} awake />
         <View style={styles.pedestal} />
       </Animated.View>
     </View>
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 16 },
   title: {
-    color: colors.text,
+    color: palette.text,
     fontSize: 26,
     fontWeight: '800',
     textAlign: 'center',
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   subtitle: {
-    color: colors.textDim,
+    color: palette.textSecondary,
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
@@ -386,9 +386,9 @@ const styles = StyleSheet.create({
   },
   boldText: {
     fontWeight: '700',
-    color: colors.text,
+    color: palette.text,
   },
-  
+
   // Custom Progress indicator
   indicatorContainer: {
     flexDirection: 'row',
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nextBtnText: {
-    color: colors.text,
+    color: palette.text,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1.5,
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     borderWidth: 1.5,
-    borderColor: colors.accent,
+    borderColor: palette.accent,
     position: 'absolute',
   },
   pauseCircle: {
@@ -560,13 +560,13 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1.8,
-    borderColor: colors.accent,
+    borderColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(124, 245, 176, 0.04)',
+    backgroundColor: 'rgba(111, 227, 169, 0.04)',
   },
   pauseText: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 14,
     fontWeight: '800',
   },

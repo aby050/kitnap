@@ -12,7 +12,8 @@ import {
   weekdayShort,
   weeklyWindows,
 } from '../data/progress';
-import { colors } from '../theme';
+import Icon, { IconName } from '../ui/Icon';
+import { palette } from '../design/tokens';
 
 export type WeeklyInsightData = {
   savedMinutes: number;
@@ -112,7 +113,7 @@ export default function WeeklyInsight({
     {
       key: 'screentime',
       title: 'Screen Time',
-      icon: '⏳',
+      icon: 'hourglass',
       value: screenTimePct !== 0 ? `${Math.abs(screenTimePct)}%` : '58%',
       arrow: screenTimePct > 0 ? '↙' : screenTimePct < 0 ? '↗' : '↙',
       descText: 'Your screen time was ',
@@ -127,7 +128,7 @@ export default function WeeklyInsight({
     {
       key: 'focus',
       title: 'Focus Time',
-      icon: '🎯',
+      icon: 'target',
       value: lastWeekFocus > 0 && focusPct !== 0 ? `${focusPct > 0 ? '+' : ''}${focusPct}%` : formatDuration(d.focusMinutes),
       arrow: focusPct >= 0 ? '↗' : '↘',
       descText: 'Your focus time was ',
@@ -140,7 +141,7 @@ export default function WeeklyInsight({
     {
       key: 'blocked',
       title: 'Shield Wall',
-      icon: '🛡️',
+      icon: 'shield',
       value: String(d.distractionsBlocked || 84),
       arrow: blockedDiff >= 0 ? '↗' : '↘',
       descText: 'You blocked ',
@@ -153,7 +154,7 @@ export default function WeeklyInsight({
     {
       key: 'streak',
       title: 'Focus Streak',
-      icon: '🔥',
+      icon: 'flame',
       value: `${d.streak || 5}d`,
       arrow: d.streak > 0 ? '↗' : '↗',
       descText: 'You maintained a ',
@@ -207,16 +208,17 @@ export default function WeeklyInsight({
                 <View style={styles.cardHeader}>
                   <View style={styles.headerLeft}>
                     <View style={styles.iconBg}>
-                      <Text style={styles.iconText}>{slide.icon}</Text>
+                      <Icon name={slide.icon as IconName} size={19} color="#0b0816" strokeWidth={1.9} />
                     </View>
                     <Text style={styles.cardTitle}>{slide.title}</Text>
                   </View>
                   <View style={styles.headerRight}>
                     <View style={styles.dropdownBtn}>
-                      <Text style={styles.dropdownBtnText}>This Week ▾</Text>
+                      <Text style={styles.dropdownBtnText}>This Week</Text>
+                      <Icon name="chevronDown" size={12} color="#ffffff" strokeWidth={2.5} />
                     </View>
                     <View style={styles.moreBtn}>
-                      <Text style={styles.moreBtnText}>•••</Text>
+                      <Icon name="more" size={14} color="#ffffff" strokeWidth={2.5} />
                     </View>
                   </View>
                 </View>
@@ -225,7 +227,9 @@ export default function WeeklyInsight({
                 <View style={styles.metricContainer}>
                   <Text style={styles.metricValue}>{slide.value}</Text>
                   {slide.arrow ? (
-                    <Text style={styles.metricArrow}>{slide.arrow}</Text>
+                    <View style={styles.metricArrow}>
+                      <Icon name={slide.arrow === '↗' ? 'trendUp' : 'trendDown'} size={26} color="#ffffff" strokeWidth={2} />
+                    </View>
                   ) : null}
                 </View>
 
@@ -264,7 +268,7 @@ export default function WeeklyInsight({
         <View style={styles.miniCard}>
           <View style={styles.miniCardHeader}>
             <Text style={styles.miniCardLabel}>Time Saved</Text>
-            <Text style={styles.miniCardIcon}>⏳</Text>
+            <Icon name="hourglass" size={15} color={palette.textSecondary} strokeWidth={1.8} />
           </View>
           <View>
             <Text style={styles.miniCardValue}>{formatDuration(d.savedMinutes)}</Text>
@@ -275,7 +279,7 @@ export default function WeeklyInsight({
         <View style={styles.miniCard}>
           <View style={styles.miniCardHeader}>
             <Text style={styles.miniCardLabel}>Focus Time</Text>
-            <Text style={styles.miniCardIcon}>🎯</Text>
+            <Icon name="target" size={15} color={palette.textSecondary} strokeWidth={1.8} />
           </View>
           <View>
             <Text style={styles.miniCardValue}>{formatDuration(d.focusMinutes)}</Text>
@@ -288,7 +292,7 @@ export default function WeeklyInsight({
         <View style={styles.miniCard}>
           <View style={styles.miniCardHeader}>
             <Text style={styles.miniCardLabel}>Blocked</Text>
-            <Text style={styles.miniCardIcon}>🛡️</Text>
+            <Icon name="shield" size={15} color={palette.textSecondary} strokeWidth={1.8} />
           </View>
           <View>
             <Text style={styles.miniCardValue}>{d.distractionsBlocked}</Text>
@@ -301,7 +305,7 @@ export default function WeeklyInsight({
         <View style={styles.miniCard}>
           <View style={styles.miniCardHeader}>
             <Text style={styles.miniCardLabel}>Streak</Text>
-            <Text style={styles.miniCardIcon}>🔥</Text>
+            <Icon name="flame" size={15} color={palette.textSecondary} strokeWidth={1.8} />
           </View>
           <View>
             <Text style={styles.miniCardValue}>{d.streak} days</Text>
@@ -324,26 +328,26 @@ export default function WeeklyInsight({
 }
 
 const styles = StyleSheet.create({
-  heading: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 15 },
+  heading: { color: palette.text, fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 15 },
   emptyCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: palette.surface,
     borderRadius: 20,
     padding: 20,
     marginTop: 18,
   },
-  emptyTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  emptyBody: { color: colors.textDim, fontSize: 14, lineHeight: 20, marginTop: 8 },
+  emptyTitle: { color: palette.text, fontSize: 16, fontWeight: '700' },
+  emptyBody: { color: palette.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 8 },
   milestoneCard: {
-    backgroundColor: 'rgba(124,245,176,0.07)',
+    backgroundColor: 'rgba(111,227,169,0.07)',
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(124,245,176,0.18)',
+    borderColor: 'rgba(111,227,169,0.18)',
     marginTop: 10,
     marginBottom: 20,
   },
-  milestoneLabel: { color: colors.accent, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-  milestoneValue: { color: colors.text, fontSize: 15, fontWeight: '700', marginTop: 6, lineHeight: 21 },
+  milestoneLabel: { color: palette.accent, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+  milestoneValue: { color: palette.text, fontSize: 15, fontWeight: '700', marginTop: 6, lineHeight: 21 },
 
   // Carousel Styles
   carouselCardContainer: {
@@ -399,6 +403,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.25)',
@@ -419,11 +426,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  moreBtnText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   metricContainer: {
     flexDirection: 'row',
@@ -522,7 +524,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   miniCardHint: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 11,
     fontWeight: '600',
     marginTop: 2,

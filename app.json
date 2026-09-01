@@ -44,12 +44,16 @@
         }
       ],
       "expo-audio",
+      "expo-notifications",
       "./plugins/withUsageStatsPermission.js",
       [
         "expo-build-properties",
         {
           "ios": {
             "deploymentTarget": "16.4"
+          },
+          "android": {
+            "minSdkVersion": 26
           }
         }
       ],

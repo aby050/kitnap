@@ -22,6 +22,11 @@ modules/**/android/.gradle/
 
 # Metro
 .metro-health-check*
+metro.log
+
+# Build artifacts
+*.apk
+modules/**/android/build/
 
 # debug
 npm-debug.*
