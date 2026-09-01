@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Slider from '@react-native-community/slider';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -10,10 +9,10 @@ import {
   cachedSoundUri,
   downloadSound,
   fetchSoundManifest,
-  isSoundCached,
 } from '../data/remoteSounds';
-import { colors } from '../theme';
-import AppIcon from '../ui/AppIcon';
+import { Card, Editorial, Screen, ScreenHeader, SectionHeader } from '../design/primitives';
+import Icon from '../ui/Icon';
+import { motion, palette, radius, space, type } from '../design/tokens';
 import { tapLight } from '../ui/haptics';
 
 /** One player per sound so switching tracks doesn't tear down and rebuild a
@@ -37,33 +36,37 @@ function SoundTile({ def, activeKey, onSetActive }: { def: SoundDef; activeKey: 
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(340)} style={[styles.tile, isActive && styles.tileActive]}>
-      <Pressable onPress={toggle} style={styles.tileRow}>
-        <AppIcon sf={def.sf as any} fallback={def.glyph} size={28} color={colors.text} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{def.name}</Text>
-          <Text style={styles.desc}>{def.description}</Text>
-        </View>
-        <View style={[styles.playBtn, isActive && styles.playBtnActive]}>
-          <Text style={styles.playGlyph}>{isActive && status.playing ? '❚❚' : '▶'}</Text>
-        </View>
-      </Pressable>
-      {isActive && (
-        <View style={styles.volumeRow}>
-          <Text style={styles.volumeGlyph}>🔈</Text>
-          <Slider
-            style={{ flex: 1, height: 32 }}
-            minimumValue={0}
-            maximumValue={1}
-            value={player.volume}
-            onValueChange={(v) => (player.volume = v)}
-            minimumTrackTintColor={colors.accent}
-            maximumTrackTintColor="rgba(255,255,255,0.15)"
-            thumbTintColor={colors.accent}
-          />
-          <Text style={styles.volumeGlyph}>🔊</Text>
-        </View>
-      )}
+    <Animated.View entering={FadeInDown.duration(motion.transition)}>
+      <Card tone={isActive ? 'accent' : 'neutral'}>
+        <Pressable onPress={toggle} style={styles.tileRow}>
+          <View style={[styles.iconTile, isActive && styles.iconTileActive]}>
+            <Icon name={def.mark} size={22} color={isActive ? palette.accent : palette.textSecondary} strokeWidth={1.6} />
+          </View>
+          <View style={styles.shrink}>
+            <Text style={type.bodyStrong}>{def.name}</Text>
+            <Text style={[type.sub, styles.desc]}>{def.description}</Text>
+          </View>
+          <View style={[styles.playBtn, isActive && styles.playBtnActive]}>
+            <Icon name={isActive && status.playing ? 'pause' : 'play'} size={16} color={isActive ? palette.accent : palette.text} />
+          </View>
+        </Pressable>
+        {isActive && (
+          <View style={styles.volumeRow}>
+            <Icon name="volumeOff" size={15} color={palette.textTertiary} />
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={1}
+              value={player.volume}
+              onValueChange={(v) => (player.volume = v)}
+              minimumTrackTintColor={palette.accent}
+              maximumTrackTintColor={palette.border}
+              thumbTintColor={palette.accent}
+            />
+            <Icon name="volume" size={15} color={palette.textTertiary} />
+          </View>
+        )}
+      </Card>
     </Animated.View>
   );
 }
@@ -86,6 +89,7 @@ function RemoteSoundPlayerTile({
   const isActive = activeKey === clip.id;
 
   const toggle = () => {
+    tapLight();
     if (isActive) {
       player.pause();
       onSetActive(null);
@@ -98,32 +102,37 @@ function RemoteSoundPlayerTile({
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(340)} style={[styles.tile, isActive && styles.tileActive]}>
-      <Pressable onPress={toggle} style={styles.tileRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{clip.name}</Text>
-          <Text style={styles.desc}>{clip.description}</Text>
-        </View>
-        <View style={[styles.playBtn, isActive && styles.playBtnActive]}>
-          <Text style={styles.playGlyph}>{isActive && status.playing ? '❚❚' : '▶'}</Text>
-        </View>
-      </Pressable>
-      {isActive && (
-        <View style={styles.volumeRow}>
-          <Text style={styles.volumeGlyph}>🔈</Text>
-          <Slider
-            style={{ flex: 1, height: 32 }}
-            minimumValue={0}
-            maximumValue={1}
-            value={player.volume}
-            onValueChange={(v) => (player.volume = v)}
-            minimumTrackTintColor={colors.accent}
-            maximumTrackTintColor="rgba(255,255,255,0.15)"
-            thumbTintColor={colors.accent}
-          />
-          <Text style={styles.volumeGlyph}>🔊</Text>
-        </View>
-      )}
+    <Animated.View entering={FadeInDown.duration(motion.transition)}>
+      <Card tone={isActive ? 'accent' : 'neutral'}>
+        <Pressable onPress={toggle} style={styles.tileRow}>
+          <View style={[styles.iconTile, isActive && styles.iconTileActive]}>
+            <Icon name="headphones" size={22} color={isActive ? palette.accent : palette.textSecondary} strokeWidth={1.6} />
+          </View>
+          <View style={styles.shrink}>
+            <Text style={type.bodyStrong}>{clip.name}</Text>
+            <Text style={[type.sub, styles.desc]}>{clip.description}</Text>
+          </View>
+          <View style={[styles.playBtn, isActive && styles.playBtnActive]}>
+            <Icon name={isActive && status.playing ? 'pause' : 'play'} size={16} color={isActive ? palette.accent : palette.text} />
+          </View>
+        </Pressable>
+        {isActive && (
+          <View style={styles.volumeRow}>
+            <Icon name="volumeOff" size={15} color={palette.textTertiary} />
+            <Slider
+              style={styles.slider}
+              minimumValue={0}
+              maximumValue={1}
+              value={player.volume}
+              onValueChange={(v) => (player.volume = v)}
+              minimumTrackTintColor={palette.accent}
+              maximumTrackTintColor={palette.border}
+              thumbTintColor={palette.accent}
+            />
+            <Icon name="volume" size={15} color={palette.textTertiary} />
+          </View>
+        )}
+      </Card>
     </Animated.View>
   );
 }
@@ -148,6 +157,7 @@ function RemoteSoundTile({
   }
 
   const download = async () => {
+    tapLight();
     setDownloading(true);
     setError(false);
     try {
@@ -161,16 +171,27 @@ function RemoteSoundTile({
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(340)} style={styles.tile}>
-      <Pressable onPress={download} disabled={downloading} style={styles.tileRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{clip.name}</Text>
-          <Text style={styles.desc}>{error ? 'Download failed — tap to retry' : clip.description}</Text>
-        </View>
-        <View style={styles.playBtn}>
-          {downloading ? <ActivityIndicator size="small" color={colors.accent} /> : <Text style={styles.playGlyph}>⇩</Text>}
-        </View>
-      </Pressable>
+    <Animated.View entering={FadeInDown.duration(motion.transition)}>
+      <Card>
+        <Pressable onPress={download} disabled={downloading} style={styles.tileRow}>
+          <View style={styles.iconTile}>
+            <Icon name="headphones" size={22} color={palette.textSecondary} strokeWidth={1.6} />
+          </View>
+          <View style={styles.shrink}>
+            <Text style={type.bodyStrong}>{clip.name}</Text>
+            <Text style={[type.sub, styles.desc, error && { color: palette.danger }]}>
+              {error ? 'Download failed — tap to retry' : clip.description}
+            </Text>
+          </View>
+          <View style={styles.playBtn}>
+            {downloading ? (
+              <ActivityIndicator size="small" color={palette.accent} />
+            ) : (
+              <Icon name={error ? 'refresh' : 'download'} size={16} color={palette.text} />
+            )}
+          </View>
+        </Pressable>
+      </Card>
     </Animated.View>
   );
 }
@@ -187,89 +208,79 @@ export default function SoundScreen({ onBack }: { onBack: () => void }) {
     });
   }, []);
 
+  const showBuiltIn = remoteClips.length === 0 && !loadingManifest;
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>Sound &amp; meditation</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <Screen edges={['top']}>
+      <ScreenHeader title="Sound & meditation" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.lede}>
+        <Editorial lead="A little sound," emphasis="a little quiet." style={styles.voice} />
+        <Text style={[type.callout, styles.lede]}>
           Ambient loops to sit under a focus session, or a breathing pacer for a moment away from the screen.
-          Only one plays at a time. Tap ⇩ to download a clip once — it plays from your device after that.
+          Only one plays at a time. Download a clip once and it plays from your device after that.
         </Text>
 
         {loadingManifest && (
           <View style={styles.centerRow}>
-            <ActivityIndicator color={colors.accent} />
+            <ActivityIndicator color={palette.accent} />
           </View>
         )}
 
-        {!loadingManifest && remoteClips.length === 0 && (
-          <Animated.View entering={FadeIn.duration(300)} style={styles.notice}>
-            <Text style={styles.noticeText}>No clips published yet — check back once they're uploaded.</Text>
-          </Animated.View>
+        {!loadingManifest && remoteClips.length > 0 && (
+          <View style={styles.list}>
+            {remoteClips.map((clip) => (
+              <RemoteSoundTile key={clip.id} clip={clip} activeKey={activeKey} onSetActive={setActiveKey} />
+            ))}
+          </View>
         )}
 
-        {remoteClips.map((clip) => (
-          <RemoteSoundTile key={clip.id} clip={clip} activeKey={activeKey} onSetActive={setActiveKey} />
-        ))}
-
-        {remoteClips.length === 0 && !loadingManifest && (
+        {showBuiltIn && (
           <>
-            <Text style={styles.sectionLabel}>Built-in (offline)</Text>
-            {SOUNDS.map((def) => (
-              <SoundTile key={def.key} def={def} activeKey={activeKey} onSetActive={setActiveKey} />
-            ))}
+            <SectionHeader title="Built-in · offline" />
+            <View style={styles.list}>
+              {SOUNDS.map((def) => (
+                <SoundTile key={def.key} def={def} activeKey={activeKey} onSetActive={setActiveKey} />
+              ))}
+            </View>
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 8 },
-  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 100, gap: 12 },
-  lede: { color: colors.textDim, fontSize: 14, lineHeight: 20, marginBottom: 6 },
-  tile: {
-    backgroundColor: 'rgba(255,255,255,0.045)',
-    borderRadius: 20,
-    padding: 16,
+  shrink: { flex: 1, minWidth: 0 },
+  scroll: { paddingHorizontal: space.gutter, paddingBottom: space.tabClearance },
+  voice: { marginTop: space.sm },
+  lede: { marginTop: space.md, marginBottom: space.lg },
+  list: { gap: space.md },
+  tileRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  iconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  tileActive: { borderColor: 'rgba(124,245,176,0.35)', backgroundColor: 'rgba(124,245,176,0.05)' },
-  tileRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  glyph: { fontSize: 28 },
-  name: { color: colors.text, fontSize: 15.5, fontWeight: '700' },
-  desc: { color: colors.textFaint, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
-  playBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: palette.border,
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playBtnActive: { backgroundColor: 'rgba(124,245,176,0.18)' },
-  playGlyph: { color: colors.accent, fontSize: 14 },
-  volumeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  volumeGlyph: { fontSize: 13 },
-  centerRow: { alignItems: 'center', paddingVertical: 20 },
-  notice: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 18,
-    padding: 18,
+  iconTileActive: { borderColor: palette.accentBorder, backgroundColor: palette.accentSoft },
+  desc: { marginTop: space.xxs },
+  playBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  noticeText: { color: colors.textDim, fontSize: 13.5, lineHeight: 20, textAlign: 'center' },
-  sectionLabel: { color: colors.textFaint, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 8, marginBottom: -2 },
+  playBtnActive: { borderColor: palette.accentBorder, backgroundColor: palette.accentSoft },
+  volumeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.base },
+  slider: { flex: 1, height: 32 },
+  centerRow: { alignItems: 'center', paddingVertical: space.lg },
 });

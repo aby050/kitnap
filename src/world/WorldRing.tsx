@@ -4,7 +4,8 @@ import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-na
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { ThemeKey } from '../data/themes';
 import { LANDMARKS, WORLD_PALETTES } from './worldData';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 const SIZE = 208;
 const STROKE = 14;
@@ -58,7 +59,11 @@ export default function WorldRing({
         </Svg>
         <View style={styles.ringCenter}>
           <View style={[styles.currentBadge, { backgroundColor: `${accent}26`, borderColor: accent }]}>
-            <Text style={styles.currentGlyph}>{current ? current.glyph : '🌱'}</Text>
+            {current ? (
+              <Text style={styles.currentGlyph}>{current.glyph}</Text>
+            ) : (
+              <Icon name="leaf" size={26} color={palette.text} strokeWidth={1.7} />
+            )}
           </View>
           <Text style={styles.hoursValue}>{hoursReclaimed.toFixed(1)}h</Text>
           <Text style={styles.hoursLabel}>reclaimed</Text>
@@ -112,9 +117,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   currentGlyph: { fontSize: 26 },
-  hoursValue: { color: colors.text, fontSize: 26, fontWeight: '800' },
-  hoursLabel: { color: colors.textDim, fontSize: 12.5, marginTop: 2 },
-  nextText: { color: colors.textDim, fontSize: 14.5, marginTop: 16, textAlign: 'center' },
+  hoursValue: { color: palette.text, fontSize: 26, fontWeight: '800' },
+  hoursLabel: { color: palette.textSecondary, fontSize: 12.5, marginTop: 2 },
+  nextText: { color: palette.textSecondary, fontSize: 14.5, marginTop: 16, textAlign: 'center' },
   badgeRow: { gap: 14, paddingHorizontal: 4, paddingTop: 22 },
   badgeCol: { alignItems: 'center', width: BADGE + 6 },
   badge: {
@@ -128,5 +133,5 @@ const styles = StyleSheet.create({
   badgeLocked: { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.1)' },
   badgeGlyph: { fontSize: 22 },
   badgeGlyphLocked: { opacity: 0.28 },
-  badgeHours: { color: colors.textFaint, fontSize: 11, marginTop: 6, fontWeight: '600' },
+  badgeHours: { color: palette.textTertiary, fontSize: 11, marginTop: 6, fontWeight: '600' },
 });

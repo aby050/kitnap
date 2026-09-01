@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { GateQuestion } from '../data/gateQuestions';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 
 const INHALE_MS = 4000;
 const HOLD_MS = 2000;
@@ -64,17 +64,17 @@ export default function BreathingExercise({
 
 const styles = StyleSheet.create({
   qBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 24 },
-  prompt: { color: colors.text, fontSize: 23, fontWeight: '700', textAlign: 'center', lineHeight: 31, maxWidth: 320 },
+  prompt: { color: palette.text, fontSize: 23, fontWeight: '700', textAlign: 'center', lineHeight: 31, maxWidth: 320 },
   orbWrap: { width: 220, height: 220, alignItems: 'center', justifyContent: 'center' },
   orb: {
     position: 'absolute',
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(124,245,176,0.18)',
+    backgroundColor: 'rgba(111,227,169,0.18)',
     borderWidth: 1.5,
-    borderColor: colors.accent,
+    borderColor: palette.accent,
   },
-  orbLabel: { color: colors.text, fontSize: 17, fontWeight: '700' },
-  hint: { color: colors.textFaint, fontSize: 13 },
+  orbLabel: { color: palette.text, fontSize: 17, fontWeight: '700' },
+  hint: { color: palette.textTertiary, fontSize: 13 },
 });

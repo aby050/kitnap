@@ -11,7 +11,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Question } from './questions';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 
 type Props = {
   question: Question;
@@ -167,7 +167,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             value={text}
             onChangeText={setText}
             placeholder={question.placeholder}
-            placeholderTextColor={colors.textFaint}
+            placeholderTextColor={palette.textTertiary}
             style={styles.input}
             autoFocus
           />
@@ -242,9 +242,9 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             step={1}
             value={sliderVal}
             onValueChange={setSliderVal}
-            minimumTrackTintColor={colors.accent}
+            minimumTrackTintColor={palette.accent}
             maximumTrackTintColor="rgba(255,255,255,0.15)"
-            thumbTintColor={colors.accent}
+            thumbTintColor={palette.accent}
           />
           <View style={{ height: 6 }} />
           <ContinueButton onPress={() => onAnswer(String(Math.round(sliderVal)), String(Math.round(sliderVal)))} />
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   prompt: {
-    color: colors.text,
+    color: palette.text,
     fontSize: 21,
     fontWeight: '700',
     textAlign: 'center',
@@ -284,8 +284,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 28,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    backgroundColor: palette.glass,
+    color: palette.text,
     fontSize: 16,
   },
   optionsWrap: {
@@ -300,20 +300,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.cardBg,
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
   },
   optionBtnSelected: {
-    backgroundColor: 'rgba(124,245,176,0.15)',
-    borderColor: colors.accent,
+    backgroundColor: 'rgba(111,227,169,0.15)',
+    borderColor: palette.accent,
   },
   optionText: {
-    color: colors.text,
+    color: palette.text,
     fontSize: 15,
     fontWeight: '500',
   },
   optionTextSelected: {
-    color: colors.accent,
+    color: palette.accent,
   },
   continueBtn: {
     width: '100%',
@@ -335,13 +335,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   skipText: {
-    color: colors.textFaint,
+    color: palette.textTertiary,
     fontSize: 14,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
   ageValue: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 34,
     fontWeight: '700',
   },
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   progressBar: {
     height: '100%',
     borderRadius: 4,
-    backgroundColor: colors.accent,
+    backgroundColor: palette.accent,
   },
   cursor: {
     color: '#FFB800',

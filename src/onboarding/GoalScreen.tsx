@@ -5,7 +5,8 @@ import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { GoalData } from '../data/goal';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 /** Generic quotes are the fallback. The real content is theirs — their line,
  *  their photo, their deadline. No competitor can clone this because it isn't
@@ -47,7 +48,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
             value={line}
             onChangeText={setLine}
             placeholder="e.g. my evenings back"
-            placeholderTextColor={colors.textFaint}
+            placeholderTextColor={palette.textTertiary}
             style={styles.input}
             maxLength={80}
           />
@@ -58,7 +59,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
             {photoUri ? (
               <Image source={{ uri: photoUri }} style={styles.photoImg} />
             ) : (
-              <Text style={styles.photoGlyph}>＋</Text>
+              <Icon name="plus" size={22} color={palette.textSecondary} />
             )}
           </Pressable>
           <View style={{ flex: 1 }}>
@@ -74,14 +75,14 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
               value={deadlineName}
               onChangeText={setDeadlineName}
               placeholder="Exam, launch, trip…"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
               style={[styles.input, styles.deadlineInput]}
             />
             <TextInput
               value={deadlineDate}
               onChangeText={setDeadlineDate}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
               style={[styles.input, styles.deadlineInput]}
             />
           </View>
@@ -113,15 +114,15 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, gap: 20 },
-  heading: { color: colors.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
-  sub: { color: colors.textDim, fontSize: 15, textAlign: 'center', lineHeight: 22, maxWidth: 300 },
+  heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
+  sub: { color: palette.textSecondary, fontSize: 15, textAlign: 'center', lineHeight: 22, maxWidth: 300 },
   input: {
     width: '100%',
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 24,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    backgroundColor: palette.glass,
+    color: palette.text,
     fontSize: 16,
   },
   photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, width: '100%', maxWidth: 320 },
@@ -129,22 +130,21 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: palette.glass,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: palette.borderStrong,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   photoImg: { width: '100%', height: '100%' },
-  photoGlyph: { color: colors.textDim, fontSize: 22 },
-  photoTitle: { color: colors.text, fontSize: 15, fontWeight: '600' },
-  photoSub: { color: colors.textFaint, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
+  photoTitle: { color: palette.text, fontSize: 15, fontWeight: '600' },
+  photoSub: { color: palette.textTertiary, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
   deadlineBlock: { width: '100%', maxWidth: 320, gap: 10 },
-  deadlineLabel: { color: colors.textFaint, fontSize: 12, letterSpacing: 1, fontWeight: '700' },
+  deadlineLabel: { color: palette.textTertiary, fontSize: 12, letterSpacing: 1, fontWeight: '700' },
   deadlineRow: { flexDirection: 'row', gap: 8 },
   deadlineInput: { flex: 1, fontSize: 14.5, paddingVertical: 13 },
-  deadlinePreview: { color: colors.accent, fontSize: 13, lineHeight: 19 },
+  deadlinePreview: { color: palette.accent, fontSize: 13, lineHeight: 19 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14 },
 });

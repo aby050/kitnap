@@ -3,7 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 /** Real, editable blocked-apps list — replaces the old mock AppPickerScreen
@@ -43,7 +43,7 @@ export default function BlockedAppsScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Blocked apps</Text>
         <View style={{ width: 40 }} />
@@ -70,7 +70,7 @@ export default function BlockedAppsScreen({
               <Switch
                 value={blockedPackages.includes(app.packageName)}
                 onValueChange={() => toggle(app.packageName)}
-                trackColor={{ true: colors.accent, false: 'rgba(255,255,255,0.2)' }}
+                trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
                 thumbColor="#fff"
               />
             </View>
@@ -85,7 +85,7 @@ export default function BlockedAppsScreen({
                 <View key={pkg} style={[styles.row, i > 0 && styles.rowBorder]}>
                   <Text style={[styles.rowTitle, { flex: 1 }]}>{pkg}</Text>
                   <Pressable onPress={() => onChange(blockedPackages.filter((p) => p !== pkg))} style={styles.removeBtn} hitSlop={8}>
-                    <Icon name="close" size={12} color={colors.textDim} />
+                    <Icon name="close" size={12} color={palette.textSecondary} />
                   </Pressable>
                 </View>
               ))}
@@ -99,7 +99,7 @@ export default function BlockedAppsScreen({
             value={customInput}
             onChangeText={setCustomInput}
             placeholder="e.g. com.pinterest"
-            placeholderTextColor={colors.textFaint}
+            placeholderTextColor={palette.textTertiary}
             style={styles.input}
             autoCapitalize="none"
             autoCorrect={false}
@@ -120,22 +120,22 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 8 },
   circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  headerGlyph: { color: palette.text, fontSize: 19 },
+  headerTitle: { color: palette.text, fontSize: 18, fontWeight: '700' },
   scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 100 },
   notice: { backgroundColor: 'rgba(255,213,79,0.08)', borderRadius: 16, padding: 14, marginBottom: 8 },
   noticeText: { color: 'rgba(255,213,79,0.9)', fontSize: 12.5, lineHeight: 18 },
-  sectionLabel: { color: colors.textFaint, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 10 },
+  sectionLabel: { color: palette.textTertiary, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 10 },
   group: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 20, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
   rowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  rowTitle: { color: colors.text, fontSize: 15, fontWeight: '600' },
-  rowSub: { color: colors.textFaint, fontSize: 11.5, marginTop: 2 },
+  rowTitle: { color: palette.text, fontSize: 15, fontWeight: '600' },
+  rowSub: { color: palette.textTertiary, fontSize: 11.5, marginTop: 2 },
   removeBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  removeIcon: { color: colors.textDim, fontSize: 12 },
+  removeIcon: { color: palette.textSecondary, fontSize: 12 },
   addRow: { flexDirection: 'row', gap: 10 },
-  input: { flex: 1, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 16, backgroundColor: colors.pillBg, color: colors.text, fontSize: 14 },
-  addBtn: { paddingHorizontal: 20, borderRadius: 16, backgroundColor: 'rgba(124,245,176,0.15)', borderWidth: 1, borderColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  addBtnText: { color: colors.accent, fontSize: 14, fontWeight: '700' },
-  hint: { color: colors.textFaint, fontSize: 11.5, lineHeight: 16, marginTop: 8 },
+  input: { flex: 1, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 16, backgroundColor: palette.glass, color: palette.text, fontSize: 14 },
+  addBtn: { paddingHorizontal: 20, borderRadius: 16, backgroundColor: 'rgba(111,227,169,0.15)', borderWidth: 1, borderColor: palette.accent, alignItems: 'center', justifyContent: 'center' },
+  addBtnText: { color: palette.accent, fontSize: 14, fontWeight: '700' },
+  hint: { color: palette.textTertiary, fontSize: 11.5, lineHeight: 16, marginTop: 8 },
 });

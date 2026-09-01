@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import {
   canDrawOverlays,
@@ -14,11 +13,12 @@ import {
   openOverlaySettings,
 } from 'device-permissions';
 import { checkUsageAccessPermission, openUsageAccessSettings } from '../data/androidUsage';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon, { IconName } from '../ui/Icon';
 
 type Card = {
   key: string;
-  icon: keyof typeof Ionicons.glyphMap;
+  icon: IconName;
   title: string;
   desc: string;
   granted: boolean;
@@ -62,7 +62,7 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
   const cards: Card[] = [
     {
       key: 'overlay',
-      icon: 'layers-outline',
+      icon: 'shield',
       title: 'Display over apps',
       desc: 'So the app can show the shield over a distracting app instead of just closing it.',
       granted: overlay,
@@ -70,7 +70,7 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     },
     {
       key: 'usage',
-      icon: 'stats-chart-outline',
+      icon: 'chart',
       title: 'Screen time',
       desc: 'Reads your real screen time so we can tell you the truth about it instead of asking you to guess.',
       granted: usage,
@@ -78,7 +78,7 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     },
     {
       key: 'accessibility',
-      icon: 'build-outline',
+      icon: 'settings',
       title: 'Accessibility',
       desc: "Lets the app notice when a distracting app opens and bring you back. It never reads what's on your screen.",
       granted: accessibility,
@@ -86,7 +86,7 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     },
     {
       key: 'notification',
-      icon: 'notifications-outline',
+      icon: 'bell',
       title: 'Notification access',
       desc: 'Notices notifications from distracting apps so it can nudge you before you even open them.',
       granted: notification,
@@ -94,7 +94,7 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     },
     {
       key: 'battery',
-      icon: 'battery-charging-outline',
+      icon: 'timer',
       title: 'Uninterrupted sessions',
       desc: "Stops Android's battery saver from pausing the block partway through a locked session.",
       granted: battery,
@@ -122,7 +122,7 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
           </View>
 
           <View style={styles.passIconWrap}>
-            <Ionicons name={card.icon} size={56} color="#1a1a1a" />
+            <Icon name={card.icon} size={52} color="#1a1a1a" strokeWidth={1.9} />
           </View>
 
           <Text style={styles.passTitle}>{card.title.toUpperCase()}</Text>
@@ -198,15 +198,15 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(20,20,20,0.15)' },
   dotActive: { backgroundColor: '#E8642C', width: 16 },
   reqLabel: {
-    color: colors.accent,
+    color: palette.accent,
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 1.5,
     marginTop: 32,
   },
-  title: { color: colors.text, fontSize: 24, fontWeight: '800', marginTop: 10, textAlign: 'center' },
+  title: { color: palette.text, fontSize: 24, fontWeight: '800', marginTop: 10, textAlign: 'center' },
   desc: {
-    color: colors.textDim,
+    color: palette.textSecondary,
     fontSize: 14.5,
     lineHeight: 21,
     textAlign: 'center',
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#111113',
     alignItems: 'center',
   },
-  grantBtnDone: { backgroundColor: colors.accent },
+  grantBtnDone: { backgroundColor: palette.accent },
   grantBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
-  skipLink: { color: colors.textFaint, fontSize: 13.5, fontWeight: '600' },
+  skipLink: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600' },
 });

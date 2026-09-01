@@ -2,16 +2,16 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import OpalOrb from '../components/OpalOrb';
+import WendOrb from '../components/WendOrb';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 
 export default function GroundRulesScreen({ onContinue }: { onContinue: () => void }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.body}>
         <Animated.View entering={FadeIn.duration(700)}>
-          <OpalOrb size={190} awake />
+          <WendOrb size={190} awake />
         </Animated.View>
         <Animated.Text entering={FadeInDown.delay(250).duration(500)} style={styles.heading}>
           Great, now let's set some ground Rules.
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34, gap: 60 },
   heading: {
-    color: colors.text,
+    color: palette.text,
     fontSize: 24,
     fontWeight: '800',
     textAlign: 'center',

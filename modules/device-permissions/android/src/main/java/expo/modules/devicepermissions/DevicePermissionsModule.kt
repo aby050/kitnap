@@ -31,7 +31,7 @@ class DevicePermissionsModule : Module() {
     }
 
     Function("openOverlaySettings") {
-      val ctx = appContext.reactContext ?: return@Function
+      val ctx = appContext.reactContext ?: return@Function null
       val intent = Intent(
         Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
         Uri.parse("package:${ctx.packageName}"),
@@ -50,7 +50,7 @@ class DevicePermissionsModule : Module() {
     }
 
     Function("openAccessibilitySettings") {
-      val ctx = appContext.reactContext ?: return@Function
+      val ctx = appContext.reactContext ?: return@Function null
       val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       ctx.startActivity(intent)
@@ -66,7 +66,7 @@ class DevicePermissionsModule : Module() {
     }
 
     Function("openNotificationListenerSettings") {
-      val ctx = appContext.reactContext ?: return@Function
+      val ctx = appContext.reactContext ?: return@Function null
       val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       ctx.startActivity(intent)
@@ -76,14 +76,14 @@ class DevicePermissionsModule : Module() {
     // every app start) so WendAccessibilityService always checks against
     // the current list, not whatever was blocked at install time.
     Function("setBlockedPackages") { packages: List<String> ->
-      val ctx = appContext.reactContext ?: return@Function
+      val ctx = appContext.reactContext ?: return@Function null
       BlockedPackagesStore.set(ctx, packages)
     }
 
     // Battery/responsiveness tradeoff — "gentle" | "balanced" | "strict".
     // See MonitoringConfigStore's doc comment for what each actually changes.
     Function("setMonitoringLevel") { level: String ->
-      val ctx = appContext.reactContext ?: return@Function
+      val ctx = appContext.reactContext ?: return@Function null
       val parsed = runCatching { MonitoringLevel.valueOf(level.uppercase()) }.getOrDefault(MonitoringLevel.BALANCED)
       MonitoringConfigStore.set(ctx, parsed)
     }
@@ -99,7 +99,7 @@ class DevicePermissionsModule : Module() {
     }
 
     Function("openBatteryOptimizationSettings") {
-      val ctx = appContext.reactContext ?: return@Function
+      val ctx = appContext.reactContext ?: return@Function null
       val intent = Intent(
         Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
         Uri.parse("package:${ctx.packageName}"),
@@ -142,7 +142,7 @@ class DevicePermissionsModule : Module() {
         }
         
         if (category == "other") {
-          val lowerPkg = packageName.toLowerCase()
+          val lowerPkg = packageName.lowercase()
           if (lowerPkg.contains("facebook") || lowerPkg.contains("instagram") || lowerPkg.contains("twitter") || 
               lowerPkg.contains("reddit") || lowerPkg.contains("tiktok") || lowerPkg.contains("snapchat") ||
               lowerPkg.contains("whatsapp") || lowerPkg.contains("telegram") || lowerPkg.contains("messenger")) {
@@ -163,7 +163,7 @@ class DevicePermissionsModule : Module() {
           "category" to category
         ))
       }
-      list.sortedBy { (it["label"] as String).toLowerCase() }
+      list.sortedBy { (it["label"] as String).lowercase() }
     }
   }
 }

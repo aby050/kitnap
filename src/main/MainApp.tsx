@@ -13,7 +13,7 @@ import EmergencyTokensScreen from './EmergencyTokensScreen';
 import DeleteAccountScreen from './DeleteAccountScreen';
 import ReflectionScreen from './ReflectionScreen';
 import EssentialsScreen from './EssentialsScreen';
-// World feature — deprioritized per product decision (Opal-style apps don't
+// World feature — deprioritized per product decision (Wend-style apps don't
 // have a "world" concept; focus is the core Shield/Gate/timer loop instead).
 // Code kept, commented, in case we revisit it later.
 // import WorldScreen from './WorldScreen';
@@ -35,13 +35,17 @@ import BlocksScreen from './BlocksScreen';
 import ShieldScreen from '../shield/ShieldScreen';
 import GateScreen from '../shield/GateScreen';
 import GrantScreen from '../shield/GrantScreen';
+import { alertGrantEnded, cancelGrantEndedNotification, scheduleGrantEndedNotification } from '../data/grantNotify';
 import LiveActivityBar from '../shield/LiveActivityBar';
 import { getIntensity, getTheme, IntensityKey, ThemeKey } from '../data/themes';
+import { isHealthLimited } from '../data/gateQuestions';
+import { computeRepTarget, parseAge, parseLifeChange } from '../data/activityDifficulty';
+import { ActivityKind, ActivitySessionResult } from '../shield/activity/types';
 import { EMPTY_GOAL, GoalData } from '../data/goal';
-import { Account, DEFAULT_STATE, PersistedState, AppLimit } from '../data/store';
+import { Account, DEFAULT_STATE, PersistedState, AppLimit, startingEmergencyTokens } from '../data/store';
 import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, globalPercentile, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
 import { useTodayUsage } from '../data/useTodayUsage';
-import { recordGateReflection } from '../data/store';
+import { recordGateReflection, recordActivitySession } from '../data/store';
 import { DEFAULT_BEDTIME, isWithinBedtime } from '../data/bedtime';
 import { shouldShowCheckIn } from '../data/checkin';
 import CheckInScreen from './CheckInScreen';
@@ -51,7 +55,9 @@ import CalendarScreen from './CalendarScreen';
 import WeeklyInsight from './WeeklyInsight';
 import RealUsageScreen from './RealUsageScreen';
 import { configureShield, grantTemporaryAccess, hasBlockedSelection, isCurrentlyShielded } from '../data/iosScreenTime';
-import { colors } from '../theme';
+import { palette, space } from '../design/tokens';
+import { Screen, ScreenHeader } from '../design/primitives';
+import Icon, { IconName } from '../ui/Icon';
 
 type Tab = 'home' | 'apps' | 'reflect' | 'timer';
 type Overlay =
@@ -83,13 +89,13 @@ type Overlay =
   | 'emergencyTokens'
   | 'deleteAccount';
 type Block = null | 'shield' | 'gate' | 'grant' | 'emergency';
-type TimerPreset = { minutes: number; label: string; autoStart: boolean };
+type TimerPreset = { minutes: number; label: string; autoStart: boolean; hardMode?: boolean };
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'home', label: 'Home' },
-  { key: 'apps', label: 'My apps' },
-  { key: 'reflect', label: 'Reflect' },
-  { key: 'timer', label: 'Timer' },
+const TABS: { key: Tab; label: string; mark: IconName }[] = [
+  { key: 'home', label: 'Home', mark: 'home' },
+  { key: 'apps', label: 'My apps', mark: 'grid' },
+  { key: 'reflect', label: 'Reflect', mark: 'chart' },
+  { key: 'timer', label: 'Timer', mark: 'timer' },
 ];
 
 export default function MainApp({
@@ -150,8 +156,9 @@ export default function MainApp({
   const [blockedPackages, setBlockedPackagesState] = useState<string[]>(persisted.blockedPackages);
   const [schedules, setSchedules] = useState(persisted.schedules);
   const [gateReflections, setGateReflections] = useState(persisted.gateReflections);
+  const [activitySessions, setActivitySessions] = useState(persisted.activitySessions ?? []);
   const [appLimits, setAppLimits] = useState<AppLimit[]>(persisted.appLimits ?? []);
-  const [emergencyTokens, setEmergencyTokens] = useState(persisted.emergencyTokens ?? 2);
+  const [emergencyTokens, setEmergencyTokens] = useState(persisted.emergencyTokens ?? startingEmergencyTokens());
   // Held until the gate resolves, so we can record whether they actually
   // went through with the unlock alongside what they wrote.
   const [pendingReflection, setPendingReflection] = useState<{ prompt: string; text: string } | null>(null);
@@ -169,6 +176,22 @@ export default function MainApp({
     onPatch({ gateReflections: next });
     setPendingReflection(null);
   }
+
+  function commitActivitySession(session: ActivitySessionResult) {
+    const next = recordActivitySession(activitySessions, session);
+    setActivitySessions(next);
+    onPatch({ activitySessions: next });
+  }
+
+  /** Adaptive rep target, resolved per movement when the gate picks one. */
+  const repsFor = (activity: ActivityKind) =>
+    computeRepTarget({
+      activity,
+      age: parseAge(persisted.onboardingAnswers?.age?.value),
+      history: activitySessions,
+      now: new Date(),
+      lifeChange: parseLifeChange(persisted.onboardingAnswers?.lifeChange?.value),
+    }).reps;
 
   useEffect(() => {
     setProgress((p) => ({ ...p, achievements: unlockAchievements(p, joinedDays) }));
@@ -321,7 +344,9 @@ export default function MainApp({
       <GateScreen
         intensity={intensity}
         futureSelfMessage={futureSelf}
-        healthLimited={!!persisted.onboardingAnswers?.healthLimit?.value}
+        healthLimited={isHealthLimited(persisted.onboardingAnswers?.healthLimit?.value)}
+        repsFor={repsFor}
+        onActivityComplete={commitActivitySession}
         tokenBalance={emergencyTokens}
         onSkipWithToken={() => {
           const nextTokens = Math.max(0, emergencyTokens - 1);
@@ -364,11 +389,21 @@ export default function MainApp({
         minutes={block === 'emergency' ? 15 : grantMinutes}
         emergency={block === 'emergency'}
         expiresAt={grantExpiresAt ?? Date.now()}
+        bailoutBalance={emergencyTokens}
         onDone={() => {
+          void cancelGrantEndedNotification();
+          if (!grantIsEmergency) {
+            const next = Math.max(0, emergencyTokens - 1);
+            setEmergencyTokens(next);
+            onPatch({ emergencyTokens: next });
+          }
           setBlock(null);
           setGrantExpiresAt(null);
         }}
-        onMinimize={() => setBlock(null)}
+        onMinimize={() => {
+          if (grantExpiresAt) void scheduleGrantEndedNotification(grantExpiresAt);
+          setBlock(null);
+        }}
       />
     );
   }
@@ -559,18 +594,12 @@ export default function MainApp({
     if (overlay === 'calendar') return <CalendarScreen progress={progress} onBack={() => setOverlay('profile')} />;
     if (overlay === 'weeklyInsight')
       return (
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={styles.insightHeader}>
-            <Pressable onPress={() => setOverlay('profile')} style={styles.insightBackBtn} hitSlop={10}>
-              <Text style={styles.insightBackGlyph}>‹</Text>
-            </Pressable>
-            <Text style={styles.insightTitle}>Weekly insight</Text>
-            <View style={{ width: 40 }} />
-          </View>
+        <Screen edges={['top']}>
+          <ScreenHeader title="Weekly insight" onBack={() => setOverlay('profile')} />
           <ScrollView contentContainerStyle={styles.insightScroll} showsVerticalScrollIndicator={false}>
             <WeeklyInsight progress={progress} goalLine={goal.line} heading="This week" />
           </ScrollView>
-        </SafeAreaView>
+        </Screen>
       );
     if (overlay === 'realUsage') return <RealUsageScreen onBack={() => setOverlay('profile')} />;
     // World feature — deprioritized, code kept for later.
@@ -592,7 +621,7 @@ export default function MainApp({
           onOpenRealUsage={() => setOverlay('realUsage')}
           onOpenWeeklyInsight={() => setOverlay('weeklyInsight')}
           progress={progress}
-          username={accountName || account?.name || 'NaturalGlass9842'}
+          username={accountName || account?.name || 'You'}
           firstOpenDate={persisted.firstOpenDate}
           goalLine={goal.line}
         />
@@ -609,18 +638,20 @@ export default function MainApp({
               onTriggerShield={() => setBlock('shield')}
               onOpenEssentials={() => setOverlay('essentials')}
               onStartFocus={() => {
-                setTimerPreset({ minutes: 25, label: 'Focus Timer', autoStart: true });
+                setTimerPreset({ minutes: 25, label: 'Focus Timer', autoStart: false });
                 setTab('timer');
               }}
               onStartRest={() => {
-                setTimerPreset({ minutes: 10, label: 'Rest Timer', autoStart: true });
+                setTimerPreset({ minutes: 10, label: 'Rest Timer', autoStart: false });
                 setTab('timer');
               }}
-              onStartPreset={(minutes, label) => {
-                setTimerPreset({ minutes, label, autoStart: true });
+              onStartPreset={(minutes, label, hardMode) => {
+                setTimerPreset({ minutes, label, autoStart: true, hardMode: !!hardMode });
                 setTab('timer');
               }}
               onOpenSleepSchedule={() => setOverlay('schedules')}
+              onOpenBlockedApps={() => setOverlay('blockedApps')}
+              blockedPackages={blockedPackages}
               unlockNumber={unlockNumber}
               streakDays={progress.currentStreak}
               score={rank.percent}
@@ -657,6 +688,7 @@ export default function MainApp({
               label={timerPreset.label}
               motivationLine={goal.line ? `Protecting: ${goal.line}` : theme.forWho}
               autoStart={timerPreset.autoStart}
+              hardMode={!!timerPreset.hardMode}
               onOpenEssentials={() => setOverlay('essentials')}
               onFocusComplete={(mins) => {
                 applyProgress([{ type: 'focus', minutes: mins }, { type: 'lockSession' }]);
@@ -685,35 +717,23 @@ export default function MainApp({
               return (
                 <Pressable
                   key={t.key}
-                  onPress={() => setTab(t.key)}
+                  onPress={() => {
+                    if (t.key === 'timer' && tab !== 'timer') {
+                      // Opening the tab from elsewhere always lands on slide-to-start,
+                      // never the locked in-session screen.
+                      setTimerPreset({ minutes: 25, label: 'Focus Timer', autoStart: false });
+                    }
+                    setTab(t.key);
+                  }}
                   style={styles.tabItem}
                 >
                   <View style={[styles.tabIconPill, active && styles.tabIconPillActive]}>
-                    {t.key === 'home' && (
-                      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={active ? '#7CF5B0' : 'rgba(255,255,255,0.45)'} strokeWidth={2}>
-                        <Circle cx="12" cy="12" r="9" />
-                      </Svg>
-                    )}
-                    {t.key === 'apps' && (
-                      <Svg width={20} height={20} viewBox="0 0 24 24" fill={active ? '#7CF5B0' : 'rgba(255,255,255,0.45)'}>
-                        <Rect x="3" y="3" width="7" height="7" rx="1.5" />
-                        <Rect x="14" y="3" width="7" height="7" rx="1.5" />
-                        <Rect x="3" y="14" width="7" height="7" rx="1.5" />
-                        <Rect x="14" y="14" width="7" height="7" rx="1.5" />
-                      </Svg>
-                    )}
-                    {t.key === 'reflect' && (
-                      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={active ? '#7CF5B0' : 'rgba(255,255,255,0.45)'} strokeWidth={2}>
-                        <Circle cx="12" cy="12" r="9" />
-                        <Path d="M12 3v9h9" strokeLinecap="round" strokeLinejoin="round" />
-                      </Svg>
-                    )}
-                    {t.key === 'timer' && (
-                      <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={active ? '#7CF5B0' : 'rgba(255,255,255,0.45)'} strokeWidth={2}>
-                        <Circle cx="12" cy="13" r="7.5" />
-                        <Path d="M12 9v4l3 2M12 2v2M9 2h6" strokeLinecap="round" strokeLinejoin="round" />
-                      </Svg>
-                    )}
+                    <Icon
+                      name={t.mark}
+                      size={21}
+                      color={active ? palette.accent : palette.textTertiary}
+                      strokeWidth={active ? 1.9 : 1.7}
+                    />
                   </View>
                   <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
                 </Pressable>
@@ -734,7 +754,11 @@ export default function MainApp({
         <LiveActivityBar
           expiresAt={grantExpiresAt}
           emergency={grantIsEmergency}
-          onExpire={() => setGrantExpiresAt(null)}
+          onExpire={() => {
+            setGrantExpiresAt(null);
+            void cancelGrantEndedNotification();
+            alertGrantEnded();
+          }}
           onPress={() => setBlock(grantIsEmergency ? 'emergency' : 'grant')}
         />
       )}
@@ -743,17 +767,13 @@ export default function MainApp({
 }
 
 const styles = StyleSheet.create({
-  insightHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 8 },
-  insightBackBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  insightBackGlyph: { color: colors.text, fontSize: 19 },
-  insightTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  insightScroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 60 },
-  tabBarWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#000000' },
+  insightScroll: { paddingHorizontal: space.gutter, paddingTop: space.sm, paddingBottom: space.tabClearance },
+  tabBarWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: palette.base },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#000000',
+    backgroundColor: palette.base,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: palette.hairline,
     paddingBottom: 28,
     paddingTop: 8,
     width: '100%',
@@ -775,15 +795,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   tabIconPillActive: {
-    backgroundColor: 'rgba(124, 245, 176, 0.14)',
+    backgroundColor: palette.accentSoft,
   },
   tabLabel: {
-    color: 'rgba(255,255,255,0.4)',
+    color: palette.textTertiary,
     fontSize: 11.5,
     fontWeight: '600',
   },
   tabLabelActive: {
-    color: '#7CF5B0',
+    color: palette.accent,
     fontWeight: '700',
   },
 });

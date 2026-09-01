@@ -3,29 +3,30 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon, { IconName } from '../ui/Icon';
 
-const STEPS = [
+const STEPS: { icon: IconName; title: string; body: string; done: boolean }[] = [
   {
-    glyph: '✓',
+    icon: 'check',
     title: 'Begin your focus journey',
     body: "You're on your way to turning intention into a daily habit.",
     done: true,
   },
   {
-    glyph: '🔓',
+    icon: 'unlock',
     title: 'Today: take back your focus',
     body: 'Start your 7-day free trial and unlock Strict mode, schedules and Guardian.',
     done: false,
   },
   {
-    glyph: '🔔',
+    icon: 'bell',
     title: 'Day 5: we remind you',
     body: "We'll email you two days before the trial ends. No surprise charge, ever.",
     done: false,
   },
   {
-    glyph: '🚀',
+    icon: 'rocket',
     title: 'Day 7: keep it going',
     body: 'Only if you want to. Cancel in two taps and nothing you built is lost.',
     done: false,
@@ -55,7 +56,7 @@ export default function TrialTimelineScreen({ onStart }: { onStart: () => void }
             <Animated.View key={s.title} entering={FadeInDown.delay(i * 90).duration(400)} style={styles.step}>
               <View style={styles.rail}>
                 <View style={[styles.node, s.done && styles.nodeDone]}>
-                  <Text style={styles.nodeGlyph}>{s.glyph}</Text>
+                  <Icon name={s.icon} size={16} color={s.done ? '#062' : palette.text} strokeWidth={2.5} />
                 </View>
                 {i < STEPS.length - 1 && <View style={[styles.line, s.done && styles.lineDone]} />}
               </View>
@@ -73,7 +74,7 @@ export default function TrialTimelineScreen({ onStart }: { onStart: () => void }
             return (
               <Pressable key={p.key} onPress={() => setPlan(p.key)} style={[styles.plan, active && styles.planActive]}>
                 <View style={[styles.radio, active && styles.radioOn]}>
-                  {active ? <Text style={styles.radioTick}>✓</Text> : null}
+                  {active ? <Icon name="check" size={13} color="#062" strokeWidth={2.8} /> : null}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.planName}>{p.name}</Text>
@@ -105,7 +106,7 @@ export default function TrialTimelineScreen({ onStart }: { onStart: () => void }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 10 },
-  heading: { color: colors.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 33, marginBottom: 28 },
+  heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 33, marginBottom: 28 },
   timeline: {},
   step: { flexDirection: 'row', gap: 14 },
   rail: { alignItems: 'center', width: 40 },
@@ -113,17 +114,16 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 11,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nodeDone: { backgroundColor: colors.accent },
-  nodeGlyph: { fontSize: 16 },
-  line: { width: 2.5, flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', minHeight: 22 },
-  lineDone: { backgroundColor: colors.accent },
+  nodeDone: { backgroundColor: palette.accent },
+  line: { width: 2.5, flex: 1, backgroundColor: palette.hairline, minHeight: 22 },
+  lineDone: { backgroundColor: palette.accent },
   stepBody: { flex: 1, paddingBottom: 24 },
-  stepTitle: { color: colors.text, fontSize: 16.5, fontWeight: '700' },
-  stepText: { color: colors.textDim, fontSize: 14, lineHeight: 20.5, marginTop: 5 },
+  stepTitle: { color: palette.text, fontSize: 16.5, fontWeight: '700' },
+  stepText: { color: palette.textSecondary, fontSize: 14, lineHeight: 20.5, marginTop: 5 },
   plans: { gap: 10, marginTop: 6 },
   plan: {
     flexDirection: 'row',
@@ -131,37 +131,36 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
     paddingVertical: 18,
     paddingHorizontal: 16,
   },
-  planActive: { borderColor: colors.accent, backgroundColor: 'rgba(124,245,176,0.08)' },
+  planActive: { borderColor: palette.accent, backgroundColor: palette.accentSoft },
   radio: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 1.8,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: palette.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  radioTick: { color: '#062', fontSize: 12, fontWeight: '900' },
-  planName: { color: colors.text, fontSize: 16.5, fontWeight: '700' },
-  planNote: { color: colors.textDim, fontSize: 12.5, marginTop: 2 },
-  planPrice: { color: colors.text, fontSize: 17, fontWeight: '800' },
-  planPer: { color: colors.textDim, fontSize: 13, fontWeight: '500' },
+  radioOn: { backgroundColor: palette.accent, borderColor: palette.accent },
+  planName: { color: palette.text, fontSize: 16.5, fontWeight: '700' },
+  planNote: { color: palette.textSecondary, fontSize: 12.5, marginTop: 2 },
+  planPrice: { color: palette.text, fontSize: 17, fontWeight: '800' },
+  planPer: { color: palette.textSecondary, fontSize: 13, fontWeight: '500' },
   badge: {
     position: 'absolute',
     top: -10,
     right: 14,
-    backgroundColor: colors.accent,
+    backgroundColor: palette.accent,
     borderRadius: 12,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
   badgeText: { color: '#062', fontSize: 11.5, fontWeight: '800' },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 12 },
-  legal: { color: colors.textFaint, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
+  legal: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
 });

@@ -5,7 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import LoginScreen from './LoginScreen';
 import { Account } from '../data/store';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const METHOD_LABEL: Record<Account['method'], string> = {
@@ -16,7 +16,7 @@ const METHOD_LABEL: Record<Account['method'], string> = {
 const METHOD_GLYPH: Record<Account['method'], string> = {
   apple: '',
   google: 'G',
-  email: '✉',
+  email: '@',
 };
 
 /** Identity (who you are) and data (your progress) are two different
@@ -44,7 +44,7 @@ export default function AccountScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>My Account</Text>
         <View style={{ width: 40 }} />
@@ -72,7 +72,7 @@ export default function AccountScreen({
               value={draft}
               onChangeText={setDraft}
               placeholder="Your name"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
               style={styles.input}
               onBlur={() => onSaveName(draft.trim())}
             />
@@ -96,7 +96,7 @@ export default function AccountScreen({
 
         <View style={styles.syncCard}>
           <View style={{ marginBottom: 8 }}>
-            <Icon name="lock" size={20} color={colors.text} strokeWidth={1.8} />
+            <Icon name="lock" size={20} color={palette.text} strokeWidth={1.8} />
           </View>
           <Text style={styles.syncTitle}>Cloud sync — coming soon</Text>
           <Text style={styles.syncBody}>
@@ -117,50 +117,49 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.glass,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
   avatarWrap: { alignItems: 'center', marginTop: 10, marginBottom: 20 },
   avatar: {
     width: 84,
     height: 84,
     borderRadius: 26,
-    backgroundColor: 'rgba(124,245,176,0.14)',
+    backgroundColor: 'rgba(111,227,169,0.14)',
     borderWidth: 1.5,
-    borderColor: colors.accent,
+    borderColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarGlyph: { color: colors.accent, fontSize: 34, fontWeight: '800' },
+  avatarGlyph: { color: palette.accent, fontSize: 34, fontWeight: '800' },
   signedInRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: colors.cardBg,
+    backgroundColor: palette.surface,
     borderRadius: 20,
     padding: 16,
     marginBottom: 22,
   },
-  methodGlyph: { fontSize: 20, width: 26, textAlign: 'center', color: colors.text },
-  signedInIdentifier: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  signedInMethod: { color: colors.textDim, fontSize: 12.5, marginTop: 3 },
-  label: { color: colors.textFaint, fontSize: 12, letterSpacing: 1, fontWeight: '700', marginBottom: 10 },
+  methodGlyph: { fontSize: 20, width: 26, textAlign: 'center', color: palette.text },
+  signedInIdentifier: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  signedInMethod: { color: palette.textSecondary, fontSize: 12.5, marginTop: 3 },
+  label: { color: palette.textTertiary, fontSize: 12, letterSpacing: 1, fontWeight: '700', marginBottom: 10 },
   input: {
     paddingVertical: 15,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    backgroundColor: palette.glass,
+    color: palette.text,
     fontSize: 16,
   },
   signOutBtn: { alignItems: 'center', paddingVertical: 16, marginTop: 6 },
-  signOutText: { color: '#ff8f6b', fontSize: 14.5, fontWeight: '600' },
-  syncCard: { marginTop: 30, padding: 18, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.04)' },
+  signOutText: { color: palette.danger, fontSize: 14.5, fontWeight: '600' },
+  syncCard: { marginTop: 30, padding: 18, borderRadius: 22, backgroundColor: palette.surface },
   syncGlyph: { fontSize: 22, marginBottom: 8 },
-  syncTitle: { color: colors.text, fontSize: 15.5, fontWeight: '700' },
-  syncBody: { color: colors.textDim, fontSize: 13.5, lineHeight: 20, marginTop: 8 },
+  syncTitle: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
+  syncBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 20, marginTop: 8 },
 });

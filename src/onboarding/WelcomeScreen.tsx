@@ -11,12 +11,12 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import OpalOrb from '../components/OpalOrb';
-import { colors } from '../theme';
+import WendOrb from '../components/WendOrb';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const { width, height } = Dimensions.get('window');
-const CONFETTI_COLORS = ['#f5c542', '#e07a5f', '#8fb8ff', '#7CF5B0', '#ff7ab8', '#7dd8ff', '#d9f77e'];
+const CONFETTI_COLORS = ['#f5c542', '#e07a5f', '#8fb8ff', '#6FE3A9', '#ff7ab8', '#7dd8ff', '#d9f77e'];
 
 function ConfettiPiece({ index }: { index: number }) {
   const fall = useSharedValue(0);
@@ -66,7 +66,7 @@ export default function WelcomeScreen({ onDone }: { onDone: () => void }) {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.body}>
           <Animated.View entering={FadeIn.duration(800)} style={styles.orbWrap}>
-            <OpalOrb size={200} awake />
+            <WendOrb size={200} awake />
             <View style={styles.pedestal} />
           </Animated.View>
 
@@ -112,6 +112,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   checkGlyph: { color: '#062a14', fontSize: 30, fontWeight: '900' },
-  heading: { color: colors.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 32 },
-  tapHint: { color: colors.textDim, fontSize: 12, letterSpacing: 2, marginTop: 20 },
+  heading: { color: palette.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 32 },
+  tapHint: { color: palette.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: 20 },
 });

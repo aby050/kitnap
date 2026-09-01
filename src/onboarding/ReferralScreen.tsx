@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 /**
  * Viral-growth screen at the tail of onboarding, after the discount
@@ -47,7 +48,8 @@ export default function ReferralScreen({ onShare, onSkip }: { onShare: () => voi
           Add your Friends
         </Animated.Text>
         <Text style={styles.sub}>
-          Invite 20 friends and get <Text style={styles.subAccent}>⚡PRO</Text> for free for 2 years
+          Invite 20 friends and get <Icon name="bolt" size={14} color={palette.accent} strokeWidth={2.2} />{' '}
+          <Text style={styles.subAccent}>PRO</Text> for free for 2 years
         </Text>
 
         <View style={{ height: 26 }} />
@@ -66,7 +68,7 @@ export default function ReferralScreen({ onShare, onSkip }: { onShare: () => voi
                 </LinearGradient>
               ) : (
                 <View style={[styles.tierBadge, styles.tierBadgeDark]}>
-                  <Text style={styles.giftGlyph}>🎁</Text>
+                  <Icon name="gift" size={30} color={palette.textSecondary} strokeWidth={1.6} />
                 </View>
               )}
               <View style={{ flex: 1 }}>
@@ -78,13 +80,17 @@ export default function ReferralScreen({ onShare, onSkip }: { onShare: () => voi
                 </View>
               </View>
             </Animated.View>
-            {i < TIERS.length - 1 && <Text style={styles.tierArrow}>↓</Text>}
+            {i < TIERS.length - 1 && (
+              <View style={styles.tierArrowWrap}>
+                <Icon name="chevronDown" size={18} color={palette.textTertiary} strokeWidth={2} />
+              </View>
+            )}
           </View>
         ))}
       </ScrollView>
 
       <View style={styles.ctaWrap}>
-        <GradientButton label="⇪  Share Invite" onPress={onShare} />
+        <GradientButton label="Share Invite" onPress={onShare} />
         <Pressable onPress={onSkip} style={styles.skipBtn} hitSlop={10}>
           <Text style={styles.skipText}>Skip</Text>
         </Pressable>
@@ -96,9 +102,9 @@ export default function ReferralScreen({ onShare, onSkip }: { onShare: () => voi
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: 20, paddingTop: 28, paddingBottom: 10 },
-  heading: { color: colors.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
-  sub: { color: colors.textDim, fontSize: 15.5, textAlign: 'center', marginTop: 10, lineHeight: 22 },
-  subAccent: { color: colors.accent, fontWeight: '700' },
+  heading: { color: palette.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
+  sub: { color: palette.textSecondary, fontSize: 15.5, textAlign: 'center', marginTop: 10, lineHeight: 22 },
+  subAccent: { color: palette.accent, fontWeight: '700' },
   tierCard: {
     flexDirection: 'row',
     gap: 14,
@@ -116,10 +122,9 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     transform: [{ rotate: '12deg' }],
   },
-  giftGlyph: { fontSize: 30 },
-  tierCount: { color: colors.accent, fontSize: 12.5, fontWeight: '800', letterSpacing: 0.5 },
-  tierTitle: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 3 },
-  tierDesc: { color: colors.textDim, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
+  tierCount: { color: palette.accent, fontSize: 12.5, fontWeight: '800', letterSpacing: 0.5 },
+  tierTitle: { color: palette.text, fontSize: 18, fontWeight: '700', marginTop: 3 },
+  tierDesc: { color: palette.textSecondary, fontSize: 12.5, marginTop: 3, lineHeight: 17 },
   progressTrack: {
     height: 5,
     borderRadius: 3,
@@ -127,9 +132,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     overflow: 'hidden',
   },
-  progressBar: { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
-  tierArrow: { color: colors.textFaint, fontSize: 17, textAlign: 'center', marginVertical: 7 },
+  progressBar: { height: '100%', backgroundColor: palette.accent, borderRadius: 3 },
+  tierArrowWrap: { alignItems: 'center', marginVertical: 7 },
   ctaWrap: { paddingHorizontal: 20, paddingBottom: 12 },
   skipBtn: { alignItems: 'center', paddingVertical: 14 },
-  skipText: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  skipText: { color: palette.text, fontSize: 16, fontWeight: '600' },
 });

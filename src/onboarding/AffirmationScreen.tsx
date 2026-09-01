@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import OpalOrb from '../components/OpalOrb';
+import WendOrb from '../components/WendOrb';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 
 /** A short positive beat between question blocks. Keeps the flow from feeling
  *  like a form, and it's the only place we're allowed to be warm. */
@@ -29,7 +29,7 @@ export default function AffirmationScreen({
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.body}>
         <Animated.View entering={FadeIn.duration(700)}>
-          <OpalOrb size={150} awake />
+          <WendOrb size={150} awake />
         </Animated.View>
 
         <Animated.Text entering={FadeInDown.delay(200).duration(450)} style={styles.headline}>
@@ -53,7 +53,7 @@ export default function AffirmationScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30, gap: 20 },
-  headline: { color: colors.text, fontSize: 32, fontWeight: '800', textAlign: 'center', marginTop: 18 },
-  sub: { color: colors.textDim, fontSize: 16.5, textAlign: 'center', lineHeight: 25, maxWidth: 320 },
+  headline: { color: palette.text, fontSize: 32, fontWeight: '800', textAlign: 'center', marginTop: 18 },
+  sub: { color: palette.textSecondary, fontSize: 16.5, textAlign: 'center', lineHeight: 25, maxWidth: 320 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14 },
 });

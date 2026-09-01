@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
@@ -23,13 +23,13 @@ export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: (
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
-        <Icon name="close" size={18} color={colors.text} />
+        <Icon name="close" size={18} color={palette.text} />
       </Pressable>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.Text entering={FadeIn.duration(500)} style={styles.bolt}>
-          ⚡
-        </Animated.Text>
+        <Animated.View entering={FadeIn.duration(500)} style={styles.bolt}>
+          <Icon name="bolt" size={40} color={palette.accent} strokeWidth={1.8} />
+        </Animated.View>
 
         <Animated.Text entering={FadeInDown.duration(450)} style={styles.heading}>
           Too Expensive?{'\n'}Here is <Text style={styles.headingAccent}>50% OFF</Text>
@@ -37,9 +37,9 @@ export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: (
 
         <View style={{ height: 34 }} />
 
-        <Feature icon={<Icon name="shield" size={19} color={colors.text} />} title="Focus, uninterrupted." desc="Finally do your best work yet." />
-        <Feature icon="🗓" title="Own your time." desc="And fill your days with more intention." />
-        <Feature icon="👥" title="Be fully present." desc="Because life isn't happening on your screen." />
+        <Feature icon={<Icon name="shield" size={19} color={palette.text} />} title="Focus, uninterrupted." desc="Finally do your best work yet." />
+        <Feature icon={<Icon name="calendar" size={19} color={palette.text} />} title="Own your time." desc="And fill your days with more intention." />
+        <Feature icon={<Icon name="user" size={19} color={palette.text} />} title="Be fully present." desc="Because life isn't happening on your screen." />
 
         <View style={{ height: 22 }} />
 
@@ -85,20 +85,20 @@ export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: (
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   closeBtn: { position: 'absolute', top: 54, left: 22, zIndex: 10 },
-  closeIcon: { color: colors.text, fontSize: 24, fontWeight: '300' },
+  closeIcon: { color: palette.text, fontSize: 24, fontWeight: '300' },
   scroll: { paddingHorizontal: 24, paddingTop: 46, paddingBottom: 10 },
-  bolt: { fontSize: 44, textAlign: 'center', marginBottom: 22 },
-  heading: { color: colors.text, fontSize: 27, fontWeight: '800', textAlign: 'center', lineHeight: 36 },
+  bolt: { marginBottom: 22, alignItems: 'center' },
+  heading: { color: palette.text, fontSize: 27, fontWeight: '800', textAlign: 'center', lineHeight: 36 },
   headingAccent: { color: '#c9f57a' },
   featureRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 18 },
   featureIcon: { fontSize: 19, width: 36 },
   featureIconWrap: { width: 36, alignItems: 'flex-start', justifyContent: 'center' },
   featureText: { flex: 1, fontSize: 15, lineHeight: 22 },
-  featureTitle: { color: colors.text, fontWeight: '700' },
+  featureTitle: { color: palette.text, fontWeight: '700' },
   featureDesc: { color: 'rgba(255,255,255,0.8)' },
   reviewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   stars: { color: '#FFC94A', fontSize: 15, letterSpacing: 2 },
-  reviewText: { color: colors.textDim, fontSize: 13.5 },
+  reviewText: { color: palette.textSecondary, fontSize: 13.5 },
   offerBadgeWrap: { alignItems: 'center', zIndex: 5, marginBottom: -14 },
   offerBadge: { borderRadius: 16, paddingVertical: 7, paddingHorizontal: 18 },
   offerBadgeText: { color: '#0b2a14', fontSize: 14, fontWeight: '800' },
@@ -112,13 +112,13 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 20,
   },
-  planTitle: { color: colors.text, fontSize: 21, fontWeight: '800' },
-  planSub: { color: colors.textDim, fontSize: 13.5, marginTop: 3 },
-  planStrike: { color: colors.textFaint, fontSize: 13, textDecorationLine: 'line-through' },
-  planPrice: { color: colors.text, fontSize: 21, fontWeight: '800', marginTop: 2 },
-  terms: { color: colors.textDim, fontSize: 12.5, textAlign: 'center', marginTop: 14 },
+  planTitle: { color: palette.text, fontSize: 21, fontWeight: '800' },
+  planSub: { color: palette.textSecondary, fontSize: 13.5, marginTop: 3 },
+  planStrike: { color: palette.textTertiary, fontSize: 13, textDecorationLine: 'line-through' },
+  planPrice: { color: palette.text, fontSize: 21, fontWeight: '800', marginTop: 2 },
+  terms: { color: palette.textSecondary, fontSize: 12.5, textAlign: 'center', marginTop: 14 },
   ctaWrap: { paddingHorizontal: 24, paddingBottom: 12 },
-  expiry: { color: colors.textFaint, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
+  expiry: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 26, marginTop: 10 },
-  legalLink: { color: colors.textDim, fontSize: 13.5 },
+  legalLink: { color: palette.textSecondary, fontSize: 13.5 },
 });

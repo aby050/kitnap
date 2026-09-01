@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 /** Any user can disable this app in Settings in two taps — no third-party app
  *  on iOS can prevent that. Guardian is one of our two real defences (with the
@@ -31,7 +32,7 @@ export default function GuardianScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Guardian</Text>
         <View style={{ width: 40 }} />
@@ -39,7 +40,9 @@ export default function GuardianScreen({
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
-          <Text style={styles.heroGlyph}>🤝</Text>
+          <View style={styles.heroGlyph}>
+            <Icon name="shield" size={34} color={palette.accent} strokeWidth={1.7} />
+          </View>
           <Text style={styles.heroTitle}>A friend holds the code</Text>
           <Text style={styles.heroBody}>
             We can't stop you disabling this in Settings — nobody can, on iOS. So instead, weakening Strict
@@ -58,7 +61,7 @@ export default function GuardianScreen({
               setEnabled(v);
               onSave({ enabled: v, name, contact });
             }}
-            trackColor={{ true: colors.accent, false: 'rgba(255,255,255,0.2)' }}
+            trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
             thumbColor="#fff"
           />
         </View>
@@ -73,7 +76,7 @@ export default function GuardianScreen({
                 setSaved(false);
               }}
               placeholder="Their name"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
               style={styles.input}
             />
             <View style={{ height: 10 }} />
@@ -84,7 +87,7 @@ export default function GuardianScreen({
                 setSaved(false);
               }}
               placeholder="Their phone or email"
-              placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
               style={styles.input}
             />
 
@@ -132,13 +135,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerGlyph: { color: palette.text, fontSize: 19 },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
   hero: { alignItems: 'center', paddingTop: 14, paddingBottom: 26 },
-  heroGlyph: { fontSize: 40 },
-  heroTitle: { color: colors.text, fontSize: 22, fontWeight: '800', marginTop: 14, textAlign: 'center' },
-  heroBody: { color: colors.textDim, fontSize: 14.5, lineHeight: 21, marginTop: 10, textAlign: 'center' },
+  heroGlyph: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: 'rgba(111,227,169,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(111,227,169,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroTitle: { color: palette.text, fontSize: 22, fontWeight: '800', marginTop: 14, textAlign: 'center' },
+  heroBody: { color: palette.textSecondary, fontSize: 14.5, lineHeight: 21, marginTop: 10, textAlign: 'center' },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -147,21 +159,21 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 20,
   },
-  toggleTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
-  toggleSub: { color: colors.textDim, fontSize: 13, marginTop: 3 },
-  sectionLabel: { color: colors.textFaint, fontSize: 12, letterSpacing: 1, fontWeight: '700', marginBottom: 10 },
+  toggleTitle: { color: palette.text, fontSize: 16, fontWeight: '700' },
+  toggleSub: { color: palette.textSecondary, fontSize: 13, marginTop: 3 },
+  sectionLabel: { color: palette.textTertiary, fontSize: 12, letterSpacing: 1, fontWeight: '700', marginBottom: 10 },
   input: {
     width: '100%',
     paddingVertical: 15,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    backgroundColor: palette.glass,
+    color: palette.text,
     fontSize: 15.5,
   },
-  confirmCard: { marginTop: 16, padding: 16, borderRadius: 18, backgroundColor: 'rgba(124,245,176,0.09)' },
-  confirmTitle: { color: colors.accent, fontSize: 15, fontWeight: '700' },
+  confirmCard: { marginTop: 16, padding: 16, borderRadius: 18, backgroundColor: 'rgba(111,227,169,0.09)' },
+  confirmTitle: { color: palette.accent, fontSize: 15, fontWeight: '700' },
   confirmBody: { color: 'rgba(255,255,255,0.78)', fontSize: 13.5, lineHeight: 20, marginTop: 7 },
   note: { marginTop: 26, padding: 16, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)' },
-  noteText: { color: colors.textFaint, fontSize: 13, lineHeight: 19 },
+  noteText: { color: palette.textTertiary, fontSize: 13, lineHeight: 19 },
 });

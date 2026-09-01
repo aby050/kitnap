@@ -9,7 +9,7 @@ import {
   saveBlockedSelection,
   screenTimeAvailable,
 } from '../data/iosScreenTime';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
 
 let DeviceActivitySelectionSheetView: any = null;
 if (Platform.OS === 'ios') {
@@ -109,25 +109,25 @@ export default function IOSAppPickerScreen({ onContinue }: { onContinue: () => v
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 20 },
-  heading: { color: colors.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 31 },
-  sub: { color: colors.textDim, fontSize: 14.5, textAlign: 'center', lineHeight: 21, maxWidth: 300 },
+  heading: { color: palette.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 31 },
+  sub: { color: palette.textSecondary, fontSize: 14.5, textAlign: 'center', lineHeight: 21, maxWidth: 300 },
   authBtn: {
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 24,
-    backgroundColor: 'rgba(124,245,176,0.15)',
+    backgroundColor: palette.accentSoft,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: palette.accent,
   },
-  authBtnText: { color: colors.accent, fontSize: 15.5, fontWeight: '700' },
+  authBtnText: { color: palette.accent, fontSize: 15.5, fontWeight: '700' },
   pickBtn: {
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: palette.glass,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: palette.border,
   },
-  pickBtnText: { color: colors.text, fontSize: 15.5, fontWeight: '700' },
+  pickBtnText: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14 },
 });

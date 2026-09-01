@@ -4,7 +4,8 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import AppleSignInButton from './AppleSignInButton';
 import { Account } from '../data/store';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 /** Google requires a real OAuth client ID from Google Cloud Console before it
  *  can complete a real sign-in — there's nothing to fake here without lying
@@ -64,7 +65,7 @@ export default function LoginScreen({
           </Pressable>
 
           <Pressable style={[styles.providerBtn, styles.emailBtn]} onPress={() => setShowEmail(true)}>
-            <Text style={styles.emailGlyph}>✉</Text>
+            <Text style={styles.emailGlyph}>@</Text>
             <Text style={styles.emailBtnText}>Continue with Email</Text>
           </Pressable>
         </Animated.View>
@@ -74,7 +75,7 @@ export default function LoginScreen({
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor={colors.textFaint}
+              placeholderTextColor={palette.textTertiary}
             style={styles.input}
             autoCapitalize="none"
             autoCorrect={false}
@@ -84,7 +85,8 @@ export default function LoginScreen({
           <View style={{ height: 12 }} />
           <GradientButton label="Continue" onPress={submitEmail} />
           <Pressable onPress={() => setShowEmail(false)} style={styles.backLink} hitSlop={10}>
-            <Text style={styles.backLinkText}>‹ Other ways to sign in</Text>
+            <Icon name="chevronLeft" size={15} color={palette.textSecondary} strokeWidth={2} />
+            <Text style={styles.backLinkText}>Other ways to sign in</Text>
           </Pressable>
         </Animated.View>
       )}
@@ -102,8 +104,8 @@ export default function LoginScreen({
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', paddingHorizontal: 26, paddingTop: 10 },
-  heading: { color: colors.text, fontSize: 21, fontWeight: '800', textAlign: 'center' },
-  sub: { color: colors.textDim, fontSize: 13.5, textAlign: 'center', lineHeight: 19, marginTop: 10, maxWidth: 300 },
+  heading: { color: palette.text, fontSize: 21, fontWeight: '800', textAlign: 'center' },
+  sub: { color: palette.textSecondary, fontSize: 13.5, textAlign: 'center', lineHeight: 19, marginTop: 10, maxWidth: 300 },
   buttons: { width: '100%', maxWidth: 320, gap: 12, marginTop: 26 },
   providerBtn: {
     flexDirection: 'row',
@@ -116,21 +118,21 @@ const styles = StyleSheet.create({
   googleBtn: { backgroundColor: '#fff' },
   googleG: { fontSize: 17, fontWeight: '900', color: '#4285F4' },
   googleText: { color: '#1f1f1f', fontSize: 15.5, fontWeight: '700' },
-  emailBtn: { backgroundColor: colors.pillBg, borderWidth: 1, borderColor: colors.cardBorder },
-  emailGlyph: { fontSize: 16, color: colors.text },
-  emailBtnText: { color: colors.text, fontSize: 15.5, fontWeight: '700' },
+  emailBtn: { backgroundColor: palette.glass, borderWidth: 1, borderColor: palette.border },
+  emailGlyph: { fontSize: 16, color: palette.text },
+  emailBtnText: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
   emailForm: { width: '100%', maxWidth: 320, marginTop: 26 },
   input: {
     paddingVertical: 15,
     paddingHorizontal: 18,
     borderRadius: 24,
-    backgroundColor: colors.pillBg,
-    color: colors.text,
+    backgroundColor: palette.glass,
+    color: palette.text,
     fontSize: 16,
   },
-  backLink: { alignItems: 'center', paddingVertical: 14 },
-  backLinkText: { color: colors.textDim, fontSize: 13.5, fontWeight: '600' },
-  error: { color: '#ff8f6b', fontSize: 13, textAlign: 'center', marginTop: 14, maxWidth: 300 },
+  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 14 },
+  backLinkText: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
+  error: { color: palette.danger, fontSize: 13, textAlign: 'center', marginTop: 14, maxWidth: 300 },
   skip: { marginTop: 22, paddingVertical: 8 },
-  skipText: { color: colors.textFaint, fontSize: 13.5, fontWeight: '600' },
+  skipText: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600' },
 });

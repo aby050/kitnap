@@ -5,7 +5,8 @@ import Svg, { Circle, Path, Defs, RadialGradient, Stop } from 'react-native-svg'
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { INTENSITIES, IntensityKey } from '../data/themes';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 const { width } = Dimensions.get('window');
 
@@ -23,7 +24,7 @@ function HeaderGlow() {
       <Svg width={width} height={160} viewBox={`0 0 ${width} 160`}>
         <Defs>
           <RadialGradient id="topGlow" cx="50%" cy="0%" r="50%">
-            <Stop offset="0%" stopColor="#7CF5B0" stopOpacity="0.15" />
+            <Stop offset="0%" stopColor="#6FE3A9" stopOpacity="0.15" />
             <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
           </RadialGradient>
         </Defs>
@@ -55,8 +56,8 @@ export default function IntensityScreen({
           How hard should this push back?
         </Animated.Text>
         <Text style={styles.sub}>
-          Every unlock takes the same real challenge — no free early opens. If you'd rather not, an emergency
-          token skips it instantly.
+          Every unlock takes the same real challenge — no free early opens. If you'd rather not, a Bailout
+          skips it instantly.
         </Text>
 
         {/* Segmented Row Selector */}
@@ -72,9 +73,12 @@ export default function IntensityScreen({
                   active && styles.segItemActive
                 ]}
               >
-                <Text style={[styles.segText, active && styles.segTextActive]}>
-                  {i.name}{i.key === recommended ? ' ✓' : ''}
-                </Text>
+                <View style={styles.segInner}>
+                  <Text style={[styles.segText, active && styles.segTextActive]}>{i.name}</Text>
+                  {i.key === recommended && (
+                    <Icon name="check" size={13} color={active ? '#6FE3A9' : 'rgba(255,255,255,0.45)'} strokeWidth={2.6} />
+                  )}
+                </View>
               </Pressable>
             );
           })}
@@ -107,8 +111,8 @@ export default function IntensityScreen({
         <View style={styles.note}>
           <View style={styles.noteHeader}>
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#7CF5B0" strokeWidth="2" fill="none" />
-              <Path d="M12 8v5M12 16h.01" stroke="#7CF5B0" strokeWidth="2" strokeLinecap="round" />
+              <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#6FE3A9" strokeWidth="2" fill="none" />
+              <Path d="M12 8v5M12 16h.01" stroke="#6FE3A9" strokeWidth="2" strokeLinecap="round" />
             </Svg>
             <Text style={styles.noteTitle}>Real Protection</Text>
           </View>
@@ -180,16 +184,17 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   segItemActive: { 
-    backgroundColor: 'rgba(124, 245, 176, 0.08)',
-    borderColor: '#7CF5B0', // clean glowing green active border
+    backgroundColor: 'rgba(111, 227, 169, 0.08)',
+    borderColor: '#6FE3A9', // clean glowing green active border
   },
-  segText: { 
+  segInner: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  segText: {
     color: 'rgba(255,255,255,0.4)', 
     fontSize: 15, 
     fontWeight: '600',
   },
   segTextActive: { 
-    color: '#7CF5B0', 
+    color: '#6FE3A9', 
     fontWeight: '800',
   },
   table: { 
@@ -228,12 +233,12 @@ const styles = StyleSheet.create({
     marginTop: 18,
     padding: 16,
     borderRadius: 18,
-    backgroundColor: 'rgba(124, 245, 176, 0.06)',
+    backgroundColor: 'rgba(111, 227, 169, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(124, 245, 176, 0.16)',
+    borderColor: 'rgba(111, 227, 169, 0.16)',
   },
   recommendTitle: {
-    color: '#7CF5B0',
+    color: '#6FE3A9',
     fontSize: 14.5,
     fontWeight: '700',
     marginBottom: 6,
@@ -248,9 +253,9 @@ const styles = StyleSheet.create({
     marginTop: 26, 
     padding: 18, 
     borderRadius: 20, 
-    backgroundColor: 'rgba(124, 245, 176, 0.04)',
+    backgroundColor: 'rgba(111, 227, 169, 0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(124, 245, 176, 0.12)',
+    borderColor: 'rgba(111, 227, 169, 0.12)',
   },
   noteHeader: {
     flexDirection: 'row',
@@ -259,7 +264,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   noteTitle: {
-    color: '#7CF5B0',
+    color: '#6FE3A9',
     fontSize: 14.5,
     fontWeight: '700',
   },

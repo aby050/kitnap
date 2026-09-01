@@ -4,6 +4,9 @@
  * A full 5-question gate always includes exactly one C and one D; those two
  * carry the weight and the rest are pacing.
  */
+import { IconName } from '../ui/Icon';
+import { ActivityKind } from '../shield/activity/types';
+
 export type Family = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
 export type GateQuestion =
@@ -15,7 +18,7 @@ export type GateQuestion =
   | { family: 'F'; kind: 'breathe'; prompt: string; cycles: number }
   | { family: 'F'; kind: 'math'; prompt: string; a: number; b: number; op: '+' | '−' | '×' }
   | { family: 'F'; kind: 'quiz'; prompt: string; options: string[]; correctIndex: number; explain: string }
-  | { family: 'G'; kind: 'activity'; prompt: string; reps: number; activity: string };
+  | { family: 'G'; kind: 'activity'; prompt: string; reps: number; activity: ActivityKind };
 
 /** Family A — Intent. "I don't know" is always present, always largest, always a soft exit. */
 export const FAMILY_A: GateQuestion[] = [
@@ -159,9 +162,13 @@ export const FAMILY_F_QUIZ: Extract<GateQuestion, { kind: 'quiz' }>[] = [
   },
 ];
 
-/** Family G — Hard unlock. Physical movement, phone camera up so it can't be
- *  done from a pocket. Never offered to anyone who flagged a physical
- *  limitation during onboarding — see buildFinalChallenge(). */
+/** Family G — Hard unlock. Real movement with the camera up, counted
+ *  automatically where the device can manage it and pace-checked where it
+ *  can't. Never offered to anyone who flagged a physical limitation during
+ *  onboarding — see isHealthLimited() and pickChallenge().
+ *
+ *  The `reps` here are only cold-start defaults; the live number comes from
+ *  computeRepTarget() via pickChallenge's `repsFor`. */
 export const FAMILY_G: GateQuestion[] = [
   { family: 'G', kind: 'activity', prompt: 'Do 10 squats to unlock.', reps: 10, activity: 'squats' },
   { family: 'G', kind: 'activity', prompt: 'Do 10 jumping jacks to unlock.', reps: 10, activity: 'jumping jacks' },
@@ -177,8 +184,30 @@ const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
  * not physical punishment" — never force movement on someone who told us
  * it might not be safe for them.
  */
-function pickQuizChallenge(): GateQuestion {
-  const roll = Math.random();
+/**
+ * Reads the free-text onboarding health-limitation answer and decides whether
+ * to keep physical challenges away from this person.
+ *
+ * The question is optional and free-text, so people answer it every way you can
+ * imagine: blank, "no", "none", "-", or an actual injury. Anything that isn't
+ * clearly a blank or a refusal is treated as a limitation. That asymmetry is
+ * deliberate — the cost of a false positive is a quiz instead of squats; the
+ * cost of a false negative is telling someone with a bad knee to do squats.
+ */
+export function isHealthLimited(raw: string | undefined | null): boolean {
+  if (!raw) return false;
+  const v = raw.trim().toLowerCase();
+  if (v.length === 0) return false;
+  return !NOT_LIMITED.has(v);
+}
+
+const NOT_LIMITED = new Set([
+  'no', 'none', 'nope', 'nil', 'nothing', 'n/a', 'na', '-', '--', 'no.', 'none.',
+  'not really', 'nothing really', 'no issues', 'no problems', 'all good', 'all fine',
+  'im fine', "i'm fine", 'fine', 'healthy', 'no limitations', 'no limits',
+]);
+
+function pickQuizChallenge(): GateQuestion {  const roll = Math.random();
   if (roll < 0.4) return pick(FAMILY_F_BREATHE);
   if (roll < 0.75) return randomMathChallenge();
   return pick(FAMILY_F_QUIZ);
@@ -190,23 +219,35 @@ function pickQuizChallenge(): GateQuestion {
  * rotation; Strict always gets a physical activity challenge (or the same
  * quiz rotation if health-limited). The only way around it is spending an
  * emergency token, handled by the caller (GateScreen), not here.
+ *
+ * `repsFor` is the adaptive rep-target resolver. It is applied here rather than
+ * in the challenge component so the prompt and the count can never disagree —
+ * the number in the sentence is the number being counted. It takes the chosen
+ * activity because a squat history says nothing about push-ups.
  */
 export function pickChallenge(
   intensityKey: 'steady' | 'strict',
   healthLimited: boolean,
+  repsFor?: (activity: ActivityKind) => number,
 ): GateQuestion {
   if (intensityKey === 'steady' || healthLimited) return pickQuizChallenge();
-  return pick(FAMILY_G);
+  const chosen = pick(FAMILY_G) as Extract<GateQuestion, { kind: 'activity' }>;
+  if (!repsFor) return chosen;
+  const resolved = repsFor(chosen.activity);
+  if (!Number.isFinite(resolved)) return chosen;
+  const reps = Math.max(1, Math.round(resolved));
+  if (reps === chosen.reps) return chosen;
+  return { ...chosen, reps, prompt: `Do ${reps} ${chosen.activity} to unlock.` };
 }
 
-export const ESSENTIALS = [
-  { name: 'Phone', glyph: '📞', locked: true, note: 'Guaranteed by iOS — can never be blocked' },
-  { name: 'Emergency SOS', glyph: '🆘', locked: true, note: 'Guaranteed by iOS — can never be blocked' },
-  { name: 'Messages', glyph: '💬', locked: false, note: '' },
-  { name: 'Maps', glyph: '🗺', locked: false, note: 'Never blocked while navigating' },
-  { name: 'Banking & UPI', glyph: '🏦', locked: false, note: 'A blocked OTP is a failed payment' },
-  { name: 'Wallet', glyph: '👛', locked: false, note: '' },
-  { name: 'Camera', glyph: '📷', locked: false, note: '' },
-  { name: 'Clock', glyph: '⏰', locked: false, note: '' },
-  { name: 'Health', glyph: '❤️', locked: false, note: '' },
+export const ESSENTIALS: { name: string; mark: IconName; locked: boolean; note: string }[] = [
+  { name: 'Phone', mark: 'phone', locked: true, note: 'Guaranteed by iOS — can never be blocked' },
+  { name: 'Emergency SOS', mark: 'alert', locked: true, note: 'Guaranteed by iOS — can never be blocked' },
+  { name: 'Messages', mark: 'message', locked: false, note: '' },
+  { name: 'Maps', mark: 'pin', locked: false, note: 'Never blocked while navigating' },
+  { name: 'Banking & UPI', mark: 'card', locked: false, note: 'A blocked OTP is a failed payment' },
+  { name: 'Wallet', mark: 'wallet', locked: false, note: '' },
+  { name: 'Camera', mark: 'camera', locked: false, note: '' },
+  { name: 'Clock', mark: 'clock', locked: false, note: '' },
+  { name: 'Health', mark: 'heart', locked: false, note: '' },
 ];

@@ -5,7 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Line, Rect } from 'react-native-svg';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { colors } from '../theme';
+import { palette } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 const { width, height } = Dimensions.get('window');
 
@@ -189,12 +190,16 @@ export default function ProposedRulesScreen({ name, onContinue }: { name: string
                       </View>
                       
                       {/* Fully visible details (time, action type) */}
-                      <Text style={[styles.cardTime, { color: rule.textColor }]}>
-                        ⏰  {rule.time}
-                      </Text>
-                      <Text style={[styles.cardAction, { color: rule.textColor }]}>
-                        🛡  Action: {rule.action}
-                      </Text>
+                      <View style={styles.cardMetaRow}>
+                        <Icon name="clock" size={13} color={rule.textColor} strokeWidth={2} />
+                        <Text style={[styles.cardTime, { color: rule.textColor }]}>{rule.time}</Text>
+                      </View>
+                      <View style={styles.cardMetaRow}>
+                        <Icon name="shield" size={13} color={rule.textColor} strokeWidth={2} />
+                        <Text style={[styles.cardAction, { color: rule.textColor }]}>
+                          Action: {rule.action}
+                        </Text>
+                      </View>
                     </View>
 
                     {/* Circular Selection Checkbox on the right */}
@@ -208,7 +213,7 @@ export default function ProposedRulesScreen({ name, onContinue }: { name: string
                       onPress={() => toggleSelect(rule.id)}
                     >
                       {isSelected && (
-                        <Text style={[styles.checkboxTick, { color: rule.tint[0] }]}>✓</Text>
+                        <Icon name="check" size={13} color={rule.tint[0]} strokeWidth={2.8} />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -241,26 +246,30 @@ export default function ProposedRulesScreen({ name, onContinue }: { name: string
                 {/* Glowing Green Shield/Calendar Svg Header inside Popup */}
                 <View style={styles.modalGraphics}>
                   <Svg width={100} height={40} viewBox="0 0 100 40" fill="none">
-                    <Rect x="5" y="10" width="20" height="20" rx="4" stroke="#7CF5B0" strokeWidth="2" fill="none" />
-                    <Line x1="10" y1="7" x2="10" y2="12" stroke="#7CF5B0" strokeWidth="2.2" strokeLinecap="round" />
-                    <Line x1="20" y1="7" x2="20" y2="12" stroke="#7CF5B0" strokeWidth="2.2" strokeLinecap="round" />
+                    <Rect x="5" y="10" width="20" height="20" rx="4" stroke="#6FE3A9" strokeWidth="2" fill="none" />
+                    <Line x1="10" y1="7" x2="10" y2="12" stroke="#6FE3A9" strokeWidth="2.2" strokeLinecap="round" />
+                    <Line x1="20" y1="7" x2="20" y2="12" stroke="#6FE3A9" strokeWidth="2.2" strokeLinecap="round" />
                     
                     <Path d="M 36 20 L 54 20" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeDasharray="3 3" />
                     <Path d="M 50 16 L 55 20 L 50 24" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" />
 
-                    <Path d="M74 30s6-3 6-8V15l-6-2-6 2v5c0 5 6 8 6 8z" stroke="#7CF5B0" strokeWidth="2" fill="none" />
+                    <Path d="M74 30s6-3 6-8V15l-6-2-6 2v5c0 5 6 8 6 8z" stroke="#6FE3A9" strokeWidth="2" fill="none" />
                   </Svg>
                 </View>
 
                 <Text style={styles.modalTitle}>{activeRule.name}</Text>
-                <Text style={styles.modalTime}>⏰  {activeRule.time}</Text>
+                <View style={styles.modalTimeRow}>
+                  <Icon name="clock" size={15} color={palette.textTertiary} strokeWidth={2} />
+                  <Text style={styles.modalTime}>{activeRule.time}</Text>
+                </View>
 
                 <View style={styles.modalBadgeRow}>
                   <View style={styles.modalActionBadge}>
                     <Text style={styles.modalActionText}>Action: {activeRule.action}</Text>
                   </View>
                   <View style={styles.modalActiveStatus}>
-                    <Text style={styles.modalActiveText}>● Active</Text>
+                    <View style={styles.activeDot} />
+                    <Text style={styles.modalActiveText}>Active</Text>
                   </View>
                 </View>
 
@@ -361,13 +370,18 @@ const styles = StyleSheet.create({
   cardTime: {
     fontSize: 13,
     fontWeight: '700',
-    marginTop: 2,
     opacity: 0.8,
   },
   cardAction: {
     fontSize: 12.5,
     fontWeight: '700',
     opacity: 0.7,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
   },
   selectCheckbox: {
     width: 26,
@@ -378,12 +392,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 14,
   },
-  checkboxTick: {
-    fontSize: 13,
-    fontWeight: '900',
-  },
   socialProof: {
-    color: '#7CF5B0',
+    color: '#6FE3A9',
     fontSize: 15,
     textAlign: 'center',
     fontWeight: '600',
@@ -408,8 +418,8 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 24,
     borderWidth: 2,
-    borderColor: 'rgba(124, 245, 176, 0.2)',
-    shadowColor: '#7CF5B0',
+    borderColor: 'rgba(111, 227, 169, 0.2)',
+    shadowColor: '#6FE3A9',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -430,7 +440,12 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
     fontSize: 15,
     fontWeight: '600',
-    textAlign: 'center',
+  },
+  modalTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginTop: 6,
   },
   modalBadgeRow: {
@@ -453,13 +468,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalActiveStatus: {
-    backgroundColor: 'rgba(124, 245, 176, 0.08)',
+    backgroundColor: 'rgba(111, 227, 169, 0.08)',
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  activeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#6FE3A9',
   },
   modalActiveText: {
-    color: '#7CF5B0',
+    color: '#6FE3A9',
     fontSize: 12.5,
     fontWeight: '700',
   },
