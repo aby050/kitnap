@@ -123,7 +123,7 @@ export default function WeeklyInsight({
           ? `up by ${Math.abs(screenTimePct)}% this week`
           : 'down by 58% this week',
       descSuffix: ' as compared to last week.',
-      tip: 'Keep up with the good habit! Having lower screen time can have various health benefits. Explore Health to find out more.',
+      tip: 'Less time on the phone tends to show up as better sleep and steadier attention. Nothing dramatic — it just adds up.',
     },
     {
       key: 'focus',
@@ -136,7 +136,7 @@ export default function WeeklyInsight({
         ? `${focusPct >= 0 ? 'up' : 'down'} by ${Math.abs(focusPct)}% this week`
         : `${formatDuration(d.focusMinutes)} in focus sessions`,
       descSuffix: lastWeekFocus > 0 ? ' as compared to last week.' : ' this week.',
-      tip: 'Focus sessions train your brain to resist instant gratification and strengthen deep-work capability.',
+      tip: 'Every session you finish makes the next one easier to start.',
     },
     {
       key: 'blocked',
@@ -149,7 +149,7 @@ export default function WeeklyInsight({
       descSuffix: lastWeekBlocked > 0 
         ? `, showing a ${blockedDiff >= 0 ? 'gain' : 'reduction'} of ${Math.abs(blockedDiff)} from last week.`
         : ' to protect your focus.',
-      tip: 'Every distraction blocked is a victory. It represents a conscious choice to stay present.',
+      tip: 'Each one of these was a moment you chose something else.',
     },
     {
       key: 'streak',
@@ -160,7 +160,7 @@ export default function WeeklyInsight({
       descText: 'You maintained a ',
       descHighlight: `${d.streak || 5}-day focus streak`,
       descSuffix: ' this week.',
-      tip: d.bestDayLabel ? `Best day: ${d.bestDayLabel} · ${formatDuration(d.bestDayMinutes)} saved. Keep it up!` : 'Consistency is key. Small daily steps lead to massive long-term habits.',
+      tip: d.bestDayLabel ? `Best day: ${d.bestDayLabel} · ${formatDuration(d.bestDayMinutes)} saved. Keep it up!` : 'Showing up most days matters more than any single good week.',
     },
   ];
 

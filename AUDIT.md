@@ -1,4 +1,4 @@
-# Wend — Full Product Audit
+# Byre — Full Product Audit
 
 Read-only audit. **No code has been changed.** Every claim below is cited to `file:line`.
 
@@ -28,7 +28,7 @@ Called out as needing to "work perfectly." It currently does not work at all in 
 
 There is **no Android equivalent, anywhere**. The native module exposes only: `canDrawOverlays`, `openOverlaySettings`, `isAccessibilityServiceEnabled`, `openAccessibilitySettings`, `isNotificationListenerEnabled`, `openNotificationListenerSettings`, `isIgnoringBatteryOptimizations`, `openBatteryOptimizationSettings`, `setBlockedPackages`, `setMonitoringLevel`, `getInstalledApps` ([DevicePermissionsModule.kt](modules/device-permissions/android/src/main/java/expo/modules/devicepermissions/DevicePermissionsModule.kt)). No grant, no allowance, no expiry.
 
-`WendAccessibilityService.onAccessibilityEvent` has no concept of an active grant, and the debounce is `BALANCED(500L, 1500L)` / `STRICT(150L, 800L)` ([MonitoringConfigStore.kt](modules/device-permissions/android/src/main/java/expo/modules/devicepermissions/MonitoringConfigStore.kt)).
+`ByreAccessibilityService.onAccessibilityEvent` has no concept of an active grant, and the debounce is `BALANCED(500L, 1500L)` / `STRICT(150L, 800L)` ([MonitoringConfigStore.kt](modules/device-permissions/android/src/main/java/expo/modules/devicepermissions/MonitoringConfigStore.kt)).
 
 **Effect:** user does 10 squats or spends a token → sees "5 minutes" → switches to Instagram → shielded again after ~1.5 s. **The token is consumed and buys nothing.** This is the single most serious defect in the project.
 
@@ -254,7 +254,7 @@ T10 (delete-account token refill), C5 (unreachable gate families; delete `FAMILY
 Sequenced so each stage is independently shippable. **Awaiting your go-ahead — nothing has been changed.**
 
 **Stage 1 — Make the grant real (fixes T1, T2).**
-Add `setGrantUntil(packageName: String, untilMs: Double)` + `clearGrant(...)` to the native module, backed by a `GrantStore` (SharedPreferences + volatile cache, mirroring `BlockedPackagesStore`), and check it at the top of `WendAccessibilityService.onAccessibilityEvent` before shielding. Call it from all three JS grant paths — challenge, token, **and emergency** — and add the missing `grantTemporaryAccess()` call on the iOS emergency path. Per project rule, I'll read the v57 docs before touching the module.
+Add `setGrantUntil(packageName: String, untilMs: Double)` + `clearGrant(...)` to the native module, backed by a `GrantStore` (SharedPreferences + volatile cache, mirroring `BlockedPackagesStore`), and check it at the top of `ByreAccessibilityService.onAccessibilityEvent` before shielding. Call it from all three JS grant paths — challenge, token, **and emergency** — and add the missing `grantTemporaryAccess()` call on the iOS emergency path. Per project rule, I'll read the v57 docs before touching the module.
 
 **Stage 2 — Reconcile the two escape hatches (fixes T3, C1).** The one real design decision, so I'll confirm direction before building. My recommendation: split the jobs.
 - **Safety stays free, instant, unlimited in kind** — but scoped to a real allowlist (phone, messages, maps, banking, health) plus a full break-glass that is *visibly logged* and *rate-limited* (e.g. 3/week, auto-refilling). Never charge for safety.

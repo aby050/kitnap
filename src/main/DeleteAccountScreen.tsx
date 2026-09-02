@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { palette } from '../design/tokens';
+import { control, palette, radius, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const ERASED_ITEMS = [
@@ -90,7 +90,7 @@ export default function DeleteAccountScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,
@@ -125,10 +125,11 @@ const styles = StyleSheet.create({
   itemText: { color: palette.textSecondary, fontSize: 13.5, flex: 1 },
   deleteBtn: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 24,
+    height: control.lg,
+    borderRadius: radius.pill,
     backgroundColor: palette.danger,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 28,
   },
   deleteBtnDisabled: { opacity: 0.6 },

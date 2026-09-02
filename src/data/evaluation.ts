@@ -1,4 +1,5 @@
 import { IntensityKey, ThemeKey } from './themes';
+import { recommendSetup } from './setupPlan';
 
 type Answer = { value: string; label: string };
 
@@ -40,77 +41,14 @@ export function suggestTheme(interestsAnswerValue: string | undefined): ThemeKey
 }
 
 /**
- * Weighs multiple onboarding signals into one recommended intensity —
- * screen time alone is a weak predictor (someone can watch 6 hrs of
- * work-related video and be in full control), so no single answer decides it.
+ * Weighs onboarding + estimated (or measured) screen time into intensity.
+ * Real usage, when passed, can overrule a confident self-report.
  */
 export function recommendIntensity(
   answers: Record<string, Answer>,
-  screentimeHours: number
+  screentimeHours: number,
+  fromUsage = false,
 ): { key: IntensityKey; reasons: string[] } {
-  let score = 0;
-  const reasons: string[] = [];
-
-  if (screentimeHours >= 6) {
-    score += 2;
-    reasons.push('Your daily screen time is on the higher end');
-  } else if (screentimeHours >= 3.5) {
-    score += 1;
-  }
-
-  const control = Number(answers.controlScale?.value);
-  if (Number.isFinite(control)) {
-    if (control <= 3) {
-      score += 2;
-      reasons.push("You said you don't feel much control over your phone right now");
-    } else if (control <= 6) {
-      score += 1;
-    }
-  }
-
-  const tried = answers.triedBefore?.value;
-  if (tried === 'Yes, many times') {
-    score += 2;
-    reasons.push("You've tried cutting back before and it hasn't stuck yet");
-  } else if (tried === 'Once or twice') {
-    score += 1;
-  }
-
-  const stopped = answers.whatStopped?.value;
-  if (stopped === 'Willpower runs out by evening' || stopped === 'Other apps make it too easy') {
-    score += 1;
-    reasons.push('Willpower alone has gotten in the way before');
-  }
-
-  const pickup = answers.pickupReason?.value;
-  if (pickup === 'Out of pure habit' || pickup === 'Bored, not sure why') {
-    score += 1;
-    reasons.push('Most of your pickups are on autopilot, not intentional');
-  }
-
-  const fear = answers.obstacleFear?.value;
-  if (fear === "Nothing — I'm ready") {
-    score += 1;
-    reasons.push("You're ready to push harder");
-  } else if (fear === "It'll feel restrictive") {
-    score -= 1;
-  }
-
-  // A recent major life change is a reason to go easier, not harder —
-  // this is the one signal that pulls the score down regardless of the rest.
-  const lifeChange = answers.lifeChange?.value;
-  if (lifeChange === 'Yes, recently') {
-    score -= 2;
-    reasons.push("You mentioned things have been rough lately — we'll start gentler");
-  }
-
-  let key: IntensityKey;
-  if (score >= 3) key = 'strict';
-  else key = 'steady';
-
-  if (reasons.length === 0) {
-    reasons.push('Based on a balanced read of your answers');
-  }
-
-  return { key, reasons };
+  const rec = recommendSetup(answers, screentimeHours, fromUsage);
+  return { key: rec.intensityKey, reasons: rec.reasons };
 }

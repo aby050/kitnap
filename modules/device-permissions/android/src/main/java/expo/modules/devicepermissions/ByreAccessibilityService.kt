@@ -8,8 +8,8 @@ import android.view.accessibility.AccessibilityEvent
 
 /**
  * Watches for foreground-app changes and, when the app that just came to
- * the foreground is on the blocked list, brings Wend to the front via a
- * `wend://shield?package=<pkg>` deep link — the RN side (App.tsx) listens
+ * the foreground is on the blocked list, brings Byre to the front via a
+ * `byre://shield?package=<pkg>` deep link — the RN side (App.tsx) listens
  * for that URL and shows the Shield/Gate/Grant flow already built for the
  * chosen intensity level.
  *
@@ -17,21 +17,21 @@ import android.view.accessibility.AccessibilityEvent
  * category (Opal, Freedom, One Sec): Android gives no 3rd-party app the
  * ability to force-close another app or block it at the OS level without
  * Device Owner / MDM enrollment, which is a different, heavier product
- * decision. What this does is put Wend on top immediately and make it the
+ * decision. What this does is put Byre on top immediately and make it the
  * thing the user has to interact with — going back to the blocked app is
  * still technically possible (swipe from recents), same as the real apps
  * this category is built on.
  *
  * Battery note: the event mask below is deliberately narrow
  * (typeWindowStateChanged only, declared in
- * wend_accessibility_service_config.xml) — broader masks like
+ * byre_accessibility_service_config.xml) — broader masks like
  * typeAllMask are the actual common cause of accessibility services
  * draining battery in this app category, since they wake the process on
  * every scroll/click system-wide, not just app switches. On top of that,
  * MonitoringConfigStore controls how tightly the OS batches even that
  * narrow event stream — see its doc comment.
  */
-class WendAccessibilityService : AccessibilityService() {
+class ByreAccessibilityService : AccessibilityService() {
   private var lastPackage: String? = null
   private var lastTriggerAt = 0L
   private var appliedLevel: MonitoringLevel? = null
@@ -61,16 +61,16 @@ class WendAccessibilityService : AccessibilityService() {
     lastPackage = pkg
     lastTriggerAt = now
 
-    Log.d("WendAccessibility", "Blocked app opened: $pkg — bringing Wend to front")
+    Log.d("ByreAccessibility", "Blocked app opened: $pkg — bringing Byre to front")
 
     val intent = Intent(
       Intent.ACTION_VIEW,
-      Uri.parse("wend://shield?package=$pkg"),
+      Uri.parse("byre://shield?package=$pkg"),
     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     try {
       startActivity(intent)
     } catch (e: Exception) {
-      Log.e("WendAccessibility", "Failed to launch shield intent", e)
+      Log.e("ByreAccessibility", "Failed to launch shield intent", e)
     }
   }
 
@@ -83,7 +83,7 @@ class WendAccessibilityService : AccessibilityService() {
       serviceInfo = info
     }
     appliedLevel = desired
-    Log.d("WendAccessibility", "Monitoring level applied: $desired")
+    Log.d("ByreAccessibility", "Monitoring level applied: $desired")
   }
 
   override fun onInterrupt() {}

@@ -8,21 +8,35 @@ import Animated, {
   FadeInUp,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { GradientButton } from '../components/ui';
+import AnalyzingLoader from './AnalyzingLoader';
 import { palette } from '../design/tokens';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import { buildRecapPlan, formatYearsLabel } from '../data/setupPlan';
 import Icon from '../ui/Icon';
+
+type Answer = { value: string; label: string };
 
 type Props = {
   name: string;
-  screentimeHours: number;
-  onFinish: () => void;
+  answers: Record<string, Answer>;
+  onFinish: (payload: { dailyHours: number; fromUsage: boolean; suggestedPackages: string[] }) => void;
 };
 
-const ANALYZING_LINES = ['Analyzing your answers…', 'Understanding your habits…', 'Creating your setup…'];
+const ANALYZING_LINES = [
+  'Reading your answers',
+  'Working out your daily average',
+  'Finding your biggest distractions',
+  'Building your setup',
+];
+
+// Per step, and the tail after the last one. The ring in AnalyzingLoader is
+// driven off the same numbers so it lands full exactly as the reveal starts.
+const ANALYZING_STEP_MS = 850;
+const ANALYZING_TAIL_MS = 800;
 
 // Fallback shown only when real usage access isn't available (iOS, web, or
 // the user declined the permission) — never shown alongside real numbers.
@@ -52,24 +66,8 @@ function formatUsage(ms: number): string {
   return h > 0 ? `${h}h ${m}m today` : `${m}m today`;
 }
 
-function ContinueButton({ label = 'Continue', onPress }: { label?: string; onPress: () => void }) {
-  const scale = useSharedValue(1);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Animated.View style={[style, { width: '100%', maxWidth: 300 }]}>
-      <Pressable
-        onPressIn={() => (scale.value = withTiming(0.97, { duration: 90 }))}
-        onPressOut={() => (scale.value = withSpring(1, { damping: 12, stiffness: 220 }))}
-        onPress={onPress}
-        style={styles.continueBtn}
-      >
-        <Text style={styles.continueText}>{label}</Text>
-      </Pressable>
-    </Animated.View>
-  );
-}
 
-export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: Props) {
+export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
   const [step, setStep] = useState(0);
   const [analyzingLine, setAnalyzingLine] = useState(0);
   const [screenTimeAccess, setScreenTimeAccess] = useState(false);
@@ -77,6 +75,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
   const [notifSub, setNotifSub] = useState(0);
   const [realHours, setRealHours] = useState<number | null>(null);
   const [realApps, setRealApps] = useState<typeof FALLBACK_DISTRACTION_APPS>([]);
+  const [topPackages, setTopPackages] = useState<string[]>([]);
 
   // Screen-time access is granted upfront now (PermissionBoardingPassScreen,
   // before onboarding even starts) — this just re-reads that real state so
@@ -119,80 +118,96 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
       const daysSeen = new Set(daily.map((d) => new Date(d.lastTimeUsed).toDateString())).size || 1;
       setRealHours(grandTotalMs / daysSeen / 3_600_000);
 
-      const top = Array.from(totalsByPackage.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([packageName, ms]) => {
-          const known = DEFAULT_BLOCKED_APPS.find((a) => a.packageName === packageName);
-          const brand = APP_BRAND[packageName] ?? { color: '#6b7280', letter: (known?.name ?? packageName).charAt(0).toUpperCase() };
-          return {
-            name: known?.name ?? packageName.split('.').pop() ?? packageName,
-            usage: formatUsage(ms),
-            color: brand.color,
-            letter: brand.letter,
-          };
-        });
+      const ranked = Array.from(totalsByPackage.entries()).sort((a, b) => b[1] - a[1]);
+      setTopPackages(ranked.map(([pkg]) => pkg).slice(0, 12));
+      const top = ranked.slice(0, 5).map(([packageName, ms]) => {
+        const known = DEFAULT_BLOCKED_APPS.find((a) => a.packageName === packageName);
+        const brand = APP_BRAND[packageName] ?? { color: '#6b7280', letter: (known?.name ?? packageName).charAt(0).toUpperCase() };
+        return {
+          name: known?.name ?? packageName.split('.').pop() ?? packageName,
+          usage: formatUsage(ms),
+          color: brand.color,
+          letter: brand.letter,
+        };
+      });
       setRealApps(top);
     })();
   }, [screenTimeAccess]);
 
-  const effectiveHours = realHours ?? screentimeHours;
-  const badDays = Math.round((effectiveHours * 365) / 24);
-  const projectedYears = Math.max(1, Math.round((50 * effectiveHours) / 16));
-  const reclaimedYears = Math.max(1, Math.round(projectedYears * 0.3));
-
+  const plan = buildRecapPlan(answers, realHours);
   const distractionApps = realApps.length > 0 ? realApps : FALLBACK_DISTRACTION_APPS;
   const activeApps = distractionApps.filter((a) => !removedApps.includes(a.name));
   const primaryApp = activeApps[0] || distractionApps[0];
+  const knownByName = new Map(DEFAULT_BLOCKED_APPS.map((a) => [a.name, a.packageName]));
+  const knownPkgs = new Set(DEFAULT_BLOCKED_APPS.map((a) => a.packageName));
+
+  const finish = () => {
+    const fromList = activeApps.map((a) => knownByName.get(a.name)).filter((p): p is string => !!p);
+    const fromUsage = topPackages.filter((p) => knownPkgs.has(p));
+    const suggestedPackages = Array.from(new Set([...fromUsage, ...fromList])).slice(0, 8);
+    onFinish({ dailyHours: plan.dailyHours, fromUsage: plan.fromUsage, suggestedPackages });
+  };
 
   useEffect(() => {
     if (step !== 0) return;
     if (analyzingLine < ANALYZING_LINES.length - 1) {
-      const t = setTimeout(() => setAnalyzingLine((v) => v + 1), 750);
+      const t = setTimeout(() => setAnalyzingLine((v) => v + 1), ANALYZING_STEP_MS);
       return () => clearTimeout(t);
     }
     // Permissions are all asked upfront now (PermissionBoardingPassScreen,
     // before onboarding even starts) — this used to land on step 1, a
     // second permission-request screen; that step no longer exists.
-    const t = setTimeout(() => setStep(2), 900);
+    const t = setTimeout(() => setStep(2), ANALYZING_TAIL_MS);
     return () => clearTimeout(t);
   }, [step, analyzingLine]);
 
-  const next = () => setStep((s) => s + 1);
+  // Step 4 doesn't render on iOS (see below), so stepping onto it there would
+  // strand the user on a blank screen.
+  const next = () => setStep((s) => (Platform.OS === 'ios' && s + 1 === 4 ? 5 : s + 1));
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.body}>
         {step === 0 && (
           <Animated.View entering={FadeIn.duration(300)} style={styles.centerBlock}>
-            <Text style={styles.heading}>{ANALYZING_LINES[analyzingLine]}</Text>
+            <AnalyzingLoader
+              lines={ANALYZING_LINES}
+              active={analyzingLine}
+              duration={ANALYZING_LINES.length * ANALYZING_STEP_MS + ANALYZING_TAIL_MS}
+            />
           </Animated.View>
         )}
 
         {step === 2 && (
           <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
             <Text style={styles.smallHeading}>The bad news is that you'll spend{' '}
-              <Text style={styles.accentInline}>{badDays} days</Text> on your phone this year.
+              <Text style={styles.accentInline}>{plan.badDaysThisYear} days</Text> on your phone this year.
             </Text>
             <Text style={styles.smallHeading}>Meaning that you're on track to spend</Text>
-            <BigNumber value={`${projectedYears} years`} />
+            <BigNumber value={formatYearsLabel(plan.phoneYears)} />
             <Text style={styles.smallHeading}>of your life looking down at your phone.</Text>
+            <Text style={styles.sourceNote}>{plan.sourceNote}</Text>
             <View style={{ height: 20 }} />
-            <ContinueButton onPress={next} />
+            <GradientButton label="Continue" onPress={next} />
           </Animated.View>
         )}
 
         {step === 3 && (
           <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
             <Text style={styles.smallHeading}>The good news is that this app can help you get back</Text>
-            <BigNumber value={`${reclaimedYears} years`} />
+            <BigNumber value={formatYearsLabel(plan.reclaimedYears)} />
             <Text style={styles.smallHeading}>of your life.</Text>
             <View style={{ height: 20 }} />
-            <ContinueButton onPress={next} />
+            <GradientButton label="Continue" onPress={next} />
           </Animated.View>
         )}
 
-        {step === 4 && (
+        {/* iOS never hands a third-party app the user's per-app usage or even
+            the names of the apps they pick, so this step could only ever show
+            a hardcoded list there — it reads as made-up data next to the real
+            Screen Time picker two screens later. Android keeps it: the usage
+            numbers behind it are real. */}
+        {step === 4 && Platform.OS !== 'ios' && (
           <Animated.View entering={FadeInUp.duration(400)} style={styles.appSelectBlock}>
             <Text style={[styles.heading, { marginBottom: 20 }]}>
               {realApps.length > 0
@@ -224,7 +239,7 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
               {distractionApps.length - removedApps.length} apps selected
             </Text>
             <View style={{ height: 16 }} />
-            <ContinueButton onPress={next} />
+            <GradientButton label="Continue" onPress={next} />
           </Animated.View>
         )}
 
@@ -299,21 +314,15 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
           </Pressable>
         )}
 
-        {step === 6 && (() => {
-          const targetMinutes = Math.round(effectiveHours * 0.7 * 60);
-          const targetH = Math.floor(targetMinutes / 60);
-          const targetM = targetMinutes % 60;
-          const targetTimeStr = targetH > 0 ? `${targetH}h ${targetM}m` : `${targetM}m`;
-          const reclaimedDays = Math.round(effectiveHours * 365 * 0.3 / 24);
-
-          return (
-            <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
+        {step === 6 && (
+            <Animated.View entering={FadeInUp.duration(400)} style={styles.recapBlock}>
               <Text style={styles.finalHeading}>
                 {name ? `${name},\n` : ''}
-                Wend will get you back <Text style={{ color: palette.accent }}>{reclaimedYears} years</Text>{'\n'}of your life
+                Byre will get you back{' '}
+                <Text style={{ color: palette.accent }}>{formatYearsLabel(plan.reclaimedYears)}</Text>
+                {'\n'}of your life
               </Text>
-              <View style={{ height: 16 }} />
-              
+
               <SummaryRow
                 icon={
                   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#6FE3A9" strokeWidth={2}>
@@ -322,20 +331,22 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
                     <Path d="M12 13v3" stroke="#6FE3A9" strokeWidth={2} />
                   </Svg>
                 }
-                title="30% less screen time"
-                desc={`Reduce your screen time by 30%, to ${targetTimeStr} each day`}
+                title={plan.extra.title}
+                desc={plan.extra.desc}
               />
-              
-              <SummaryRow
-                icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="#6FE3A9">
-                    <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                  </Svg>
-                }
-                title="30% deeper sleep"
-                desc="Fall asleep faster and deeper with less screen time before bed"
-              />
-              
+
+              {plan.sleep ? (
+                <SummaryRow
+                  icon={
+                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="#6FE3A9">
+                      <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </Svg>
+                  }
+                  title={plan.sleep.title}
+                  desc={plan.sleep.desc}
+                />
+              ) : null}
+
               <SummaryRow
                 icon={
                   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#6FE3A9" strokeWidth={2}>
@@ -349,16 +360,15 @@ export default function PostOnboardingFlow({ name, screentimeHours, onFinish }: 
                     <Circle cx={16} cy={18} r={1.2} fill="#6FE3A9" />
                   </Svg>
                 }
-                title={`${reclaimedDays} days back this year`}
-                desc={`Develop your focus plan to save up to ${reclaimedDays} days this year`}
+                title={`${plan.reclaimedDaysThisYear} days back this year`}
+                desc={`At ${plan.reductionPercent}% less phone time, that's about ${plan.reclaimedDaysThisYear} days this year.`}
               />
 
-              <View style={{ height: 40 }} />
+              <Text style={styles.sourceNote}>{plan.sourceNote}</Text>
               <Text style={styles.fistBumpLabel}>Let's solidify it with a fist bump</Text>
-              <ContinueButton label="Let's Do It" onPress={onFinish} />
+              <GradientButton label="Let's Do It" onPress={finish} />
             </Animated.View>
-          );
-        })()}
+        )}
       </View>
     </SafeAreaView>
   );
@@ -368,7 +378,7 @@ function BigNumber({ value }: { value: string }) {
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
   useEffect(() => {
-    scale.value = withSpring(1, { damping: 10, stiffness: 140 });
+    scale.value = withTiming(1, { duration: 400 });
     opacity.value = withTiming(1, { duration: 400 });
   }, [value]);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }], opacity: opacity.value }));
@@ -384,7 +394,7 @@ function SummaryRow({ icon, title, desc }: { icon: React.ReactNode; title: strin
   return (
     <View style={styles.summaryRow}>
       <View style={styles.summaryIconContainer}>{icon}</View>
-      <View style={{ flex: 1, marginLeft: 16 }}>
+      <View style={styles.summaryText}>
         <Text style={styles.summaryTitle}>{title}</Text>
         <Text style={styles.summaryDesc}>{desc}</Text>
       </View>
@@ -395,7 +405,13 @@ function SummaryRow({ icon, title, desc }: { icon: React.ReactNode; title: strin
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
-  centerBlock: { alignItems: 'center', width: '100%' },
+  centerBlock: { alignItems: 'center', width: '100%', justifyContent: 'center' },
+  recapBlock: {
+    alignItems: 'center',
+    width: '100%',
+    justifyContent: 'center',
+    flexGrow: 1,
+  },
   appSelectBlock: { alignItems: 'center', width: '100%' },
   heading: { color: palette.text, fontSize: 22, fontWeight: '700', textAlign: 'center', lineHeight: 30, maxWidth: 320 },
   headingBold: { fontWeight: '700', color: palette.text },
@@ -515,7 +531,9 @@ const styles = StyleSheet.create({
   tapHint: { color: palette.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: 40 },
   summaryRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Top-aligned, not centred: the descriptions wrap to two lines, and
+    // centring floated the icon down opposite the gap between them.
+    alignItems: 'flex-start',
     width: '100%',
     maxWidth: 320,
     marginBottom: 20,
@@ -528,7 +546,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  summaryTitle: { color: palette.text, fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  // Nudged down so the title's cap-height sits level with the icon plate.
+  summaryText: { flex: 1, marginLeft: 16, marginTop: 2 },
+  summaryTitle: { color: palette.text, fontSize: 16, lineHeight: 21, fontWeight: '700', marginBottom: 4 },
   summaryDesc: { color: palette.textSecondary, fontSize: 13, lineHeight: 18 },
   finalHeading: {
     color: '#ffffff',
@@ -536,7 +556,7 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 28,
+    marginBottom: 22,
   },
   fistBumpLabel: {
     color: palette.textSecondary,
@@ -545,6 +565,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
-  continueBtn: { width: '100%', paddingVertical: 16, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.95)', alignItems: 'center' },
-  continueText: { color: '#000', fontSize: 16, fontWeight: '700' },
+  sourceNote: {
+    color: palette.textTertiary,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 18,
+    maxWidth: 300,
+  },
 });

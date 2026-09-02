@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SplashFlow from './src/onboarding/SplashFlow';
@@ -10,10 +10,10 @@ import PostOnboardingFlow from './src/onboarding/PostOnboardingFlow';
 import TrustPromiseScreen from './src/onboarding/TrustPromiseScreen';
 import GoalScreen from './src/onboarding/GoalScreen';
 import EducationScreen from './src/onboarding/EducationScreen';
+import OnboardingMark from './src/onboarding/OnboardingMark';
 import AffirmationScreen from './src/onboarding/AffirmationScreen';
 import BenefitsScreen from './src/onboarding/BenefitsScreen';
 import TrialTimelineScreen from './src/onboarding/TrialTimelineScreen';
-import WorldSeedScreen from './src/onboarding/WorldSeedScreen';
 import ThemePickerScreen from './src/onboarding/ThemePickerScreen';
 import IntensityScreen from './src/onboarding/IntensityScreen';
 import FutureSelfScreen from './src/onboarding/FutureSelfScreen';
@@ -30,7 +30,9 @@ import PersistentBackground from './src/components/PersistentBackground';
 import { IntensityKey, ThemeKey } from './src/data/themes';
 import { EMPTY_GOAL, GoalData } from './src/data/goal';
 import { clearState, DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
+import { QUESTION_CHUNKS } from './src/onboarding/questions';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
+import { estimateDailyHours, recommendSetup } from './src/data/setupPlan';
 import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
 
 const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
@@ -39,10 +41,10 @@ const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
 };
 import { colors } from './src/theme';
 
-/** wend://shield?package=com.instagram.android — fired by the native
+/** byre://shield?package=com.instagram.android — fired by the native
  *  Accessibility Service when a blocked app comes to the foreground. */
 function parseShieldDeepLink(url: string | null): string | null {
-  if (!url || !url.startsWith('wend://shield')) return null;
+  if (!url || !url.startsWith('byre://shield')) return null;
   try {
     const query = url.split('?')[1] ?? '';
     const params = new URLSearchParams(query);
@@ -56,7 +58,6 @@ type Stage =
   | 'loading'
   | 'splash'
   | 'education'
-  | 'permissions'
   | 'onboarding'
   | 'momentum'
   | 'post'
@@ -69,7 +70,6 @@ type Stage =
   | 'intensity'
   | 'proposedRules'
   | 'futureSelf'
-  | 'worldSeed'
   | 'benefits'
   | 'paywall'
   | 'trial'
@@ -80,16 +80,6 @@ type Stage =
 
 type Answer = { value: string; label: string };
 
-const SCREENTIME_HOURS: Record<string, number> = {
-  '< 1 hour': 0.5,
-  '1–3 hours': 2,
-  '3–4 hours': 3.5,
-  '4–5 hours': 4.5,
-  '5–7 hours': 6,
-  '7+ hours': 8,
-  "I don't know": 4,
-};
-
 export default function App() {
   const [stage, setStage] = useState<Stage>('loading');
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
@@ -97,10 +87,17 @@ export default function App() {
   const [goal, setGoal] = useState<GoalData>(EMPTY_GOAL);
   const [intensityKey, setIntensityKey] = useState<IntensityKey>('steady');
   const [futureSelfMessage, setFutureSelfMessage] = useState('');
+  const [measuredHours, setMeasuredHours] = useState<number | null>(null);
+  const [hoursFromUsage, setHoursFromUsage] = useState(false);
+  const [suggestedPackages, setSuggestedPackages] = useState<string[]>([]);
 
   const [persisted, setPersisted] = useState<PersistedState>(DEFAULT_STATE);
   const [loaded, setLoaded] = useState(false);
   const [pendingShieldPackage, setPendingShieldPackage] = useState<string | null>(null);
+  // Which run of questions we are on, and whether its permission ask is showing.
+  const [chunk, setChunk] = useState(0);
+  const [askingPermission, setAskingPermission] = useState(false);
+  const [history, setHistory] = useState<{ id: string; prompt: string; label: string }[]>([]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -146,7 +143,7 @@ export default function App() {
   }, [loaded, persisted.intensityKey]);
 
   // Catches the deep link the Accessibility Service fires when a blocked
-  // app opens, whether Wend was already running or cold-started by it.
+  // app opens, whether Byre was already running or cold-started by it.
   useEffect(() => {
     const handleUrl = (url: string | null) => {
       const pkg = parseShieldDeepLink(url);
@@ -158,6 +155,21 @@ export default function App() {
   }, []);
 
   const patch = (partial: Partial<PersistedState>) => setPersisted((s) => ({ ...s, ...partial }));
+
+  // The single completion path out of onboarding: persist everything MainApp
+  // reads, then hand over. Shared by the Welcome step and the dev skip so the
+  // two can't drift into leaving different state behind.
+  const completeOnboarding = () => {
+    patch({
+      onboardingComplete: true,
+      themeKey,
+      intensityKey,
+      futureSelfMessage,
+      goal,
+      onboardingAnswers: answers,
+    });
+    setStage('app');
+  };
 
   // Nothing here has a server copy (see AccountScreen/DeleteAccountScreen),
   // so "delete account" is a real local wipe: clear the store, reset every
@@ -171,29 +183,18 @@ export default function App() {
     setIntensityKey('steady');
     setFutureSelfMessage('');
     setGoal(EMPTY_GOAL);
+    setMeasuredHours(null);
+    setHoursFromUsage(false);
+    setSuggestedPackages([]);
     setPendingShieldPackage(null);
     setStage('splash');
   };
 
   const name = answers.name?.value ?? '';
-  const screentimeHours = SCREENTIME_HOURS[answers.screentime?.value ?? ''] ?? 4;
-
-  // Built from their own onboarding answers so the paywall reflects what
-  // they actually said, not generic copy — this is what conversion research
-  // on quiz-funnel apps consistently points to as the highest-leverage lever.
-  const aspiration = answers.aspiration?.value?.trim();
-  const cost = answers.costText?.value?.trim();
-  const loseTime = answers.loseTime?.label;
-  const paywallPersonalLine = aspiration
-    ? `You said: "${aspiration}"`
-    : cost
-      ? `You told us you miss: ${cost}`
-      : loseTime
-        ? `Built around where you lose time most — ${loseTime.toLowerCase()}`
-        : undefined;
-  const paywallHoursBack = Math.max(2, Math.round(screentimeHours * 0.3));
-
-  const intensityRecommendation = recommendIntensity(answers, screentimeHours);
+  const { hours: inferredHours, fromUsage } = estimateDailyHours(answers, measuredHours);
+  const dailyHours = inferredHours;
+  const setup = recommendSetup(answers, dailyHours, hoursFromUsage || fromUsage, suggestedPackages);
+  const intensityRecommendation = recommendIntensity(answers, dailyHours, hoursFromUsage || fromUsage);
   const suggestedTheme = suggestTheme(answers.interests?.value);
 
   return (
@@ -205,8 +206,10 @@ export default function App() {
 
           {stage === 'splash' && <SplashFlow onDone={() => setStage('education')} />}
 
+          {(stage === 'education' || stage === 'onboarding') && <OnboardingMark />}
+
           {stage === 'education' && (
-            <EducationScreen onContinue={() => setStage('permissions')} />
+            <EducationScreen onContinue={() => setStage('onboarding')} />
           )}
 
           {/* All permissions asked upfront, boarding-pass style, before any
@@ -214,17 +217,31 @@ export default function App() {
               interleaving asks mid-questionnaire. Real usage data is
               available for the rest of onboarding and for
               PostOnboardingFlow's projections from this point on. */}
-          {stage === 'permissions' && (
-            <PermissionBoardingPassScreen onContinue={() => setStage('onboarding')} />
-          )}
-
-          {stage === 'onboarding' && (
+          {stage === 'onboarding' && !askingPermission && (
             <OnboardingFlow
-              onComplete={(a) => {
+              key={`chunk-${chunk}`}
+              questions={QUESTION_CHUNKS[chunk].questions}
+              progressFrom={QUESTION_CHUNKS.slice(0, chunk).reduce((n, c) => n + c.questions.length, 0)}
+              progressTotal={QUESTION_CHUNKS.reduce((n, c) => n + c.questions.length, 0)}
+              initialAnswers={answers}
+              initialHistory={history}
+              onComplete={(a, h) => {
                 setAnswers(a);
-                setStage('momentum');
+                if (h) setHistory(h);
+                setAskingPermission(true);
               }}
               onAccountSignedIn={(account) => patch({ account })}
+            />
+          )}
+
+          {stage === 'onboarding' && askingPermission && (
+            <PermissionBoardingPassScreen
+              only={QUESTION_CHUNKS[chunk].permissions}
+              onContinue={() => {
+                setAskingPermission(false);
+                if (chunk < QUESTION_CHUNKS.length - 1) setChunk((c) => c + 1);
+                else setStage('momentum');
+              }}
             />
           )}
 
@@ -239,8 +256,14 @@ export default function App() {
           {stage === 'post' && (
             <PostOnboardingFlow
               name={name}
-              screentimeHours={screentimeHours}
-              onFinish={() => setStage('trust')}
+              answers={answers}
+              onFinish={({ dailyHours: h, fromUsage: u, suggestedPackages: pkgs }) => {
+                setMeasuredHours(h);
+                setHoursFromUsage(u);
+                setSuggestedPackages(pkgs);
+                if (pkgs.length > 0) patch({ blockedPackages: pkgs });
+                setStage('trust');
+              }}
             />
           )}
 
@@ -265,27 +288,35 @@ export default function App() {
             />
           )}
 
-          {stage === 'groundRules' && <GroundRulesScreen onContinue={() => setStage('appPicker')} />}
+          {stage === 'groundRules' && (
+            <GroundRulesScreen
+              onContinue={() => setStage(Platform.OS === 'ios' ? 'iosAppPicker' : 'appPicker')}
+            />
+          )}
 
           {stage === 'appPicker' && (
             <AppPickerScreen
+              suggestedPackages={suggestedPackages.length > 0 ? suggestedPackages : setup.suggestedPackages}
               onContinue={(selected) => {
-                // The picker's `selected` list mixes real Android package
-                // names with cosmetic category/"all" ids used only for its
-                // own bulk-select bookkeeping (and, on the iOS fallback
-                // path, non-package placeholder ids) — only ids that look
-                // like a real package name (contain a dot) are ever
-                // persisted as something the Accessibility Service blocks.
                 if (Platform.OS === 'android') {
                   const packages = selected.filter((id) => id.includes('.'));
-                  patch({ blockedPackages: packages });
+                  patch({ blockedPackages: packages.length > 0 ? packages : setup.suggestedPackages });
                 }
-                setStage(Platform.OS === 'ios' ? 'iosAppPicker' : 'intensity');
+                setStage('intensity');
               }}
             />
           )}
 
-          {stage === 'iosAppPicker' && <IOSAppPickerScreen onContinue={() => setStage('intensity')} />}
+          {stage === 'iosAppPicker' && (
+            <IOSAppPickerScreen
+              hint={
+                hoursFromUsage
+                  ? 'Start with the apps that already eat most of your day. Byre never sees the names you pick.'
+                  : 'Block the apps that usually steal the hours you described. Byre never sees the names you pick.'
+              }
+              onContinue={() => setStage('intensity')}
+            />
+          )}
 
           {stage === 'intensity' && (
             <IntensityScreen
@@ -293,7 +324,6 @@ export default function App() {
               recommendedReasons={intensityRecommendation.reasons}
               onContinue={(k) => {
                 setIntensityKey(k);
-                // ProposedRulesScreen removed from the funnel — straight to Future Self.
                 setStage('futureSelf');
               }}
             />
@@ -303,35 +333,17 @@ export default function App() {
             <FutureSelfScreen
               onContinue={(m) => {
                 setFutureSelfMessage(m);
-                setStage('worldSeed');
+                setStage('benefits');
               }}
             />
           )}
 
-          {stage === 'worldSeed' && (
-            <WorldSeedScreen themeKey={themeKey} onContinue={() => setStage('benefits')} />
-          )}
-
-          {/* Paywall (and its trial/discount retention offshoots) and the
-              friend-referral screen are hidden from the funnel for now —
-              straight from Benefits to Welcome. */}
+          {/* World Seed (landmarks chrome) is skipped — world is deprioritized.
+              Paywall, trial/discount, and referral stay hidden from the funnel.
+              Straight from Benefits to Welcome. */}
           {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('welcome')} />}
 
-          {stage === 'welcome' && (
-            <WelcomeScreen
-              onDone={() => {
-                patch({
-                  onboardingComplete: true,
-                  themeKey,
-                  intensityKey,
-                  futureSelfMessage,
-                  goal,
-                  onboardingAnswers: answers,
-                });
-                setStage('app');
-              }}
-            />
-          )}
+          {stage === 'welcome' && <WelcomeScreen onDone={completeOnboarding} />}
 
           {stage === 'app' && (
             <MainApp
@@ -346,6 +358,17 @@ export default function App() {
               onDeleteAccount={handleDeleteAccount}
             />
           )}
+
+          {/* Dev-only shortcut past the funnel while working on the main app.
+              __DEV__-gated deliberately: in a release build this would let a
+              user skip the permission asks and the app picker and land in a
+              main screen with nothing actually guarded. Top-left because the
+              Expo dev-tools bubble parks itself over the right-hand corners. */}
+          {__DEV__ && stage !== 'loading' && stage !== 'app' && (
+            <Pressable onPress={completeOnboarding} style={styles.devSkip} hitSlop={10}>
+              <Text style={styles.devSkipLabel}>Skip →</Text>
+            </Pressable>
+          )}
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -354,4 +377,17 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  devSkip: {
+    position: 'absolute',
+    top: 58,
+    left: 16,
+    zIndex: 100,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  devSkipLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600' },
 });

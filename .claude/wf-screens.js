@@ -1,6 +1,6 @@
 export const meta = {
-  name: 'wend-screen-rebuild',
-  description: 'Rebuild Wend core-loop screens on the new design system in parallel',
+  name: 'byre-screen-rebuild',
+  description: 'Rebuild Byre core-loop screens on the new design system in parallel',
   phases: [{ title: 'Rebuild', detail: 'one agent per screen file' }],
 };
 
@@ -128,7 +128,7 @@ log(`Rebuilding ${tasks.length} screens in parallel on the new design system`);
 const results = await parallel(
   tasks.map((t) => () =>
     agent(
-      `You are a senior React Native engineer rebuilding ONE screen of the Wend app (Expo SDK 57, RN 0.86, TypeScript) on a brand-new design system. Work professionally and precisely.
+      `You are a senior React Native engineer rebuilding ONE screen of the Byre app (Expo SDK 57, RN 0.86, TypeScript) on a brand-new design system. Work professionally and precisely.
 
 TARGET FILE (rewrite this file only): ${t.file}
 

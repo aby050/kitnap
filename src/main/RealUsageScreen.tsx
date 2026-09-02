@@ -10,6 +10,7 @@ import {
   queryTodayUsage,
   usageStatsAvailable,
 } from '../data/androidUsage';
+import { Button } from '../design/primitives';
 import { palette, space, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
 import { Donut, AppGlyphTile } from './profile/viz';
@@ -106,12 +107,9 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
             <StateCard
               icon="lock"
               title="Usage Access isn't granted yet"
-              body="Android treats this as a special permission — there's no in-app prompt for it. You'll be sent to Settings; find Wend in the list and turn the toggle on, then come back here."
+              body="Android treats this as a special permission — there's no in-app prompt for it. You'll be sent to Settings; find Byre in the list and turn the toggle on, then come back here."
             >
-              <Pressable style={styles.grantBtn} onPress={openUsageAccessSettings}>
-                <Icon name="arrowUpRight" size={17} color={palette.accent} strokeWidth={2} />
-                <Text style={styles.grantBtnText}>Open Usage Access settings</Text>
-              </Pressable>
+              <Button label="Open Usage Access settings" variant="outline" icon="arrowUpRight" onPress={openUsageAccessSettings} />
             </StateCard>
           ) : usage.length === 0 ? (
             <StateCard
@@ -215,7 +213,7 @@ function StateCard({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.base },
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.sm },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.md },
   circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.glass, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
   scroll: { paddingHorizontal: space.gutter, paddingTop: space.xs, paddingBottom: 110 },
@@ -239,15 +237,6 @@ const styles = StyleSheet.create({
   },
   noticeTitle: { color: palette.text, fontSize: 17, fontWeight: '800', textAlign: 'center', letterSpacing: -0.3 },
   noticeBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 20, textAlign: 'center' },
-  grantBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginTop: space.sm,
-    paddingVertical: 13, paddingHorizontal: space.lg,
-    borderRadius: radius.pill,
-    backgroundColor: palette.accentSoft,
-    borderWidth: 1, borderColor: palette.accentBorder,
-  },
-  grantBtnText: { color: palette.accent, fontSize: 14.5, fontWeight: '800' },
 
   card: {
     backgroundColor: palette.surface,

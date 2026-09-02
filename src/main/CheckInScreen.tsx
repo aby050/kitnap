@@ -5,21 +5,12 @@ import QuestionBlock from '../onboarding/QuestionBlock';
 import { CHECKIN_QUESTIONS, CheckIn, latestCheckIn } from '../data/checkin';
 import { ProgressState, formatDuration, formatSignedMinutes, sumRange, weeklyWindows, dateKey } from '../data/progress';
 import { recommendIntensity } from '../data/evaluation';
+import { estimateDailyHours } from '../data/setupPlan';
 import { INTENSITIES, IntensityKey } from '../data/themes';
-import { Screen } from '../design/primitives';
+import { Button, Screen } from '../design/primitives';
 import { palette } from '../design/tokens';
 
 type Answer = { value: string; label: string };
-
-const SCREENTIME_HOURS: Record<string, number> = {
-  '< 1 hour': 0.5,
-  '1–3 hours': 2,
-  '3–4 hours': 3.5,
-  '4–5 hours': 4.5,
-  '5–7 hours': 6,
-  '7+ hours': 8,
-  "I don't know": 4,
-};
 
 // Trend is self-reported, not measured, so it only nudges the baseline
 // estimate rather than replacing it outright.
@@ -77,7 +68,7 @@ export default function CheckInScreen({
     const nowControl = Number(answers.checkin_control?.value);
     const controlDelta = Number.isFinite(priorControl) && Number.isFinite(nowControl) ? nowControl - priorControl : 0;
 
-    const baselineHours = SCREENTIME_HOURS[onboardingAnswers.screentime?.value ?? ''] ?? 4;
+    const { hours: baselineHours } = estimateDailyHours(onboardingAnswers, null);
     const trendMultiplier = TREND_MULTIPLIER[answers.checkin_screentime?.value ?? ''] ?? 1;
     const estimatedHours = baselineHours * trendMultiplier;
     const mergedAnswers: Record<string, Answer> = {
@@ -145,12 +136,11 @@ export default function CheckInScreen({
         </ScrollView>
 
         <View style={styles.ctaWrap}>
-          <Pressable
-            style={styles.cta}
+          <Button
+            label="Continue"
+            variant="primary"
             onPress={() => onComplete({ date: new Date().toISOString(), answers })}
-          >
-            <Text style={styles.ctaText}>Continue</Text>
-          </Pressable>
+          />
         </View>
       </Screen>
     );
@@ -175,7 +165,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, height: 50 },
   eyebrow: { color: palette.textTertiary, fontSize: 12, letterSpacing: 1.5, fontWeight: '700' },
   skipLink: { color: palette.textSecondary, fontSize: 14, fontWeight: '600' },
-  currentArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingBottom: 40 },
+  currentArea: { flex: 1, alignItems: 'stretch', justifyContent: 'center', paddingHorizontal: 28, paddingBottom: 40 },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 20, gap: 14 },
   heading: { color: palette.text, fontSize: 26, fontWeight: '800', textAlign: 'center' },
   sub: { color: palette.textSecondary, fontSize: 14.5, textAlign: 'center', marginTop: 8, marginBottom: 10 },
@@ -211,12 +201,4 @@ const styles = StyleSheet.create({
   recommendBtnText: { color: palette.accent, fontSize: 14.5, fontWeight: '700' },
   recommendSkip: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', marginTop: 8 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14, paddingTop: 8 },
-  cta: {
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 28,
-    backgroundColor: palette.surfaceInverse,
-    alignItems: 'center',
-  },
-  ctaText: { color: '#000', fontSize: 16, fontWeight: '700' },
 });

@@ -1,7 +1,8 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import BlockedSelection from '../components/BlockedSelection';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import { getIntensity, IntensityKey } from '../data/themes';
 import {
@@ -81,13 +82,17 @@ export default function MyAppsScreen({
   onOpenBlocks?: () => void;
   schedules?: { id: string; name: string; start: string; end: string; days: string }[];
 }) {
-  const blockedApps = blockedPackages.map((pkg) => ({ packageName: pkg, name: appLabel(pkg) }));
+  const blockedApps = blockedPackages.map((pkg) => ({
+    packageName: pkg,
+    name: appLabel(pkg),
+    icon: DEFAULT_BLOCKED_APPS.find((a) => a.packageName === pkg)?.icon,
+  }));
   const strictnessLabel = getIntensity(intensityKey).name;
 
   return (
     <Screen edges={['top']} bloom>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Apps</Text>
+        <View style={styles.headerRow} />
         <Editorial lead="Decide once," emphasis="stay out of reach." style={styles.voice} />
 
         {/* Primary entry */}
@@ -104,18 +109,22 @@ export default function MyAppsScreen({
         {/* Blocked apps */}
         <SectionHeader
           title="Blocked apps"
-          actionLabel={blockedApps.length > 0 ? 'Edit' : undefined}
-          onAction={blockedApps.length > 0 ? onOpenBlockedApps : undefined}
+          actionLabel={Platform.OS !== 'ios' && blockedApps.length > 0 ? 'Edit' : undefined}
+          onAction={Platform.OS !== 'ios' && blockedApps.length > 0 ? onOpenBlockedApps : undefined}
           style={styles.section}
         />
 
-        {blockedApps.length > 0 ? (
+        {/* iOS never tells the app which apps were picked, so the row list is
+            Android-only: there the package names are real. */}
+        {Platform.OS === 'ios' ? (
+          <BlockedSelection />
+        ) : blockedApps.length > 0 ? (
           <Card padded={false} style={styles.list}>
             {blockedApps.map((app, i) => (
               <Animated.View key={app.packageName} entering={FadeInDown.delay(i * 30).duration(240)}>
                 {i > 0 && <Divider inset={56} />}
                 <View style={styles.blockedRow}>
-                  <AppGlyph name={app.name} packageName={app.packageName} size={44} />
+                  <AppGlyph name={app.name} packageName={app.packageName} source={app.icon} size={44} />
                   <View style={styles.shrink}>
                     <Text style={type.body} numberOfLines={1}>{app.name}</Text>
                     <Text style={[type.sub, styles.rowSub]}>Locked · {strictnessLabel}</Text>
@@ -167,7 +176,7 @@ export default function MyAppsScreen({
           <EmptyState
             icon="calendar"
             title="No recurring rules"
-            body="Add a window like Work Time or Sleep and Wend will block on schedule."
+            body="Add a window like Work Time or Sleep and Byre will block on schedule."
             actionLabel="Add a rule"
             onAction={onOpenSchedules}
           />
@@ -208,8 +217,8 @@ export default function MyAppsScreen({
 const styles = StyleSheet.create({
   shrink: { flex: 1, minWidth: 0 },
   scroll: { paddingHorizontal: space.gutter, paddingTop: space.sm, paddingBottom: space.tabClearance },
-  title: { ...type.title1 },
-  voice: { marginTop: space.xxs },
+  headerRow: { minHeight: 44 },
+  voice: { marginTop: space.base },
 
   blockCard: { marginTop: space.xl },
   section: { marginTop: space.xl },

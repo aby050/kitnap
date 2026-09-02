@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoider } from '../components/KeyboardAware';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { palette } from '../design/tokens';
+import { palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 /** Plays back at unlock #4 and above. A user's own voice at 11pm beats every
@@ -34,52 +35,54 @@ export default function FutureSelfScreen({
         </View>
       )}
 
-      <View style={styles.body}>
-        <Animated.Text entering={FadeInDown.duration(450)} style={styles.heading}>
-          {editing
-            ? 'Still true? Change it any time.'
-            : "Right now you're motivated.\nIn three days you won't be."}
-        </Animated.Text>
+      <KeyboardAvoider>
+        <View style={styles.body}>
+          <Animated.Text entering={FadeInDown.duration(450)} style={styles.heading}>
+            {editing
+              ? 'Still true? Change it any time.'
+              : "Right now you're motivated.\nIn three days you won't be."}
+          </Animated.Text>
 
-        <Animated.Text entering={FadeInDown.delay(200).duration(450)} style={styles.sub}>
-          {editing
-            ? "This is what plays back on your 4th unlock of the day, unskippable."
-            : "Say something to that version of you. They'll see it at their weakest moment."}
-        </Animated.Text>
+          <Animated.Text entering={FadeInDown.delay(200).duration(450)} style={styles.sub}>
+            {editing
+              ? "This is what plays back on your 4th unlock of the day, unskippable."
+              : "Say something to that version of you. They'll see it at their weakest moment."}
+          </Animated.Text>
 
-        <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.inputWrap}>
-          <TextInput
-            value={text}
-            onChangeText={setText}
-            multiline
-            placeholder="e.g. please just go to sleep, you'll hate yourself tomorrow"
-            placeholderTextColor={palette.textTertiary}
-            style={styles.input}
-            autoFocus={editing}
+          <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.inputWrap}>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              multiline
+              placeholder="e.g. please just go to sleep, you'll hate yourself tomorrow"
+              placeholderTextColor={palette.textTertiary}
+              style={styles.input}
+              autoFocus={editing}
+            />
+          </Animated.View>
+
+          <Text style={styles.hint}>Two lines is plenty. It only has to sound like you.</Text>
+        </View>
+
+        <View style={styles.ctaWrap}>
+          <GradientButton
+            label={editing ? 'Save' : text.trim() ? 'Save it' : 'Continue'}
+            onPress={() => onContinue(text.trim())}
           />
-        </Animated.View>
-
-        <Text style={styles.hint}>Two lines is plenty. It only has to sound like you.</Text>
-      </View>
-
-      <View style={styles.ctaWrap}>
-        <GradientButton
-          label={editing ? 'Save' : text.trim() ? 'Save it' : 'Continue'}
-          onPress={() => onContinue(text.trim())}
-        />
-        {!editing && (
-          <Pressable onPress={() => onContinue('')} style={styles.skipBtn} hitSlop={10}>
-            <Text style={styles.skipText}>Skip — I'll do it later</Text>
-          </Pressable>
-        )}
-      </View>
+          {!editing && (
+            <Pressable onPress={() => onContinue('')} style={styles.skipBtn} hitSlop={10}>
+              <Text style={styles.skipText}>Skip — I'll do it later</Text>
+            </Pressable>
+          )}
+        </View>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,

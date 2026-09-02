@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Slider from '@react-native-community/slider';
+import * as Haptics from 'expo-haptics';
 import Animated, {
   FadeIn,
   FadeInDown,
-  FadeInUp,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
 import { Question } from './questions';
-import { palette } from '../design/tokens';
+import { GradientButton } from '../components/ui';
+import { Field } from '../design/primitives';
+import { palette, space } from '../design/tokens';
 
 type Props = {
   question: Question;
@@ -35,93 +37,117 @@ function OptionButton({ label, selected, onPress }: { label: string; selected: b
   );
 }
 
-function ContinueButton({ label = 'Continue', disabled, onPress }: { label?: string; disabled?: boolean; onPress: () => void }) {
-  const scale = useSharedValue(1);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Animated.View style={[style, { width: '100%', maxWidth: 300 }]}>
-      <Pressable
-        disabled={disabled}
-        onPressIn={() => !disabled && (scale.value = withTiming(0.97, { duration: 90 }))}
-        onPressOut={() => (scale.value = withSpring(1, { damping: 12, stiffness: 220 }))}
-        onPress={onPress}
-        style={[styles.continueBtn, disabled && styles.continueBtnDisabled]}
-      >
-        <Text style={styles.continueText}>{label}</Text>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
 /** Renders only the CURRENT question, centered. Once answered the parent
  * swaps it out of the tree entirely (moved into history), so this never
  * needs to render an "answered" state itself. */
-// --- Typewriter Component ---
+// --- Typewriter ---
 interface TypewriterTextProps {
   text: string;
+  /** Base milliseconds per character. Real delay varies around this. */
   speed?: number;
   onComplete?: () => void;
   style?: any;
 }
 
-function TypewriterText({ text, speed = 20, onComplete, style }: TypewriterTextProps) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [showCursor, setShowCursor] = useState(true);
-  const [isTyping, setIsTyping] = useState(true);
+/**
+ * Types a prompt out character by character.
+ *
+ * A fixed interval reads as a machine, so the delay is shaped instead: a beat
+ * after sentence-enders, a shorter one after commas, a touch of jitter on the
+ * rest, and no pause at all inside a word. The cursor blinks on a steady rhythm
+ * of its own rather than being tied to the typing, which is what stops it
+ * looking like a stutter.
+ */
+/** Splits `a **b** c` into runs, so the typed prompt can carry emphasis
+ *  without the whole line shouting. */
+function parseEmphasis(src: string): { text: string; emph: boolean }[] {
+  return src
+    .split(/(\*\*[^*]+\*\*)/)
+    .filter(Boolean)
+    .map((part) =>
+      part.startsWith('**') && part.endsWith('**')
+        ? { text: part.slice(2, -2), emph: true }
+        : { text: part, emph: false },
+    );
+}
+
+function TypewriterText({ text, speed = 11, onComplete, style }: TypewriterTextProps) {
+  const runs = React.useMemo(() => parseEmphasis(text), [text]);
+  const plain = React.useMemo(() => runs.map((r) => r.text).join(''), [runs]);
+  const [shown, setShown] = useState(0);
+  const [caretOn, setCaretOn] = useState(true);
+  const done = shown >= plain.length;
+  const finished = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const delayFor = useCallback(
+    (ch: string, next: string) => {
+      if (/[.!?]/.test(ch)) return speed * 4;
+      if (/[,;:—]/.test(ch)) return speed * 2.4;
+      if (ch === ' ' && /[A-Z]/.test(next || '')) return speed * 1.4;
+      // Jitter keeps identical letters from marching in lockstep.
+      return speed * (0.8 + Math.random() * 0.4);
+    },
+    [speed],
+  );
 
   useEffect(() => {
-    setDisplayedText('');
-    setIsTyping(true);
-    let index = 0;
-    
-    const interval = setInterval(() => {
-      index++;
-      setDisplayedText(text.slice(0, index));
-      if (index >= text.length) {
-        clearInterval(interval);
-        setIsTyping(false);
+    setShown(0);
+    finished.current = false;
+  }, [text]);
+
+  useEffect(() => {
+    if (done) {
+      if (!finished.current) {
+        finished.current = true;
+        Haptics.selectionAsync().catch(() => {});
         onComplete?.();
       }
-    }, speed);
-
-    return () => clearInterval(interval);
-  }, [text, speed]);
-
-  // Blinking cursor
-  useEffect(() => {
-    let cursorInterval: any;
-    if (!isTyping) {
-      let count = 0;
-      cursorInterval = setInterval(() => {
-        setShowCursor((prev) => !prev);
-        count++;
-        if (count > 6) { // Blink 3 times, then hide
-          clearInterval(cursorInterval);
-          setShowCursor(false);
-        }
-      }, 500);
-    } else {
-      setShowCursor(true);
+      return;
     }
+    timer.current = setTimeout(
+      () => setShown((n) => n + 1),
+      delayFor(plain[shown] ?? '', plain[shown + 1] ?? ''),
+    );
     return () => {
-      if (cursorInterval) clearInterval(cursorInterval);
+      if (timer.current) clearTimeout(timer.current);
     };
-  }, [isTyping]);
+  }, [shown, done, plain, delayFor, onComplete]);
 
+  // Independent of typing, so the caret never stutters mid-word.
+  useEffect(() => {
+    const id = setInterval(() => setCaretOn((v) => !v), 520);
+    return () => clearInterval(id);
+  }, []);
+
+  // Reveal across the runs so emphasis appears as the words are typed, not
+  // only once the line finishes.
+  let budget = shown;
   return (
     <Text style={style}>
-      {displayedText}
-      <Text style={[styles.cursor, { opacity: showCursor ? 1 : 0 }]}> ▌</Text>
+      {runs.map((run, i) => {
+        if (budget <= 0) return null;
+        const slice = run.text.slice(0, budget);
+        budget -= run.text.length;
+        return (
+          <Text key={i} style={run.emph ? styles.promptEmphasis : undefined}>
+            {slice}
+          </Text>
+        );
+      })}
+      <Text style={[styles.cursor, { opacity: caretOn ? 1 : 0 }]}> ▌</Text>
     </Text>
   );
 }
 
 export default function QuestionBlock({ question, onAnswer }: Props) {
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
   const [text, setText] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [multiSelected, setMultiSelected] = useState<string[]>([]);
-  const [sliderVal, setSliderVal] = useState(question.kind === 'slider' ? question.default : 0);
-  const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const [sliderVal, setSliderVal] = useState(
+    question.kind === 'slider' ? question.default : 0,
+  );
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -145,7 +171,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 
   return (
     <Animated.View
-      entering={FadeInUp.duration(420).springify().damping(16)}
+      entering={FadeIn.duration(400)}
       // No `exiting` animation here on purpose — react-native-reanimated's
       // exit animations absolutely-position the outgoing view to animate it
       // out while the new one enters, but that exit reliably fails to clean
@@ -162,17 +188,15 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       />
 
       {isTypingComplete && question.kind === 'text' && (
-        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
-          <TextInput
+        <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
+          <Field
             value={text}
             onChangeText={setText}
             placeholder={question.placeholder}
-            placeholderTextColor={palette.textTertiary}
-            style={styles.input}
             autoFocus
           />
-          <View style={{ height: 14 }} />
-          <ContinueButton
+          <View style={{ height: space.md }} />
+          <GradientButton
             label={question.optional && text.trim().length === 0 ? 'Skip' : 'Continue'}
             disabled={!question.optional && text.trim().length === 0}
             onPress={() => {
@@ -185,18 +209,20 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       )}
 
       {isTypingComplete && question.kind === 'choice' && (
-        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
+        <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
           <View style={styles.optionsWrap}>
-            {question.options.map((opt) => (
-              <OptionButton
-                key={opt}
-                label={opt}
-                selected={selected === opt}
-                onPress={() => {
-                  setSelected(opt);
-                  setTimeout(() => onAnswer(opt, opt), 260);
-                }}
-              />
+            {question.options.map((opt, i) => (
+              <Animated.View key={opt} entering={FadeInDown.delay(i * 60).duration(320)}>
+                <OptionButton
+                  label={opt}
+                  selected={selected === opt}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setSelected(opt);
+                    setTimeout(() => onAnswer(opt, opt), 260);
+                  }}
+                />
+              </Animated.View>
             ))}
           </View>
           {question.optional && (
@@ -208,23 +234,25 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       )}
 
       {isTypingComplete && question.kind === 'multi' && (
-        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
+        <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
           <View style={styles.optionsWrap}>
-            {question.options.map((opt) => (
+            {question.options.map((opt, i) => (
+              <Animated.View key={opt} entering={FadeInDown.delay(i * 60).duration(320)}>
               <OptionButton
-                key={opt}
                 label={opt}
                 selected={multiSelected.includes(opt)}
                 onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
                   setMultiSelected((prev) =>
                     prev.includes(opt) ? prev.filter((o) => o !== opt) : [...prev, opt]
                   );
                 }}
               />
+              </Animated.View>
             ))}
           </View>
-          <View style={{ height: 14 }} />
-          <ContinueButton
+          <View style={{ height: space.md }} />
+          <GradientButton
             label={multiSelected.length === 0 ? 'Skip' : 'Continue'}
             disabled={!question.optional && multiSelected.length === 0}
             onPress={() => onAnswer(multiSelected.join(','), multiSelected.join(', '))}
@@ -233,8 +261,25 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       )}
 
       {isTypingComplete && question.kind === 'slider' && (
-        <Animated.View entering={FadeInDown.duration(350).springify().damping(15)} style={styles.fullWidth}>
-          <Text style={styles.ageValue}>{Math.round(sliderVal)}</Text>
+        <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
+          {(() => {
+            const rounded = Math.round(sliderVal);
+            const named = question.labels?.[rounded - question.min];
+            return (
+              <>
+                <Text style={named ? styles.levelName : styles.ageValue}>{named ?? rounded}</Text>
+                {named ? (
+                  <Text style={styles.levelMeta}>
+                    Level {rounded} of {question.max}
+                  </Text>
+                ) : (
+                  <Text style={styles.levelMeta}>
+                    {question.min} – {question.max}
+                  </Text>
+                )}
+              </>
+            );
+          })()}
           <Slider
             style={{ width: '100%', height: 40 }}
             minimumValue={question.min}
@@ -246,8 +291,15 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             maximumTrackTintColor="rgba(255,255,255,0.15)"
             thumbTintColor={palette.accent}
           />
-          <View style={{ height: 6 }} />
-          <ContinueButton onPress={() => onAnswer(String(Math.round(sliderVal)), String(Math.round(sliderVal)))} />
+          <View style={{ height: space.sm }} />
+          <GradientButton
+            label="Continue"
+            onPress={() => {
+              const rounded = Math.round(sliderVal);
+              const named = question.labels?.[rounded - question.min];
+              onAnswer(String(rounded), named ?? String(rounded));
+            }}
+          />
         </Animated.View>
       )}
 
@@ -262,31 +314,25 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 
 const styles = StyleSheet.create({
   block: {
-    alignItems: 'center',
+    width: '100%',
+    alignItems: 'stretch',
     gap: 16,
     paddingHorizontal: 8,
   },
   prompt: {
     color: palette.text,
     fontSize: 21,
-    fontWeight: '700',
+    fontWeight: '500',
     textAlign: 'center',
+    alignSelf: 'center',
     maxWidth: 300,
     lineHeight: 28,
   },
+  promptEmphasis: { fontWeight: '800', color: palette.accent },
   fullWidth: {
     width: '100%',
-    maxWidth: 300,
-    alignItems: 'center',
-  },
-  input: {
-    width: '100%',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 28,
-    backgroundColor: palette.glass,
-    color: palette.text,
-    fontSize: 16,
+    alignSelf: 'stretch',
+    alignItems: 'stretch',
   },
   optionsWrap: {
     flexDirection: 'row',
@@ -315,21 +361,6 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: palette.accent,
   },
-  continueBtn: {
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center',
-  },
-  continueBtnDisabled: {
-    opacity: 0.35,
-  },
-  continueText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '700',
-  },
   skipBtn: {
     marginTop: 14,
     alignItems: 'center',
@@ -344,6 +375,22 @@ const styles = StyleSheet.create({
     color: palette.accent,
     fontSize: 34,
     fontWeight: '700',
+    textAlign: 'center',
+  },
+  levelName: {
+    color: palette.accent,
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  levelMeta: {
+    color: palette.textTertiary,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 4,
   },
   progressTrack: {
     width: '100%',

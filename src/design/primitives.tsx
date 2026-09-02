@@ -5,6 +5,8 @@ import {
   StyleProp,
   StyleSheet,
   Text,
+  TextInput,
+  TextInputProps,
   TextStyle,
   View,
   ViewStyle,
@@ -22,6 +24,7 @@ import Icon, { IconName } from '../ui/Icon';
 import { tapLight } from '../ui/haptics';
 import {
   control,
+  fieldStyle,
   gradients,
   motion,
   palette,
@@ -31,7 +34,7 @@ import {
 } from './tokens';
 
 /**
- * Wend's primitives. Every screen is assembled from these — no screen defines
+ * Byre's primitives. Every screen is assembled from these — no screen defines
  * its own button, card, row or header.
  *
  * The reason is not tidiness, it's that the app previously had four different
@@ -254,7 +257,7 @@ export function Button({
   };
 
   return (
-    <Animated.View style={[press.style, full ? undefined : styles.shrink, style]}>
+    <Animated.View style={[press.style, full ? styles.btnFull : styles.btnCompact, style]}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled: disabled || loading }}
@@ -269,6 +272,7 @@ export function Button({
           styles.btn,
           shell,
           { height, paddingHorizontal: pad },
+          full && styles.btnFillWidth,
           disabled && styles.btnDisabled,
         ]}
       >
@@ -285,7 +289,7 @@ export function Button({
         ) : (
           <>
             {icon && <Icon name={icon} size={size === 'sm' ? 15 : 18} color={fg} />}
-            <Text style={labelStyle} numberOfLines={1}>
+            <Text style={[labelStyle, styles.btnLabel]} numberOfLines={1}>
               {label}
             </Text>
             {iconRight && <Icon name={iconRight} size={size === 'sm' ? 15 : 18} color={fg} />}
@@ -293,6 +297,17 @@ export function Button({
         )}
       </Pressable>
     </Animated.View>
+  );
+}
+
+/** Single-line pill input. Matches a large Button so a field + Continue stack lines up. */
+export function Field({ style, ...rest }: TextInputProps) {
+  return (
+    <TextInput
+      placeholderTextColor={palette.textTertiary}
+      {...rest}
+      style={[styles.field, style]}
+    />
   );
 }
 
@@ -712,7 +727,7 @@ export function SegmentedControl<T extends string>({
 }
 
 /**
- * Honest empty state. Wend's principle is "no fake numbers", so a screen with
+ * Honest empty state. Byre's principle is "no fake numbers", so a screen with
  * nothing in it says so plainly rather than showing placeholder data.
  */
 export function EmptyState({
@@ -765,7 +780,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     overflow: 'hidden',
   },
+  btnFull: { alignSelf: 'stretch', width: '100%' },
+  btnCompact: { alignSelf: 'center' },
+  btnFillWidth: { width: '100%' },
+  btnLabel: { includeFontPadding: false, textAlignVertical: 'center' },
   btnDisabled: { opacity: 0.38 },
+  field: {
+    ...fieldStyle,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
 
   iconBtn: {
     width: control.touch,

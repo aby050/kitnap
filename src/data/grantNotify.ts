@@ -1,6 +1,6 @@
 import { Alert, Platform } from 'react-native';
 
-const GRANT_NOTIFY_ID = 'wend-grant-ended';
+const GRANT_NOTIFY_ID = 'byre-grant-ended';
 
 type NotificationsModule = typeof import('expo-notifications');
 
@@ -26,7 +26,7 @@ async function loadNotifications(): Promise<NotificationsModule | null> {
   }
 }
 
-/** Fire when the timed unlock actually ends — in-app if Wend is open. */
+/** Fire when the timed unlock actually ends — in-app if Byre is open. */
 export function alertGrantEnded() {
   Alert.alert('Unlock ended', 'Your timed access is over. Distracting apps are blocked again.');
 }

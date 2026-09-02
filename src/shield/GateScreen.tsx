@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { GateQuestion, pickChallenge } from '../data/gateQuestions';
 import { Intensity } from '../data/themes';
-import { Button, Card, IconButton, Screen } from '../design/primitives';
+import { Button, Card, Field, IconButton, Screen } from '../design/primitives';
 import { palette, radius, space, type } from '../design/tokens';
 import BreathingExercise from './BreathingExercise';
 import ActivityChallenge from './ActivityChallenge';
@@ -13,7 +13,8 @@ import { success } from '../ui/haptics';
 type Props = {
   intensity: Intensity;
   futureSelfMessage: string;
-  healthLimited?: boolean;
+  /** Free-text onboarding health answer — used to skip unsafe movements. */
+  healthLimitRaw?: string | null;
   /** Resolves the adaptive rep target for a given movement. Undefined leaves
    *  Family G's built-in defaults alone. */
   repsFor?: (activity: ActivityKind) => number;
@@ -50,12 +51,11 @@ function MathQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'math' }
       <Text style={styles.mathExpr}>
         {q.a} {q.op} {q.b} = ?
       </Text>
-      <TextInput
+      <Field
         value={input}
         onChangeText={setInput}
         keyboardType="number-pad"
         placeholder="Your answer"
-        placeholderTextColor={palette.textTertiary}
         style={[styles.input, wrong && styles.inputWrong]}
         autoFocus
       />
@@ -109,7 +109,7 @@ function QuizQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'quiz' }
 export default function GateScreen({
   intensity,
   futureSelfMessage,
-  healthLimited = false,
+  healthLimitRaw,
   repsFor,
   onActivityComplete,
   onGranted,
@@ -123,7 +123,7 @@ export default function GateScreen({
   // while this screen is up (a finished session is recorded before the grant
   // lands), and with that in a dependency list the question would reroll out
   // from under a user who had just finished it.
-  const [q] = useState<GateQuestion>(() => pickChallenge(intensity.key, healthLimited, repsFor));
+  const [q] = useState<GateQuestion>(() => pickChallenge(intensity.key, healthLimitRaw, repsFor));
   const [showFutureSelf, setShowFutureSelf] = useState(!!futureSelfMessage);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
@@ -230,13 +230,13 @@ const styles = StyleSheet.create({
   confirmBody: { ...type.callout, color: palette.textSecondary, textAlign: 'center', lineHeight: 21 },
   confirmSpend: { marginTop: space.xs },
 
-  qBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xxl, gap: space.lg },
+  qBody: { flex: 1, alignItems: 'stretch', justifyContent: 'center', paddingHorizontal: space.xxl, gap: space.lg },
   eyebrow: { color: palette.textTertiary },
-  futureSelf: { ...type.editorial, color: palette.accent, textAlign: 'center', maxWidth: 320 },
-  prompt: { ...type.title2, textAlign: 'center', lineHeight: 31, maxWidth: 320 },
-  mathExpr: { ...type.hero, fontSize: 34, color: palette.accent, letterSpacing: -0.5 },
+  futureSelf: { ...type.editorial, color: palette.accent, textAlign: 'center', maxWidth: 320, alignSelf: 'center' },
+  prompt: { ...type.title2, textAlign: 'center', lineHeight: 31, maxWidth: 320, alignSelf: 'center' },
+  mathExpr: { ...type.hero, fontSize: 34, color: palette.accent, letterSpacing: -0.5, textAlign: 'center' },
 
-  options: { width: '100%', maxWidth: 320, gap: space.sm },
+  options: { width: '100%', gap: space.sm },
   option: {
     paddingVertical: space.base,
     borderRadius: radius.lg,
@@ -253,18 +253,12 @@ const styles = StyleSheet.create({
 
   input: {
     width: '100%',
-    maxWidth: 300,
-    paddingVertical: space.base,
-    paddingHorizontal: space.lg,
-    borderRadius: radius.lg,
+    textAlign: 'center',
     borderWidth: 1,
     borderColor: palette.border,
     backgroundColor: palette.surfaceRaised,
-    color: palette.text,
-    fontSize: 18,
-    textAlign: 'center',
   },
   inputWrong: { borderColor: palette.danger },
   wrongText: { ...type.sub, color: palette.danger, marginTop: -space.sm },
-  ctaWrap: { width: '100%', maxWidth: 300 },
+  ctaWrap: { width: '100%' },
 });

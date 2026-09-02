@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import LoginScreen from './LoginScreen';
 import { Account } from '../data/store';
-import { palette } from '../design/tokens';
+import { Field } from '../design/primitives';
+import { palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const METHOD_LABEL: Record<Account['method'], string> = {
@@ -50,7 +52,11 @@ export default function AccountScreen({
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        {...keyboardScrollProps}
+      >
         <Animated.View entering={FadeInDown.duration(400)} style={styles.avatarWrap}>
           <View style={styles.avatar}>
             <Text style={styles.avatarGlyph}>{(draft || account?.identifier || '?').charAt(0).toUpperCase()}</Text>
@@ -68,12 +74,10 @@ export default function AccountScreen({
             </View>
 
             <Text style={styles.label}>Display name</Text>
-            <TextInput
+            <Field
               value={draft}
               onChangeText={setDraft}
               placeholder="Your name"
-              placeholderTextColor={palette.textTertiary}
-              style={styles.input}
               onBlur={() => onSaveName(draft.trim())}
             />
 
@@ -112,7 +116,7 @@ export default function AccountScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,
@@ -148,14 +152,6 @@ const styles = StyleSheet.create({
   signedInIdentifier: { color: palette.text, fontSize: 15, fontWeight: '700' },
   signedInMethod: { color: palette.textSecondary, fontSize: 12.5, marginTop: 3 },
   label: { color: palette.textTertiary, fontSize: 12, letterSpacing: 1, fontWeight: '700', marginBottom: 10 },
-  input: {
-    paddingVertical: 15,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    backgroundColor: palette.glass,
-    color: palette.text,
-    fontSize: 16,
-  },
   signOutBtn: { alignItems: 'center', paddingVertical: 16, marginTop: 6 },
   signOutText: { color: palette.danger, fontSize: 14.5, fontWeight: '600' },
   syncCard: { marginTop: 30, padding: 18, borderRadius: 22, backgroundColor: palette.surface },

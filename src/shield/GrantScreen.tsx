@@ -75,7 +75,7 @@ export default function GrantScreen({
           <>
             <Button label="Continue in app" iconRight="chevronDown" variant="primary" onPress={onMinimize} />
             <Text style={styles.hint}>
-              Keep using Wend. We'll notify you when this unlock ends and apps lock again.
+              Keep using Byre. We'll notify you when this unlock ends and apps lock again.
             </Text>
           </>
         )}

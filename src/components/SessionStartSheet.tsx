@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -11,6 +11,7 @@ import Animated, {
 import Icon, { IconName } from '../ui/Icon';
 import { tapLight, tapMedium } from '../ui/haptics';
 import { control, palette, radius, space, type } from '../design/tokens';
+import Toggle from '../design/Toggle';
 
 const HOLD_MS = 900;
 const STEP_MINUTES = 15;
@@ -159,12 +160,9 @@ export default function SessionStartSheet({
               </View>
               <Text style={styles.rowSub}>Can't use a Bailout to leave early.</Text>
             </View>
-            <Switch
+            <Toggle
               value={hardMode}
               onValueChange={setHardMode}
-              trackColor={{ false: palette.surfaceHigh, true: palette.accent }}
-              thumbColor={palette.text}
-              ios_backgroundColor={palette.surfaceHigh}
             />
           </View>
 

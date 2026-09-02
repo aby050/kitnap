@@ -1,0 +1,10 @@
+{
+  "name": "screen-time-labels",
+  "version": "1.0.0",
+  "description": "Local Expo module: renders the real icons of the apps chosen in Apple's Family Activity picker. Only SwiftUI's Label(ApplicationToken) can draw them, and the tokens never cross into JavaScript.",
+  "main": "index.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react-native": "*"
+  }
+}

@@ -3,13 +3,21 @@
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
   <application>
+    <!-- Keeps the countdown on the lock screen and the process alive for the
+         length of a session. dataSync: it is neither media nor location, and
+         Android 14+ refuses a foreground service without a declared type. -->
+    <service
+      android:name=".SessionTimerService"
+      android:exported="false"
+      android:foregroundServiceType="dataSync" />
+
     <!-- Stub service: declared and toggleable in system Settings so the
          "Accessibility" permission check has something real to point at.
          It currently only logs foreground-app change events — it does NOT
          yet draw the Shield overlay or block anything. That's the next
          real chunk of work, not implemented here. -->
     <service
-      android:name="expo.modules.devicepermissions.WendAccessibilityService"
+      android:name="expo.modules.devicepermissions.ByreAccessibilityService"
       android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
       android:exported="false">
       <intent-filter>
@@ -17,13 +25,13 @@
       </intent-filter>
       <meta-data
         android:name="android.accessibilityservice"
-        android:resource="@xml/wend_accessibility_service_config" />
+        android:resource="@xml/byre_accessibility_service_config" />
     </service>
 
     <!-- Stub notification listener — declared so the toggle is real; does
          not yet act on notifications from distracting apps. -->
     <service
-      android:name="expo.modules.devicepermissions.WendNotificationListenerService"
+      android:name="expo.modules.devicepermissions.ByreNotificationListenerService"
       android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
       android:exported="false">
       <intent-filter>

@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { Camera } from 'expo-camera';
+import * as Notifications from 'expo-notifications';
 import {
   canDrawOverlays,
   isAccessibilityServiceEnabled,
@@ -13,8 +15,15 @@ import {
   openOverlaySettings,
 } from 'device-permissions';
 import { checkUsageAccessPermission, openUsageAccessSettings } from '../data/androidUsage';
+import {
+  getScreenTimeAuthorizationStatus,
+  requestScreenTimeAuthorization,
+} from '../data/iosScreenTime';
+import { Button } from '../design/primitives';
 import { palette } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
+import { OnboardingMarkSlot } from './OnboardingMark';
+import PermissionArt from './PermissionArt';
 
 type Card = {
   key: string;
@@ -34,15 +43,34 @@ type Card = {
  * again whenever the app regains focus, the only way to know if the user
  * granted something in Settings, since none of these fire a JS event.
  */
-export default function PermissionBoardingPassScreen({ onContinue }: { onContinue: () => void }) {
+export default function PermissionBoardingPassScreen({
+  onContinue,
+  only,
+}: {
+  onContinue: () => void;
+  /** Show just these permission keys. Asking for everything up front makes the
+   *  app look like it wants the whole phone before it has done anything; each
+   *  ask lands better next to the question that motivates it. */
+  only?: string[];
+}) {
   const [index, setIndex] = useState(0);
   const [overlay, setOverlay] = useState(false);
   const [usage, setUsage] = useState(false);
   const [accessibility, setAccessibility] = useState(false);
   const [notification, setNotification] = useState(false);
   const [battery, setBattery] = useState(false);
+  const [screenTime, setScreenTime] = useState(false);
+  const [camera, setCamera] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (Platform.OS === 'ios') {
+      setScreenTime(getScreenTimeAuthorizationStatus() === 'approved');
+      const notif = await Notifications.getPermissionsAsync();
+      setNotification(notif.granted || notif.ios?.status === Notifications.IosAuthorizationStatus.AUTHORIZED);
+      const cam = await Camera.getCameraPermissionsAsync();
+      setCamera(cam.granted);
+      return;
+    }
     if (Platform.OS !== 'android') return;
     setOverlay(canDrawOverlays());
     setAccessibility(isAccessibilityServiceEnabled());
@@ -59,7 +87,24 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     return () => sub.remove();
   }, [refresh]);
 
-  const cards: Card[] = [
+  // iOS system prompts only appear if we actually request them. Fire the
+  // current card's request so Simulator/device dialogs show up instead of
+  // a Grant button that used to no-op (Android settings openers).
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    let cancelled = false;
+    (async () => {
+      if (index === 0) await requestScreenTimeAuthorization();
+      else if (index === 1) await Notifications.requestPermissionsAsync();
+      else if (index === 2) await Camera.requestCameraPermissionsAsync();
+      if (!cancelled) await refresh();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [index, refresh]);
+
+  const androidCards: Card[] = [
     {
       key: 'overlay',
       icon: 'shield',
@@ -71,8 +116,8 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     {
       key: 'usage',
       icon: 'chart',
-      title: 'Screen time',
-      desc: 'Reads your real screen time so we can tell you the truth about it instead of asking you to guess.',
+      title: 'Usage access',
+      desc: 'Reads your real app usage so we can tell you the truth about it instead of asking you to guess.',
       granted: usage,
       onRequest: openUsageAccessSettings,
     },
@@ -102,6 +147,51 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     },
   ];
 
+  const iosCards: Card[] = [
+    {
+      key: 'screenTime',
+      icon: 'chart',
+      title: 'Screen Time',
+      desc: "Uses Apple's Screen Time controls so Byre can block the apps you pick. A system prompt appears — Allow it.",
+      granted: screenTime,
+      onRequest: async () => {
+        await requestScreenTimeAuthorization();
+        await refresh();
+      },
+    },
+    {
+      key: 'notification',
+      icon: 'bell',
+      title: 'Notifications',
+      desc: 'Lets Byre ping you when a timed unlock ends, even if the app is in the background.',
+      granted: notification,
+      onRequest: async () => {
+        await Notifications.requestPermissionsAsync();
+        await refresh();
+      },
+    },
+    {
+      key: 'camera',
+      icon: 'eye',
+      title: 'Camera',
+      desc: 'Used only for Strict-mode movement challenges. Nothing is recorded or leaves the phone.',
+      granted: camera,
+      onRequest: async () => {
+        await Camera.requestCameraPermissionsAsync();
+        await refresh();
+      },
+    },
+  ];
+
+  const all: Card[] = Platform.OS === 'ios' ? iosCards : androidCards;
+  const cards: Card[] = only ? all.filter((c) => only.includes(c.key)) : all;
+
+  // Nothing relevant on this platform — don't strand the user on a blank pass.
+  useEffect(() => {
+    if (cards.length === 0) onContinue();
+  }, [cards.length, onContinue]);
+  if (cards.length === 0) return null;
+
   const card = cards[index];
   const isLast = index === cards.length - 1;
 
@@ -110,56 +200,51 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
     else setIndex((i) => i + 1);
   };
 
+  // Granting is the answer to the question this screen asks, so it moves on by
+  // itself — a Continue button after a system prompt is a second confirmation
+  // of something already decided. The short pause lets the card show that it
+  // took before it leaves.
+  useEffect(() => {
+    if (!card.granted) return;
+    const t = setTimeout(next, 550);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.key, card.granted]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <OnboardingMarkSlot />
       <View style={styles.body}>
-        <Animated.View key={card.key} entering={FadeIn.duration(350)} style={styles.pass}>
-          <View style={styles.passHeader}>
-            <Text style={styles.passEyebrow}>BOARDING PASS</Text>
-            <Text style={styles.passCount}>
-              {String(index + 1).padStart(2, '0')} / {String(cards.length).padStart(2, '0')}
-            </Text>
-          </View>
-
-          <View style={styles.passIconWrap}>
-            <Icon name={card.icon} size={52} color="#1a1a1a" strokeWidth={1.9} />
-          </View>
-
-          <Text style={styles.passTitle}>{card.title.toUpperCase()}</Text>
-
-          <View style={styles.passDivider}>
-            {Array.from({ length: 14 }).map((_, i) => (
-              <View key={i} style={styles.passDividerDot} />
-            ))}
-          </View>
-
-          <Text style={styles.passBrand}>wend</Text>
-          <View style={styles.dotsRow}>
-            {cards.map((_, i) => (
-              <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
-            ))}
-          </View>
+        <Animated.View key={card.key} entering={FadeIn.duration(350)} style={styles.art}>
+          <PermissionArt permission={card.key} size={224} />
         </Animated.View>
 
-        <Text style={styles.reqLabel}>AUTHORIZATION REQUIRED</Text>
+        <View style={styles.dotsRow}>
+          {cards.map((_, i) => (
+            <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
+          ))}
+        </View>
+
+        <Text style={styles.reqLabel}>
+          {String(index + 1).padStart(2, '0')} / {String(cards.length).padStart(2, '0')} · AUTHORIZATION REQUIRED
+        </Text>
         <Text style={styles.title}>{card.title}</Text>
         <Text style={styles.desc}>{card.desc}</Text>
       </View>
 
       <View style={styles.ctaWrap}>
-        <Pressable
-          style={[styles.grantBtn, card.granted && styles.grantBtnDone]}
-          onPress={() => {
-            if (card.granted) next();
-            else card.onRequest();
-          }}
-        >
-          <Text style={styles.grantBtnText}>{card.granted ? 'Continue' : 'Grant'}</Text>
-        </Pressable>
-        {!card.granted && (
-          <Pressable onPress={next} hitSlop={10}>
-            <Text style={styles.skipLink}>Skip for now</Text>
-          </Pressable>
+        {card.granted ? (
+          <View style={styles.grantedRow}>
+            <Icon name="check" size={16} color={palette.accent} strokeWidth={2.6} />
+            <Text style={styles.grantedText}>Granted</Text>
+          </View>
+        ) : (
+          <>
+            <Button label="Grant" variant="primary" onPress={card.onRequest} />
+            <Pressable onPress={next} hitSlop={10}>
+              <Text style={styles.skipLink}>Skip for now</Text>
+            </Pressable>
+          </>
         )}
       </View>
     </SafeAreaView>
@@ -168,41 +253,17 @@ export default function PermissionBoardingPassScreen({ onContinue }: { onContinu
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  body: { flex: 1, alignItems: 'center', paddingHorizontal: 26, paddingTop: 30 },
-  pass: {
-    width: '100%',
-    maxWidth: 320,
-    backgroundColor: '#F5F1E9',
-    borderRadius: 24,
-    paddingVertical: 24,
-    paddingHorizontal: 22,
-    alignItems: 'center',
-  },
-  passHeader: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 18 },
-  passEyebrow: { color: 'rgba(20,20,20,0.4)', fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  passCount: { color: '#E8642C', fontSize: 12, fontWeight: '800' },
-  passIconWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 22,
-    backgroundColor: 'rgba(20,20,20,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
-  },
-  passTitle: { color: '#1a1a1a', fontSize: 15, fontWeight: '800', letterSpacing: 1.5, marginBottom: 20 },
-  passDivider: { flexDirection: 'row', width: '100%', justifyContent: 'space-between', marginBottom: 14 },
-  passDividerDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(20,20,20,0.15)' },
-  passBrand: { color: 'rgba(20,20,20,0.35)', fontSize: 14, fontWeight: '700' },
-  dotsRow: { flexDirection: 'row', gap: 5, marginTop: 10 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(20,20,20,0.15)' },
-  dotActive: { backgroundColor: '#E8642C', width: 16 },
+  body: { flex: 1, alignItems: 'center', paddingHorizontal: 26, paddingTop: 8 },
+  art: { alignItems: 'center', justifyContent: 'center', marginTop: 12 },
+  dotsRow: { flexDirection: 'row', gap: 5, marginTop: 22 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
+  dotActive: { backgroundColor: palette.accent, width: 16 },
   reqLabel: {
     color: palette.accent,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
-    letterSpacing: 1.5,
-    marginTop: 32,
+    letterSpacing: 1.4,
+    marginTop: 18,
   },
   title: { color: palette.text, fontSize: 24, fontWeight: '800', marginTop: 10, textAlign: 'center' },
   desc: {
@@ -213,15 +274,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
     maxWidth: 320,
   },
-  ctaWrap: { paddingHorizontal: 26, paddingBottom: 18, gap: 14, alignItems: 'center' },
-  grantBtn: {
-    width: '100%',
-    paddingVertical: 17,
-    borderRadius: 28,
-    backgroundColor: '#111113',
+  ctaWrap: { paddingHorizontal: 26, paddingBottom: 18, gap: 14, alignItems: 'stretch' },
+  grantedRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
   },
-  grantBtnDone: { backgroundColor: palette.accent },
-  grantBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
-  skipLink: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600' },
+  grantedText: { color: palette.accent, fontSize: 15.5, fontWeight: '800' },
+  skipLink: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600', textAlign: 'center' },
 });

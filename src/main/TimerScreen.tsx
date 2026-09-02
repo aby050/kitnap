@@ -1,30 +1,43 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
+  Linking,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, {
+  Easing,
   FadeIn,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withRepeat,
+  withTiming,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { Button, Card, Divider, Editorial, IconButton, Pill, Ring, Screen } from '../design/primitives';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { Button, Card, Divider, Editorial, IconButton, Pill, Ring, Row, Screen } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';
 import AppGlyph from '../ui/AppGlyph';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import BlockedAppsPill from '../components/BlockedAppsPill';
+import BlockedListSheet from '../components/BlockedListSheet';
+import BlockedSelection from '../components/BlockedSelection';
+import EmergencyDialer from '../components/EmergencyDialer';
+import { ESSENTIALS, EssentialKey } from '../data/gateQuestions';
+import { hasBlockedSelection } from '../data/iosScreenTime';
+import { FocusSession } from '../data/store';
 import { motion, palette, radius, space, type } from '../design/tokens';
+import Toggle from '../design/Toggle';
 
 const { width } = Dimensions.get('window');
 
@@ -48,11 +61,13 @@ function FeatureTile({ name }: { name: IconName }) {
   );
 }
 
-const SWITCH_TRACK = { true: palette.accent, false: palette.surfaceHigh };
 
 export default function TimerScreen({
   initialMinutes = 30,
-  autoStart = false,
+  essentials,
+  session = null,
+  onStartSession,
+  onEndSession,
   hardMode = false,
   label = 'Timer',
   motivationLine,
@@ -66,7 +81,14 @@ export default function TimerScreen({
   onUpdateBlockedPackages,
 }: {
   initialMinutes?: number;
-  autoStart?: boolean;
+  /** The live session, owned by MainApp and persisted. Held here as an end
+   *  timestamp rather than a countdown so navigating away — or force-quitting
+   *  — can't wipe it. */
+  /** Which essential categories the user left switched on. */
+  essentials?: Record<EssentialKey, boolean>;
+  session?: FocusSession | null;
+  onStartSession?: (minutes: number, label: string, hardMode: boolean) => void;
+  onEndSession?: () => void;
   /** Hard mode: the session cannot be ended with a Bailout. Emergency access stays. */
   hardMode?: boolean;
   label?: string;
@@ -83,6 +105,11 @@ export default function TimerScreen({
 }) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showAppSelectModal, setShowAppSelectModal] = useState(false);
+  const [showPickPrompt, setShowPickPrompt] = useState(false);
+  // Mid-session the timer is the point; the controls around it are not. Tapping
+  // anywhere reveals them and they fade back out, so a locked screen stays calm
+  // without hiding the way out.
+  const [chromeVisible, setChromeVisible] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Category toggle states (mirrored into the parent's blockedPackages on start).
@@ -119,23 +146,28 @@ export default function TimerScreen({
 
   // ── Timer state ──
   const [selectedMinutes, setSelectedMinutes] = useState(initialMinutes);
-  const [remaining, setRemaining] = useState(autoStart ? initialMinutes * 60 : 0);
-  const [running, setRunning] = useState(autoStart);
+  // Locked-session sheets: the icon grid, and the per-app unlock confirm.
+  const [showLockedApps, setShowLockedApps] = useState(false);
+  const [showEssentials, setShowEssentials] = useState(false);
+  const [unlockTarget, setUnlockTarget] = useState<{ name: string; packageName: string } | null>(null);
+  const secsLeft = (sn: FocusSession | null) =>
+    sn ? Math.max(0, Math.ceil((sn.endsAt - Date.now()) / 1000)) : 0;
+  const [remaining, setRemaining] = useState(() => secsLeft(session));
+  const running = !!session && remaining > 0;
   const prevRemaining = useRef(remaining);
 
+  // Recomputed from the clock every tick rather than decremented, so a session
+  // stays correct across backgrounding, where timers stop firing.
   useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => {
-      setRemaining((r) => {
-        if (r <= 1) {
-          setRunning(false);
-          return 0;
-        }
-        return r - 1;
-      });
-    }, 1000);
+    setRemaining(secsLeft(session));
+    if (!session) return;
+    const id = setInterval(() => setRemaining(secsLeft(session)), 1000);
     return () => clearInterval(id);
-  }, [running]);
+  }, [session]);
+
+  useEffect(() => {
+    if (session && remaining <= 0) onEndSession?.();
+  }, [session, remaining, onEndSession]);
 
   // Completion callback — rest sessions don't award focus credit.
   useEffect(() => {
@@ -163,36 +195,111 @@ export default function TimerScreen({
     if (running) return;
     const next = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, selectedMinutes + dir * SLIDER_STEP));
     setSelectedMinutes(next);
-    setRemaining(0);
   };
 
   // ── Slide-to-start gesture ──
   const maxSlideX = width - space.gutter * 2 - SLIDE_BTN - SLIDE_PAD * 2;
   const slideX = useSharedValue(0);
+  /** 1 while a finger is on the thumb — drives the live "current" pulse, so the
+   *  track only crackles while it is actually being charged. */
+  const charging = useSharedValue(0);
+  const pulse = useSharedValue(0);
+  /** Last charge notch that fired a tick, so each one only fires once. */
+  const lastNotch = useRef(-1);
+
+  // Twelve notches across the track. Ticking on each one — light at the start,
+  // firmer past the commit point — reads in the hand like something filling up
+  // rather than a single click at the end.
+  const chargeTick = useCallback((notch: number, committed: boolean) => {
+    if (notch === lastNotch.current) return;
+    const rising = notch > lastNotch.current;
+    lastNotch.current = notch;
+    if (!rising) return;
+    Haptics.impactAsync(
+      committed ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light,
+    ).catch(() => {});
+  }, []);
+
+  const resetNotch = useCallback(() => {
+    lastNotch.current = -1;
+  }, []);
+
+  const chargeDone = useCallback(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [pulse]);
 
   const triggerStart = useCallback(() => {
-    if (remaining > 0 && !running) {
-      setRunning(true);
-    } else {
-      setRemaining(selectedMinutes * 60);
-      setRunning(true);
-    }
-  }, [remaining, running, selectedMinutes]);
+    onStartSession?.(selectedMinutes, label, hardMode);
+  }, [onStartSession, selectedMinutes, label, hardMode]);
 
   useEffect(() => {
     if (running) {
       const t = setTimeout(() => {
-        slideX.value = withSpring(0, { damping: 15 });
+        slideX.value = withTiming(0, { duration: 260, easing: Easing.out(Easing.cubic) });
       }, 400);
       return () => clearTimeout(t);
     }
+    // Idle: park it at the start. Left at the far end after a completed slide,
+    // the control looked live but had nowhere left to travel.
+    slideX.value = 0;
   }, [running, slideX]);
 
-  const handleSlideComplete = () => setShowAppSelectModal(true);
+  // Rendered outside the running/idle split: the slider that opens it lives in
+  // the idle tree, and the sheet used to be defined only in the running one.
+  const pickPrompt = (
+    <Modal
+      visible={showPickPrompt}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowPickPrompt(false)}
+    >
+      <View style={styles.lockedSheetScrim}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={() => setShowPickPrompt(false)}
+          accessibilityLabel="Dismiss"
+        />
+        <View style={styles.lockedSheet}>
+          <View style={styles.lockedSheetHandle} />
+          <Text style={styles.lockedSheetTitle}>Nothing to block yet</Text>
+          <Text style={styles.lockedSheetSub}>
+            Pick the apps this block should cover — a session with nothing selected holds nothing
+            back.
+          </Text>
+          <BlockedSelection onChanged={() => setShowPickPrompt(false)} />
+        </View>
+      </View>
+    </Modal>
+  );
+
+
+  // On iOS the app-select sheet below is meaningless: it lists Android package
+  // names, its search can never match (iOS gives no installed-app list), and
+  // what actually gets blocked is Apple's own picker selection. So the slide
+  // starts the session directly there, which is also why it looked stuck —
+  // the sheet opened onto a list that could do nothing.
+  const handleSlideComplete = () => {
+    if (Platform.OS === 'ios') {
+      // Starting with an empty selection blocks nothing at all, and used to do
+      // so silently — send them to the picker instead of running a timer that
+      // enforces nothing.
+      if (!hasBlockedSelection()) {
+        setShowPickPrompt(true);
+        return;
+      }
+      triggerStart();
+      return;
+    }
+    setShowAppSelectModal(true);
+  };
 
   const handleCancelStart = () => {
     setShowAppSelectModal(false);
-    slideX.value = withSpring(0, { damping: 15 });
+    slideX.value = withTiming(0, { duration: 260, easing: Easing.out(Easing.cubic) });
   };
 
   const handleConfirmAndStart = () => {
@@ -206,22 +313,71 @@ export default function TimerScreen({
     triggerStart();
   };
 
-  const slideGesture = Gesture.Pan()
+  const slideTap = Gesture.Tap().onEnd((_e, ok) => {
+    'worklet';
+    if (!ok) return;
+    slideX.value = withTiming(maxSlideX, { duration: 220, easing: Easing.out(Easing.cubic) });
+    runOnJS(chargeDone)();
+    runOnJS(handleSlideComplete)();
+  });
+
+  const slidePan = Gesture.Pan()
+    // The slider lives inside a vertical ScrollView, which was winning the
+    // gesture race: a drag that wasn't perfectly horizontal became a scroll,
+    // so the thumb buzzed on touch and then went nowhere.
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-18, 18])
+    .onBegin(() => {
+      'worklet';
+      charging.value = withTiming(1, { duration: 120 });
+    })
     .onUpdate((e) => {
       'worklet';
       slideX.value = Math.max(0, Math.min(e.translationX, maxSlideX));
+      const t = maxSlideX > 0 ? slideX.value / maxSlideX : 0;
+      runOnJS(chargeTick)(Math.floor(t * 12), t > 0.65);
     })
-    .onEnd(() => {
+    .onEnd((e) => {
       'worklet';
-      if (slideX.value > maxSlideX * 0.65) {
-        slideX.value = withSpring(maxSlideX, { damping: 15 });
+      // No spring: releasing halfway used to bounce, which felt like the
+      // control fighting the user. It now glides to whichever end it committed
+      // to, at a speed that reads as deliberate.
+      // Half the track, or a decisive flick. Two-thirds meant an ordinary
+      // confident swipe still snapped back.
+      if (slideX.value > maxSlideX * 0.5 || e.velocityX > 900) {
+        slideX.value = withTiming(maxSlideX, { duration: 180, easing: Easing.out(Easing.cubic) });
+        runOnJS(chargeDone)();
         runOnJS(handleSlideComplete)();
       } else {
-        slideX.value = withSpring(0, { damping: 15 });
+        slideX.value = withTiming(0, { duration: 260, easing: Easing.out(Easing.cubic) });
       }
+      charging.value = withTiming(0, { duration: 260 });
+      runOnJS(resetNotch)();
     });
 
+  // Pan wins when there's real movement; the tap covers everything else.
+  const slideGesture = Gesture.Exclusive(slidePan, slideTap);
+
   const slideAnimStyle = useAnimatedStyle(() => ({ transform: [{ translateX: slideX.value }] }));
+
+  // The track charges up behind the thumb: the further you push, the brighter
+  // and more saturated the trail, so the gesture feels like it is building
+  // something rather than just dragging a handle across.
+  const slideFillStyle = useAnimatedStyle(() => ({
+    width: slideX.value + SLIDE_BTN + SLIDE_PAD * 2,
+  }));
+  const slideGlowStyle = useAnimatedStyle(() => {
+    const t = maxSlideX > 0 ? slideX.value / maxSlideX : 0;
+    const flicker = 0.7 + pulse.value * 0.3 * charging.value;
+    return {
+      opacity: t * 0.85 * flicker,
+      transform: [{ translateX: slideX.value }, { scale: 0.8 + t * 0.5 }],
+    };
+  });
+  const slideLabelStyle = useAnimatedStyle(() => {
+    const t = maxSlideX > 0 ? slideX.value / maxSlideX : 0;
+    return { opacity: Math.max(0, 1 - t * 2.2) };
+  });
 
   // ─────────────────────────────────────────────────────────────
   // Locked full-screen mode — running can't be paused or backed out
@@ -230,27 +386,45 @@ export default function TimerScreen({
   if (running) {
     return (
       <Screen edges={['top', 'bottom']}>
-        <View style={styles.lockedRoot}>
+        <Pressable
+          style={styles.lockedRoot}
+          onPress={() => setChromeVisible((v) => !v)}
+          accessibilityLabel={chromeVisible ? 'Hide controls' : 'Show controls'}
+        >
         {hardMode ? (
           <View style={styles.cornerLeft} />
         ) : (
           <View style={styles.cornerLeft}>
-            <Pill
-              label="Bailout"
-              icon="key"
-              tone="warn"
-              onPress={() => setShowCancelConfirm(true)}
-            />
+            {/* A close button, not a "Bailout" button. Naming the currency up
+                front advertises the way out; this asks to leave first and only
+                then says what leaving costs. */}
+            <View style={!chromeVisible && styles.chromeHidden} pointerEvents={chromeVisible ? 'auto' : 'none'}>
+              <IconButton
+                name="close"
+                onPress={() => setShowCancelConfirm(true)}
+                bordered
+                accessibilityLabel="End session"
+              />
+            </View>
           </View>
         )}
 
-          <View style={styles.cornerRight}>
-            {onOpenShield && (
-              <IconButton name="shield" onPress={onOpenShield} bordered accessibilityLabel="Shield" />
-            )}
-            {onOpenEssentials && (
-              <Pill label="Emergency" icon="key" tone="danger" onPress={onOpenEssentials} />
-            )}
+          <View style={[styles.cornerRight, !chromeVisible && styles.chromeHidden]} pointerEvents={chromeVisible ? 'auto' : 'none'}>
+            <IconButton
+              name="shield"
+              onPress={() => setShowLockedApps(true)}
+              bordered
+              accessibilityLabel="What's locked"
+            />
+            {/* Straight to the dialer. Deliberately does not place a call —
+                the user types the number, so the app can never dial emergency
+                services by accident. */}
+            <Pill
+              label="Emergency"
+              icon="phone"
+              tone="danger"
+              onPress={() => setShowEssentials(true)}
+            />
           </View>
 
           <View style={styles.lockedBody}>
@@ -264,17 +438,70 @@ export default function TimerScreen({
               <Text style={[type.unit, styles.unitLine]}>{showHours ? 'hours · minutes' : 'minutes · seconds'}</Text>
             </Ring>
             {motivationLine ? <Text style={[type.callout, styles.lockedMotivation]}>{motivationLine}</Text> : null}
+
+            {/* What's being held back, as real icons — tap for the full list. */}
+            {Platform.OS === 'ios' && (
+              <Pressable
+                onPress={() => setShowLockedApps(true)}
+                style={[styles.lockedIcons, !chromeVisible && styles.chromeHidden]}
+                pointerEvents={chromeVisible ? 'auto' : 'none'}
+                accessibilityLabel="Blocked apps"
+              >
+                <BlockedSelection compact />
+              </Pressable>
+            )}
           </View>
-        </View>
+        </Pressable>
+
+
+        {pickPrompt}
+
+        {Platform.OS === 'ios' && (
+          <BlockedListSheet
+            visible={showLockedApps}
+            running
+            onClose={() => setShowLockedApps(false)}
+          />
+        )}
+
+        <EssentialsSheet
+          visible={showEssentials}
+          enabled={essentials}
+          onClose={() => setShowEssentials(false)}
+        />
+
+        <LockedAppsSheet
+          visible={showLockedApps && Platform.OS !== 'ios'}
+          packages={blockedPackages}
+          onClose={() => setShowLockedApps(false)}
+          onPick={(app) => {
+            setShowLockedApps(false);
+            setUnlockTarget(app);
+          }}
+        />
+
+        <UnlockAppConfirm
+          app={unlockTarget}
+          tokenBalance={tokenBalance}
+          hardMode={hardMode}
+          onClose={() => setUnlockTarget(null)}
+          onSpend={() => {
+            setUnlockTarget(null);
+            onEndSession?.();
+            onSpendTokenToCancel?.();
+          }}
+          onOpenTokenInfo={onOpenTokenInfo}
+        />
 
         <CancelConfirm
           visible={showCancelConfirm}
+          remainingLabel={`${lcdLeft}:${lcdRight}`}
+          remainingUnits={showHours ? 'hours · minutes' : 'minutes · seconds'}
           tokenBalance={tokenBalance}
           onClose={() => setShowCancelConfirm(false)}
           onSpend={() => {
             setShowCancelConfirm(false);
-            setRunning(false);
-            setRemaining(0);
+            onEndSession?.();
             onSpendTokenToCancel?.();
           }}
           onOpenTokenInfo={
@@ -295,8 +522,19 @@ export default function TimerScreen({
   // ─────────────────────────────────────────────────────────────
   return (
     <Screen edges={['top']} bloom>
-      <View style={styles.content}>
-        <Text style={styles.title}>{label}</Text>
+      {/* Scrollable: the body sizes itself to the viewport via the flex spacer
+          below, but on shorter screens (or once the access cards are present)
+          it overflows, and a plain View left everything past the fold
+          unreachable. flexGrow rather than flex on the content container so
+          the spacer still distributes slack when there is room to spare. */}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.headerRow}>
+          <Text style={styles.sessionLabel}>{label.toUpperCase()}</Text>
+        </View>
         <Editorial
           lead={motivationLine ? '' : 'Set the length,'}
           emphasis={motivationLine || 'then commit to it.'}
@@ -328,14 +566,33 @@ export default function TimerScreen({
         <View style={styles.spacer} />
 
         {/* Slide to start */}
+        <GestureDetector gesture={slideGesture}>
         <View style={styles.slideTrack}>
-          <Text style={styles.slideLabel}>Slide to start</Text>
-          <GestureDetector gesture={slideGesture}>
-            <Animated.View style={[styles.slideThumb, slideAnimStyle]}>
-              <Icon name="chevronRight" size={22} color={palette.textInverse} strokeWidth={2.2} />
-            </Animated.View>
-          </GestureDetector>
+          {/* Charge trail: dim at the start, blazing at the thumb. */}
+          <Animated.View style={[styles.slideFill, slideFillStyle]} pointerEvents="none">
+            <LinearGradient
+              colors={[
+                'rgba(111,227,169,0.04)',
+                'rgba(111,227,169,0.22)',
+                'rgba(111,227,169,0.55)',
+                'rgba(150,255,205,0.95)',
+              ]}
+              locations={[0, 0.45, 0.82, 1]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+          <Animated.View style={[styles.slideGlow, slideGlowStyle]} pointerEvents="none" />
+          <Animated.Text style={[styles.slideLabel, slideLabelStyle]}>Slide to start</Animated.Text>
+          <Animated.View style={[styles.slideThumb, slideAnimStyle]}>
+            <Icon name="chevronRight" size={22} color={palette.textInverse} strokeWidth={2.2} />
+          </Animated.View>
         </View>
+        </GestureDetector>
+
+        {/* Right under the start control: what this session will hold back. */}
+        <BlockedAppsPill style={styles.blockedPill} />
 
         {onOpenEssentials && (
           <Card onPress={onOpenEssentials} style={styles.accessCard}>
@@ -366,7 +623,9 @@ export default function TimerScreen({
             </View>
           </Card>
         )}
-      </View>
+      </ScrollView>
+
+      {pickPrompt}
 
       {/* Select-apps sheet */}
       {showAppSelectModal &&
@@ -391,7 +650,7 @@ export default function TimerScreen({
 
           return (
             <Modal visible transparent animationType="slide" onRequestClose={handleCancelStart}>
-              <View style={styles.modalOverlay}>
+              <KeyboardAvoider style={styles.modalOverlay}>
                 <SafeAreaView style={styles.modalSheet} edges={['bottom']}>
                   <View style={styles.grabber} />
                   <View style={styles.modalHeader}>
@@ -414,7 +673,12 @@ export default function TimerScreen({
                     />
                   </View>
 
-                  <ScrollView contentContainerStyle={styles.modalScrollBody} showsVerticalScrollIndicator={false}>
+                  <ScrollView
+                    {...keyboardScrollProps}
+                    style={styles.modalScroll}
+                    contentContainerStyle={styles.modalScrollBody}
+                    showsVerticalScrollIndicator={false}
+                  >
                     {/* YouTube */}
                     {('youtube'.includes(q) || q === '') && (
                       <View style={styles.groupCard}>
@@ -424,7 +688,7 @@ export default function TimerScreen({
                             <Text style={type.bodyStrong}>YouTube</Text>
                             <Text style={[type.sub, styles.accessSub]}>Blocked completely</Text>
                           </View>
-                          <Switch value={ytBlocked} onValueChange={setYtBlocked} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
+                          <Toggle value={ytBlocked} onValueChange={setYtBlocked} />
                         </View>
                         <Divider inset={0} />
                         <View style={styles.subList}>
@@ -436,7 +700,7 @@ export default function TimerScreen({
                             <View key={o.label} style={styles.subRow}>
                               <FeatureTile name={o.icon} />
                               <Text style={styles.subLabel}>{o.label}</Text>
-                              <Switch value={o.value} onValueChange={o.set} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
+                              <Toggle value={o.value} onValueChange={o.set} />
                             </View>
                           ))}
                         </View>
@@ -454,7 +718,7 @@ export default function TimerScreen({
                             <Text style={type.bodyStrong}>Browser apps</Text>
                             <Text style={[type.sub, styles.accessSub]}>Blocked completely</Text>
                           </View>
-                          <Switch value={browserBlocked} onValueChange={setBrowserBlocked} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
+                          <Toggle value={browserBlocked} onValueChange={setBrowserBlocked} />
                         </View>
                         <Divider inset={0} />
                         <View style={styles.subList}>
@@ -465,7 +729,7 @@ export default function TimerScreen({
                             <View key={o.label} style={styles.subRow}>
                               <FeatureTile name={o.icon} />
                               <Text style={styles.subLabel}>{o.label}</Text>
-                              <Switch value={o.value} onValueChange={o.set} trackColor={SWITCH_TRACK} thumbColor={palette.text} />
+                              <Toggle value={o.value} onValueChange={o.set} />
                             </View>
                           ))}
                         </View>
@@ -484,11 +748,9 @@ export default function TimerScreen({
                             <Icon name={distractingCollapsed ? 'chevronRight' : 'chevronDown'} size={18} color={palette.textTertiary} />
                             <Text style={type.bodyStrong}>Distracting apps</Text>
                           </Pressable>
-                          <Switch
+                          <Toggle
                             value={isAnyDistractingChecked}
                             onValueChange={handleToggleDistractingMaster}
-                            trackColor={SWITCH_TRACK}
-                            thumbColor={palette.text}
                           />
                         </View>
                         {!distractingCollapsed && (
@@ -499,13 +761,11 @@ export default function TimerScreen({
                                 <View key={app.packageName} style={styles.appRow}>
                                   <AppGlyph name={app.name} packageName={app.packageName} size={34} />
                                   <Text style={styles.appLabel}>{app.name}</Text>
-                                  <Switch
+                                  <Toggle
                                     value={!!distractingAppsState[app.packageName]}
                                     onValueChange={(val) =>
                                       setDistractingAppsState((prev) => ({ ...prev, [app.packageName]: val }))
                                     }
-                                    trackColor={SWITCH_TRACK}
-                                    thumbColor={palette.text}
                                   />
                                 </View>
                               ))}
@@ -520,7 +780,7 @@ export default function TimerScreen({
                     <Button label="Start focus" icon="shield" variant="accent" onPress={handleConfirmAndStart} />
                   </View>
                 </SafeAreaView>
-              </View>
+              </KeyboardAvoider>
             </Modal>
           );
         })()}
@@ -529,14 +789,217 @@ export default function TimerScreen({
 }
 
 /** End-session-early confirm. A Bailout is the only way out of a locked timer. */
+/** The break-glass list, and only what the user left switched on. Kept to a
+ *  handful of categories on purpose: an essentials list long enough to browse
+ *  is just another feed. */
+function EssentialsSheet({
+  visible,
+  enabled,
+  onClose,
+}: {
+  visible: boolean;
+  enabled?: Record<EssentialKey, boolean>;
+  onClose: () => void;
+}) {
+  const live = ESSENTIALS.filter((e) => enabled?.[e.key]);
+  const [dialerOpen, setDialerOpen] = useState(false);
+  return (
+    <>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.lockedSheetScrim}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Dismiss" />
+        <View style={styles.lockedSheet}>
+          <View style={styles.lockedSheetHandle} />
+          <Text style={styles.lockedSheetTitle}>Emergency</Text>
+          <Text style={styles.lockedSheetSub}>
+            {live.length === 0
+              ? 'You have switched every essential off. Turn some back on in Settings → Essentials.'
+              : 'Always available. Never counted, never charged.'}
+          </Text>
+          {live.map((e, i) => (
+            <View key={e.key}>
+              {i > 0 && <Divider inset={54} />}
+              <Row
+                icon={e.mark}
+                iconColor={palette.accent}
+                title={e.name}
+                subtitle={e.note}
+                onPress={
+                  // `tel:` with no number is a no-op on iOS, so Call opens our
+                  // own keypad and dials from there instead of dead-ending.
+                  e.key === 'call'
+                    ? () => {
+                        onClose();
+                        // Straight into the real Phone app. Android takes
+                        // `tel:` with no number; on iOS `mobilephone:` is the
+                        // scheme the Phone app registers — it is undocumented,
+                        // so if the OS refuses it we fall back to our own
+                        // keypad rather than leaving the button dead.
+                        if (Platform.OS === 'android') {
+                          Linking.openURL('tel:').catch(() => {});
+                          return;
+                        }
+                        Linking.openURL('mobilephone:').catch(() => {
+                          setTimeout(() => setDialerOpen(true), 200);
+                        });
+                      }
+                    : e.url
+                      ? () => {
+                          onClose();
+                          Linking.openURL(e.url as string).catch(() => {});
+                        }
+                      : undefined
+                }
+              />
+            </View>
+          ))}
+        </View>
+      </View>
+    </Modal>
+    {/* Sibling, not nested: a Modal inside a Modal doesn't reliably present
+        on iOS. */}
+    <EmergencyDialer
+      visible={dialerOpen}
+      onClose={() => {
+        setDialerOpen(false);
+        onClose();
+      }}
+    />
+    </>
+  );
+}
+
+/** What's locked right now, as icons. A glance, not a settings screen — the
+ *  full blocked-apps editor is deliberately unreachable mid-session, since
+ *  editing the list would be a way around the block. */
+function LockedAppsSheet({
+  visible,
+  packages,
+  onClose,
+  onPick,
+}: {
+  visible: boolean;
+  packages: string[];
+  onClose: () => void;
+  onPick: (app: { name: string; packageName: string }) => void;
+}) {
+  const apps = packages.map((pkg) => ({
+    packageName: pkg,
+    name: DEFAULT_BLOCKED_APPS.find((a) => a.packageName === pkg)?.name ?? pkg,
+  }));
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.lockedSheetScrim}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Dismiss" />
+        <View style={styles.lockedSheet}>
+          <View style={styles.lockedSheetHandle} />
+          <Text style={styles.lockedSheetTitle}>Locked right now</Text>
+          {Platform.OS === 'ios' ? (
+            // The real selection, drawn by iOS. There is no per-app unlock on
+            // iOS — the shield covers the whole selection — so these are shown
+            // rather than offered as buttons.
+            <>
+              <Text style={styles.lockedSheetSub}>
+                Chosen in Apple's picker. Unlocking lifts the whole block, not one app.
+              </Text>
+              <BlockedSelection compact />
+            </>
+          ) : (
+            <>
+              <Text style={styles.lockedSheetSub}>
+                {apps.length === 0
+                  ? 'Nothing is on your blocked list yet.'
+                  : 'Tap one if you need it back before the timer ends.'}
+              </Text>
+              <View style={styles.lockedGrid}>
+                {apps.map((app) => (
+                  <Pressable key={app.packageName} style={styles.lockedGridItem} onPress={() => onPick(app)}>
+                    <AppGlyph name={app.name} packageName={app.packageName} size={54} />
+                    <Text style={styles.lockedGridLabel} numberOfLines={1}>{app.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/** Unlocking one app ends the whole session — there is no per-app escape, and
+ *  it costs a Bailout either way. Saying so plainly beats letting someone tap
+ *  through expecting a partial unlock. */
+function UnlockAppConfirm({
+  app,
+  tokenBalance,
+  hardMode,
+  onClose,
+  onSpend,
+  onOpenTokenInfo,
+}: {
+  app: { name: string; packageName: string } | null;
+  tokenBalance: number;
+  hardMode: boolean;
+  onClose: () => void;
+  onSpend: () => void;
+  onOpenTokenInfo?: () => void;
+}) {
+  if (!app) return null;
+  const noun = tokenBalance === 1 ? 'Bailout' : 'Bailouts';
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.confirmOverlay}>
+        <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
+          <View style={styles.unlockGlyphWrap}>
+            <AppGlyph name={app.name} packageName={app.packageName} size={56} />
+          </View>
+          <Text style={styles.confirmTitle}>Unlock {app.name}?</Text>
+          <Text style={styles.confirmBody}>
+            {hardMode
+              ? 'This session was started in hard mode. A Bailout will not end it — it runs to the end.'
+              : (
+                  <>
+                    This ends the whole session, not just this app, and costs{' '}
+                    <Text style={styles.confirmAccent}>1 Bailout</Text>.{'\n'}You have {tokenBalance} {noun}.
+                  </>
+                )}
+          </Text>
+          {!hardMode && (
+            <Button
+              label={tokenBalance <= 0 ? 'No Bailouts left' : `Use 1 Bailout and unlock`}
+              variant="danger"
+              disabled={tokenBalance <= 0}
+              onPress={onSpend}
+            />
+          )}
+          <Button label="Keep going" variant="ghost" onPress={onClose} />
+          {onOpenTokenInfo && tokenBalance <= 0 && (
+            <Pressable onPress={onOpenTokenInfo} hitSlop={8}>
+              <Text style={styles.confirmInfoLink}>What is a Bailout?</Text>
+            </Pressable>
+          )}
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+/** Two ways out and no third: wait, or spend. Leading with the time left makes
+ *  waiting the obvious default rather than burying it under the paid option. */
 function CancelConfirm({
   visible,
+  remainingLabel,
+  remainingUnits,
   tokenBalance,
   onClose,
   onSpend,
   onOpenTokenInfo,
 }: {
   visible: boolean;
+  remainingLabel?: string;
+  remainingUnits?: string;
   tokenBalance: number;
   onClose: () => void;
   onSpend: () => void;
@@ -547,18 +1010,24 @@ function CancelConfirm({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.confirmOverlay}>
         <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
-          <Text style={styles.confirmTitle}>Leave this timer?</Text>
+          <Text style={styles.confirmTitle}>End this session?</Text>
+          {!!remainingLabel && (
+            <View style={styles.confirmWaitWrap}>
+              <Text style={styles.confirmWaitValue}>{remainingLabel}</Text>
+              <Text style={styles.confirmWaitUnits}>{remainingUnits} left</Text>
+            </View>
+          )}
           <Text style={styles.confirmBody}>
-            A locked session doesn't stop for free. Walking out now uses{' '}
+            You can wait it out, or end it now for{' '}
             <Text style={styles.confirmAccent}>1 Bailout</Text>.{'\n'}You have {tokenBalance} {noun}.
           </Text>
+          <Button label="Wait it out" variant="accent" onPress={onClose} />
           <Button
-            label={tokenBalance <= 0 ? 'No Bailouts left' : 'Use 1 Bailout and exit'}
-            variant="danger"
+            label={tokenBalance <= 0 ? 'No Bailouts left' : 'End now · 1 Bailout'}
+            variant="ghost"
             disabled={tokenBalance <= 0}
             onPress={onSpend}
           />
-          <Button label="Keep going" variant="ghost" onPress={onClose} />
           {onOpenTokenInfo && (
             <Pressable onPress={onOpenTokenInfo} hitSlop={8}>
               <Text style={styles.confirmInfoLink}>What is a Bailout?</Text>
@@ -572,10 +1041,11 @@ function CancelConfirm({
 
 const styles = StyleSheet.create({
   shrink: { flex: 1, minWidth: 0 },
-  content: { flex: 1, paddingHorizontal: space.gutter, paddingBottom: space.tabClearance },
+  content: { flexGrow: 1, paddingHorizontal: space.gutter, paddingBottom: space.tabClearance },
 
-  title: { ...type.title1, marginTop: space.sm },
-  voice: { marginTop: space.xxs },
+  headerRow: { minHeight: 44, justifyContent: 'flex-end' },
+  sessionLabel: { ...type.overline, color: palette.textTertiary },
+  voice: { marginTop: space.base },
 
   hero: { alignItems: 'center', marginTop: space.xl },
   heroCap: { marginBottom: space.sm, color: palette.textTertiary },
@@ -598,6 +1068,28 @@ const styles = StyleSheet.create({
 
   spacer: { flex: 1, minHeight: space.xl },
 
+  slideFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: SLIDE_TRACK_H / 2,
+    overflow: 'hidden',
+  },
+
+  // A halo behind the thumb, deliberately wider than it so it never touches
+  // the thumb's own outline — the previous version was the same size and
+  // colour, which softened the edge and made the button read as smudged.
+  slideGlow: {
+    position: 'absolute',
+    left: SLIDE_PAD - 11,
+    width: SLIDE_BTN + 22,
+    height: SLIDE_BTN + 22,
+    top: (SLIDE_TRACK_H - (SLIDE_BTN + 22)) / 2,
+    borderRadius: (SLIDE_BTN + 22) / 2,
+    backgroundColor: 'rgba(111,227,169,0.22)',
+    zIndex: 0,
+  },
   slideTrack: {
     width: '100%',
     height: SLIDE_TRACK_H,
@@ -617,7 +1109,14 @@ const styles = StyleSheet.create({
     backgroundColor: palette.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 2,
+    zIndex: 3,
+    // Shadow only — no ring. The disc has to stay a plain circle; a border
+    // just reads as a second shape stacked on the button.
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
   },
   slideLabel: {
     position: 'absolute',
@@ -663,6 +1162,35 @@ const styles = StyleSheet.create({
   lockedMotivation: { color: palette.textSecondary, textAlign: 'center', maxWidth: 300 },
 
   // ── Cancel confirm ──
+  blockedPill: { marginTop: 14 },
+  chromeHidden: { opacity: 0 },
+  lockedIcons: { marginTop: 22, alignItems: 'center' },
+  lockedSheetScrim: { flex: 1, backgroundColor: palette.scrim, justifyContent: 'flex-end' },
+  lockedSheet: {
+    backgroundColor: palette.surfaceRaised,
+    borderTopLeftRadius: radius.xxl,
+    borderTopRightRadius: radius.xxl,
+    paddingHorizontal: space.lg,
+    paddingTop: space.sm,
+    paddingBottom: space.xxl,
+  },
+  lockedSheetHandle: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    marginBottom: space.md,
+  },
+  lockedSheetTitle: { ...type.title3, marginBottom: space.xxs },
+  lockedSheetSub: { ...type.sub, marginBottom: space.lg },
+  lockedGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
+  lockedGridItem: { width: '25%', alignItems: 'center', gap: space.xs },
+  lockedGridLabel: { ...type.caption, color: palette.textTertiary, maxWidth: '92%', textAlign: 'center' },
+  unlockGlyphWrap: { alignItems: 'center', marginBottom: space.md },
+  confirmWaitWrap: { alignItems: 'center', marginTop: space.sm, marginBottom: space.xs },
+  confirmWaitValue: { ...type.title1, color: palette.text },
+  confirmWaitUnits: { ...type.caption, color: palette.textTertiary },
   confirmOverlay: { flex: 1, backgroundColor: palette.scrim, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xxl },
   confirmBox: {
     width: '100%',
@@ -703,7 +1231,10 @@ const styles = StyleSheet.create({
     height: 46,
   },
   searchInput: { flex: 1, ...type.body, paddingVertical: 0 },
-  modalScrollBody: { paddingHorizontal: space.gutter, paddingBottom: space.huge, gap: space.base },
+  modalScroll: { flex: 1 },
+  // The CTA is absolutely positioned over the sheet and stands ~96pt tall, so
+  // the old 48pt reserve left the last apps hidden underneath it.
+  modalScrollBody: { paddingHorizontal: space.gutter, paddingBottom: 132, gap: space.base },
   groupCard: {
     backgroundColor: palette.surfaceRaised,
     borderRadius: radius.lg,
