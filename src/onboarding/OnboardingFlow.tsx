@@ -1,12 +1,13 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import WendOrb from '../components/WendOrb';
+import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import QuestionBlock from './QuestionBlock';
 import HistoryItem from './HistoryItem';
 import LoginScreen from '../main/LoginScreen';
-import { Question, QUESTIONS, resolvePrompt } from './questions';
+import { OnboardingMarkSlot } from './OnboardingMark';
+import { Question, QUESTIONS, resolvePrompt, stripEmphasis } from './questions';
 import { Account } from '../data/store';
 
 type Answer = { value: string; label: string };
@@ -14,6 +15,8 @@ type HistoryEntry = { id: string; prompt: string; label: string };
 
 export default function OnboardingFlow({
   questions = QUESTIONS,
+  progressFrom = 0,
+  progressTotal,
   initialAnswers = {},
   initialHistory = [],
   onComplete,
@@ -23,9 +26,16 @@ export default function OnboardingFlow({
    *  to run a subset (answers/history carry forward via initialAnswers/
    *  initialHistory if so). */
   questions?: Question[];
+  /** Where this run sits in the whole of onboarding, so the bar keeps climbing
+   *  across runs instead of resetting to zero after every permission ask. An
+   *  unbounded stack of questions is what makes a setup flow feel endless. */
+  progressFrom?: number;
+  progressTotal?: number;
   initialAnswers?: Record<string, Answer>;
   initialHistory?: HistoryEntry[];
-  onComplete: (answers: Record<string, Answer>) => void;
+  /** History comes back too, so a caller running the questions in several runs
+   *  can carry the answered stack into the next one instead of it resetting. */
+  onComplete: (answers: Record<string, Answer>, history?: HistoryEntry[]) => void;
   onAccountSignedIn?: (account: Account) => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
@@ -38,14 +48,29 @@ export default function OnboardingFlow({
 
   const rawQuestion = questions[stepIndex];
   const question = { ...rawQuestion, prompt: resolvePrompt(rawQuestion.prompt, answers) };
+  const progressDenom = Math.max(1, progressTotal ?? questions.length);
+  const progressTarget = (progressFrom + stepIndex) / progressDenom;
+  const progressFill = useSharedValue(progressTarget);
+
+  useEffect(() => {
+    progressFill.value = withTiming(progressTarget, {
+      duration: 560,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+    });
+  }, [progressTarget, progressFill]);
+
+  const progressFillStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: progressFill.value }],
+  }));
 
   const handleAnswer = (value: string, label: string) => {
     const nextAnswers = { ...answers, [question.id]: { value, label } };
     setAnswers(nextAnswers);
 
-    if (label) {
-      setHistory((prev) => [...prev, { id: question.id, prompt: question.prompt, label }]);
-    }
+    const nextHistory = label
+      ? [...history, { id: question.id, prompt: stripEmphasis(question.prompt), label }]
+      : history;
+    if (label) setHistory(nextHistory);
 
     // Login/signup disabled for now — "Yes, sign in" just continues like any
     // other answer instead of opening LoginScreen.
@@ -60,17 +85,15 @@ export default function OnboardingFlow({
     if (stepIndex < questions.length - 1) {
       setStepIndex(stepIndex + 1);
     } else {
-      setTimeout(() => onComplete(nextAnswers), 350);
+      setTimeout(() => onComplete(nextAnswers, nextHistory), 350);
     }
   };
 
   if (showLogin) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.mascotWrap}>
-          <WendOrb size={52} awake />
-        </View>
-        <View style={styles.loginArea}>
+        <OnboardingMarkSlot />
+        <KeyboardAvoider style={styles.loginArea}>
           <LoginScreen
             onSignedIn={(account) => {
               onAccountSignedIn?.(account);
@@ -78,35 +101,40 @@ export default function OnboardingFlow({
             }}
             onSkip={() => setShowLogin(false)}
           />
-        </View>
+        </KeyboardAvoider>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Slides up + fades in to continue the motion of the orb from the
-          last EducationScreen slide, which lifts off before this mounts. */}
-      <Animated.View entering={FadeInUp.duration(500)} style={styles.mascotWrap}>
-        <WendOrb size={40} awake />
-      </Animated.View>
+      <OnboardingMarkSlot />
 
-      <View style={styles.historyWrap}>
-        <ScrollView
-          ref={scrollRef}
-          style={styles.historyArea}
-          contentContainerStyle={styles.historyContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {history.map((h) => (
-            <HistoryItem key={h.id} prompt={h.prompt} label={h.label} />
-          ))}
-        </ScrollView>
+      <View style={styles.progressWrap}>
+        <View style={styles.progressTrack}>
+          <Animated.View style={[styles.progressFill, progressFillStyle]} />
+        </View>
       </View>
 
-      <View style={styles.currentArea}>
-        <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
-      </View>
+      <KeyboardAvoider>
+        <View style={styles.historyWrap}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.historyArea}
+            contentContainerStyle={styles.historyContent}
+            showsVerticalScrollIndicator={false}
+            {...keyboardScrollProps}
+          >
+            {history.map((h) => (
+              <HistoryItem key={h.id} prompt={h.prompt} label={h.label} />
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.currentArea}>
+          <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
+        </View>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }
@@ -116,30 +144,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  mascotWrap: {
-    alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 8,
+  progressWrap: { paddingHorizontal: 28, marginTop: 4 },
+  progressTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 3,
+    borderRadius: 2,
+    width: '100%',
+    backgroundColor: 'rgba(111,227,169,0.85)',
+    transformOrigin: 'left center',
   },
   // Fixed pixel height + explicit clipping — a percentage maxHeight here
   // silently fails to clip on React Native Web (it needs every ancestor up
   // the tree to have a definite, non-auto height to resolve against), which
   // let old answered questions bleed straight through into the current one.
+  //
+  // The height is definite rather than a maxHeight for a second reason: the
+  // band has to reserve its full size even when empty, or a short history
+  // shrink-wraps the ScrollView and the `flex-end` below has no spare room to
+  // push against. Reserving it also stops the current question sliding down
+  // the screen as the first few answers land.
   historyWrap: {
-    maxHeight: 130,
+    marginTop: 8,
+    height: 130,
     overflow: 'hidden',
   },
   historyArea: {
-    maxHeight: 130,
+    height: 130,
   },
+  // Bottom-anchored: the newest answer sits at the foot of the band, right
+  // above the current question, and older ones stack upward out of the top.
   historyContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
     paddingHorizontal: 28,
     paddingTop: 8,
     paddingBottom: 4,
   },
   currentArea: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'stretch',
     justifyContent: 'center',
     paddingHorizontal: 28,
     paddingTop: 24,

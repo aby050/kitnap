@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions, Modal
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { GateReflection } from '../data/store';
 import { palette, type as T, space, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
 import {
@@ -30,7 +31,7 @@ import {
 } from '../data/progress';
 import Medal from './profile/Medal';
 import {
-  GemHero,
+  CalendarHeatmap,
   IntensityBars,
   Sparkline,
   SegmentBar,
@@ -40,6 +41,8 @@ import {
 
 const { width } = Dimensions.get('window');
 const CONTENT_W = width - space.gutter * 2;
+/** Ten weeks fits the card and is long enough for streaks to read as shapes. */
+const HEATMAP_WEEKS = 10;
 
 /** The signature headline figure — big tabular numerals with small dim units,
  *  the way Opal renders "3h 37m". Split so the unit contrast does the work. */
@@ -67,18 +70,28 @@ function StatCol({
   value,
   label,
   color,
+  onPress,
 }: {
   icon: React.ReactNode;
   value: string;
   label: string;
   color: string;
+  /** Makes the column tappable; without it the column is inert as before. */
+  onPress?: () => void;
 }) {
+  const Container: React.ComponentType<any> = onPress ? Pressable : View;
   return (
-    <View style={styles.statCol}>
+    <Container
+      style={styles.statCol}
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? `${label}, ${value}. Opens awards.` : undefined}
+    >
       <View style={[styles.statIcon, { backgroundColor: color + '22' }]}>{icon}</View>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+      {!!onPress && <Icon name="chevronRight" size={11} color={palette.textQuaternary} strokeWidth={2} />}
+    </Container>
   );
 }
 
@@ -125,6 +138,7 @@ export default function ProfileScreen({
   onOpenRealUsage,
   onOpenWeeklyInsight,
   progress,
+  gateReflections = [],
   username,
   firstOpenDate,
   goalLine,
@@ -137,6 +151,9 @@ export default function ProfileScreen({
   onOpenRealUsage?: () => void;
   onOpenWeeklyInsight?: () => void;
   progress: ProgressState;
+  /** Everything typed at the gate. Rendered here because Profile is the
+   *  personal record — this used to be the Reflect tab's "Your words". */
+  gateReflections?: GateReflection[];
   username: string;
   firstOpenDate: string;
   goalLine?: string;
@@ -168,6 +185,29 @@ export default function ProfileScreen({
   const earnedDefs = progress.achievements
     .map((e) => ({ ...e, def: getAchievement(e.id) }))
     .filter((x): x is typeof x & { def: AchievementDef } => !!x.def);
+  // The hero badge: your highest award, not simply the last one in the list.
+  // ACHIEVEMENTS is grouped by category, so array order would rank "First
+  // Month" above a 100-day streak. Rank by medal tier instead, and break ties
+  // on whichever was unlocked most recently.
+  const heroAward = (() => {
+    const TIER: Record<AchievementDef['medal'], number> = {
+      mint: 1,
+      flame: 2,
+      steel: 3,
+      gold: 4,
+      violet: 5,
+    };
+    const earnedAt = new Map(progress.achievements.map((a) => [a.id, a.earnedAt]));
+    const earned = ACHIEVEMENTS.filter((a) => earnedIds.has(a.id));
+    if (earned.length === 0) return { def: ACHIEVEMENTS[0], locked: true };
+    const best = earned.reduce((top, a) => {
+      const dt = TIER[a.medal] - TIER[top.medal];
+      if (dt !== 0) return dt > 0 ? a : top;
+      return (earnedAt.get(a.id) ?? '') > (earnedAt.get(top.id) ?? '') ? a : top;
+    }, earned[0]);
+    return { def: best, locked: false };
+  })();
+
   const monthAchievements = earnedThisMonth(progress, windows.monthStart);
   const avgDailyAll = all.focusMinutes / Math.max(1, joinedDays);
 
@@ -184,6 +224,21 @@ export default function ProfileScreen({
   }, [progress, range, firstOpenDate, today, joinedDays]);
 
   const barData = series.map((d) => ({ value: d.focusMinutes, flag: d.hardUnlocks > 0 }));
+
+  // Its own window: the heatmap earns its space by showing more than the bars
+  // can, so it always looks back 10 weeks regardless of the selected range.
+  const heatData = useMemo(() => {
+    const start = addDays(today, -(HEATMAP_WEEKS * 7 - 1));
+    const from = start < dateKey(new Date(firstOpenDate)) ? dateKey(new Date(firstOpenDate)) : start;
+    return dailySeries(progress, from > today ? today : from, today).map((d) => ({
+      value: d.focusMinutes,
+      flag: d.hardUnlocks > 0,
+      date: d.date,
+      today: d.date === today,
+    }));
+  }, [progress, firstOpenDate, today]);
+
+  const heatActiveDays = heatData.filter((d) => d.value > 0).length;
   const axisMarks = series
     .map((d, i) => ({ d, i }))
     .filter(({ i }) => i === 0 || i === series.length - 1 || i === Math.floor(series.length / 2));
@@ -229,16 +284,22 @@ export default function ProfileScreen({
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
             <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.headerWordmark}>Wend</Text>
+          <Text style={styles.headerWordmark}>Byre</Text>
           <Pressable onPress={onOpenSettings} style={styles.circleBtn} hitSlop={10}>
             <Icon name="settings" size={19} color={palette.text} strokeWidth={1.8} />
           </Pressable>
         </View>
 
+        <LinearGradient
+          colors={['#04140D', 'rgba(4,20,13,0.85)', 'rgba(0,0,0,0)']}
+          locations={[0, 0.45, 1]}
+          style={styles.topFade}
+          pointerEvents="none"
+        />
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           {/* HERO — the focus crystal + today's headline figure */}
           <Animated.View entering={FadeInDown.duration(420)} style={styles.hero}>
-            <GemHero size={196} />
+            <Medal def={heroAward.def} locked={heroAward.locked} size={196} id="hero" />
             <Text style={styles.username} numberOfLines={1}>{username}</Text>
             <HeroDuration minutes={todayLog.focusMinutes} />
             <Text style={styles.heroCaption}>FOCUS TODAY</Text>
@@ -251,6 +312,7 @@ export default function ProfileScreen({
               value={String(progress.currentStreak)}
               label="DAY STREAK"
               color="#E9AE62"
+              onPress={onOpenMilestones}
             />
             <View style={styles.statDivider} />
             <StatCol
@@ -297,8 +359,41 @@ export default function ProfileScreen({
             </View>
           </Animated.View>
 
+          {/* CALENDAR HEATMAP — the long view the bars cannot give */}
+          {heatData.length > 7 && (
+            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={styles.chartCard}>
+              <View style={styles.chartHead}>
+                <View>
+                  <Text style={styles.metricEyebrow}>LAST 10 WEEKS</Text>
+                  <Text style={styles.chartHeadValue}>{heatActiveDays} active days</Text>
+                  <Text style={[styles.chartHeadSub, styles.chartHeadSentence]}>Darker means more focus</Text>
+                </View>
+                <View style={styles.legend}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: palette.accent }]} />
+                    <Text style={styles.legendText}>Focus</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendDot, { backgroundColor: palette.danger }]} />
+                    <Text style={styles.legendText}>Slip</Text>
+                  </View>
+                </View>
+              </View>
+              <CalendarHeatmap
+                data={heatData}
+                width={CONTENT_W - space.lg * 2}
+                style={styles.chart}
+              />
+            </Animated.View>
+          )}
+
           {/* RANGE PILLS */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.rangeRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.railBleed}
+            contentContainerStyle={styles.rangeRow}
+          >
             {(['week', 'month', '3mo', '6mo', '9mo', '12mo', 'all'] as const).map((r) => (
               <Pressable key={r} onPress={() => setRange(r)} style={[styles.rangePill, range === r && styles.rangePillActive]}>
                 <Text style={[styles.rangeText, range === r && styles.rangeTextActive]}>
@@ -337,12 +432,16 @@ export default function ProfileScreen({
                   <Text style={styles.streakSub}>Streak paused. Your best is still {progress.bestStreak} days — pick it back up today.</Text>
                 ) : (
                   <Text style={styles.streakSub}>
-                    Next spark: {streakGoal.next} days · {Math.max(0, streakGoal.next - progress.currentStreak)} to go
+                    Next milestone: {streakGoal.next} days · {Math.max(0, streakGoal.next - progress.currentStreak)} to go
                   </Text>
                 )}
               </View>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.milestoneRow}>
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.milestoneRow}
+              >
               {STREAK_MILESTONES.map((m) => {
                 const hit = Math.max(progress.currentStreak, progress.bestStreak) >= m;
                 return (
@@ -397,6 +496,7 @@ export default function ProfileScreen({
               <DetailRow label="Focus this block" value={formatDuration(longRange.current.focusMinutes)} />
               <DetailRow label="Distractions blocked" value={String(longRange.current.distractionsBlocked)} />
               <DetailRow label="Hard unlocks" value={String(longRange.current.hardUnlocks)} />
+              <DetailRow label="Focus sessions" value={String(longRange.current.lockSessions)} />
             </View>
           )}
 
@@ -413,6 +513,32 @@ export default function ProfileScreen({
           {onOpenCalendar && <LinkRow title="Calendar" sub="Every day, by colour" icon="calendar" onPress={onOpenCalendar} />}
           {onOpenProgressPhotos && <LinkRow title="Progress photos" sub="Your weekly check-ins" icon="camera" onPress={onOpenProgressPhotos} />}
 
+          {/* YOUR WORDS — the only thing that read gateReflections, carried over
+              when the Reflect tab was removed. Without it this data would still
+              be collected at the gate and never shown back. */}
+          {gateReflections.length > 0 && (
+            <>
+              <View style={styles.sectionHead}>
+                <Text style={styles.sectionTitle}>Your words</Text>
+                <Text style={styles.sectionLink}>{gateReflections.length}</Text>
+              </View>
+              {[...gateReflections].reverse().slice(0, 8).map((w, i) => (
+                <View key={`${w.date}-${i}`} style={styles.wordCard}>
+                  <Text style={styles.wordDate}>{formatPrettyDate(w.date)}</Text>
+                  <Text style={styles.wordText}>“{w.text}”</Text>
+                  <Text
+                    style={[
+                      styles.wordOutcome,
+                      { color: w.unlocked ? palette.textTertiary : palette.accent },
+                    ]}
+                  >
+                    {w.unlocked ? 'You went in anyway.' : 'You backed out. That one counted.'}
+                  </Text>
+                </View>
+              ))}
+            </>
+          )}
+
           {/* AWARDS RAIL */}
           <Pressable onPress={onOpenMilestones} style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>Awards</Text>
@@ -423,13 +549,18 @@ export default function ProfileScreen({
               <Icon name="chevronRight" size={14} color={palette.textQuaternary} strokeWidth={2} />
             </View>
           </Pressable>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.awardRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.railBleed}
+            contentContainerStyle={styles.awardRow}
+          >
             {ACHIEVEMENTS.slice(0, 8).map((def) => {
               const earned = earnedIds.has(def.id);
               const stamp = progress.achievements.find((a) => a.id === def.id);
               return (
                 <Pressable key={def.id} onPress={() => setShareTarget(def)} style={styles.awardCol}>
-                  <Medal medal={def.medal} locked={!earned} id={def.id} />
+                  <Medal medal={def.medal} def={def} locked={!earned} id={def.id} />
                   <Text style={styles.awardName} numberOfLines={1}>{def.name}</Text>
                   <Text style={styles.awardSub} numberOfLines={2}>
                     {earned && stamp ? formatPrettyDate(stamp.earnedAt) : def.statLabel}
@@ -447,8 +578,8 @@ export default function ProfileScreen({
             {shareTarget && (
               <>
                 <LinearGradient colors={['#12241A', '#0B0B0D']} style={StyleSheet.absoluteFill} />
-                <Text style={styles.shareBrand}>Wend</Text>
-                <Medal medal={shareTarget.medal} size={88} locked={!earnedIds.has(shareTarget.id)} id={`share-${shareTarget.id}`} />
+                <Text style={styles.shareBrand}>Byre</Text>
+                <Medal medal={shareTarget.medal} def={shareTarget} size={88} locked={!earnedIds.has(shareTarget.id)} id={`share-${shareTarget.id}`} />
                 <Text style={styles.shareName}>{shareTarget.name}</Text>
                 <Text style={styles.shareDesc}>{shareTarget.description}</Text>
                 {earnedIds.has(shareTarget.id) ? (
@@ -494,7 +625,7 @@ function LinkRow({ title, sub, icon, onPress }: { title: string; sub: string; ic
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.base },
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.sm },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.md },
   headerWordmark: { color: palette.text, fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
   circleBtn: {
     width: 40,
@@ -504,12 +635,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scroll: { paddingHorizontal: space.gutter, paddingBottom: 120 },
+  scroll: { paddingHorizontal: space.gutter, paddingTop: space.sm, paddingBottom: 120 },
+  /** Sits over the top of the scroll so content fades out under the header
+   *  instead of being cut at a hard, invisible edge. */
+  topFade: { position: 'absolute', top: 0, left: 0, right: 0, height: 28, zIndex: 2 },
 
-  hero: { alignItems: 'center', marginTop: space.xs },
+  hero: { alignItems: 'center', marginTop: space.xl },
   username: { color: palette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, marginTop: space.xs },
   heroFigure: { flexDirection: 'row', alignItems: 'flex-start', marginTop: space.sm },
-  heroNum: { fontFamily: T.hero.fontFamily, fontSize: 74, lineHeight: 82, fontWeight: '200', letterSpacing: -3.5, fontVariant: ['tabular-nums'] },
+  heroNum: { fontFamily: T.hero.fontFamily, fontSize: 74, lineHeight: 94, fontWeight: '200', letterSpacing: -3.5, fontVariant: ['tabular-nums'] },
   heroUnit: { color: palette.textTertiary, fontSize: 20, fontWeight: '500', marginTop: 14, marginRight: 6, marginLeft: 2 },
   heroCaption: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 1.6, marginTop: 2 },
 
@@ -540,6 +674,7 @@ const styles = StyleSheet.create({
   chartHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space.base },
   chartHeadValue: { color: palette.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 4 },
   chartHeadSub: { color: palette.textTertiary, fontSize: 12, marginTop: 1, textTransform: 'capitalize' },
+  chartHeadSentence: { textTransform: 'none' },
   legend: { gap: 6, alignItems: 'flex-end' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
@@ -548,7 +683,15 @@ const styles = StyleSheet.create({
   chartAxis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space.sm },
   axisLabel: { color: palette.textTertiary, fontSize: 11, fontWeight: '600' },
 
-  rangeRow: { flexDirection: 'row', gap: space.sm, marginTop: space.base, paddingRight: space.lg },
+  /** Lets a horizontal rail run to the screen edge from inside a gutter-padded
+   *  scroll, so the last item scrolls away instead of butting against padding. */
+  railBleed: { marginHorizontal: -space.gutter },
+  rangeRow: {
+    flexDirection: 'row',
+    gap: space.sm,
+    marginTop: space.lg,
+    paddingHorizontal: space.gutter,
+  },
   rangePill: {
     paddingVertical: 9,
     paddingHorizontal: 18,
@@ -631,7 +774,16 @@ const styles = StyleSheet.create({
   sectionTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
   sectionLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   sectionLink: { color: palette.accent, fontSize: 14, fontWeight: '700' },
-  awardRow: { gap: space.base, paddingRight: space.md, marginTop: space.base },
+  wordCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    padding: 16,
+    marginBottom: 10,
+  },
+  wordDate: { color: palette.textTertiary, fontSize: 11, fontWeight: '600', letterSpacing: 0.3 },
+  wordText: { color: palette.text, fontSize: 15.5, lineHeight: 22, marginTop: 8 },
+  wordOutcome: { fontSize: 12.5, fontWeight: '600', marginTop: 8 },
+  awardRow: { gap: space.base, marginTop: space.base, paddingHorizontal: space.gutter },
   awardCol: { width: 96, alignItems: 'center' },
   awardName: { color: palette.text, fontSize: 13, fontWeight: '700', marginTop: space.sm, textAlign: 'center' },
   awardSub: { color: palette.textTertiary, fontSize: 11.5, marginTop: 3, textAlign: 'center' },

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { Schedule } from '../data/store';
-import { palette } from '../design/tokens';
+import { fieldStyle, palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 /** Rules were display-only before this — this is where you actually add or
@@ -65,45 +66,47 @@ export default function ScheduleEditorScreen({
           <View style={{ width: 40 }} />
         </View>
 
-        <View style={styles.form}>
-          <TextInput
-            value={draftName}
-            onChangeText={setDraftName}
-            placeholder="Name — Work Time, Sleep, Family Time…"
-            placeholderTextColor={palette.textTertiary}
-            style={styles.input}
-          />
-          <View style={styles.timeRow}>
+        <KeyboardAvoider>
+          <View style={styles.form}>
             <TextInput
-              value={draftStart}
-              onChangeText={setDraftStart}
-              placeholder="Start — 09:00"
+              value={draftName}
+              onChangeText={setDraftName}
+              placeholder="Name — Work Time, Sleep, Family Time…"
               placeholderTextColor={palette.textTertiary}
-              style={[styles.input, styles.timeInput]}
+              style={styles.input}
             />
-            <TextInput
-              value={draftEnd}
-              onChangeText={setDraftEnd}
-              placeholder="End — 17:00"
-              placeholderTextColor={palette.textTertiary}
-              style={[styles.input, styles.timeInput]}
-            />
-          </View>
-          <View style={styles.daysRow}>
-            {['Every day', 'Mon–Fri', 'Weekends'].map((d) => (
-              <Pressable
-                key={d}
-                onPress={() => setDraftDays(d)}
-                style={[styles.dayChip, draftDays === d && styles.dayChipActive]}
-              >
-                <Text style={[styles.dayChipText, draftDays === d && styles.dayChipTextActive]}>{d}</Text>
-              </Pressable>
-            ))}
-          </View>
+            <View style={styles.timeRow}>
+              <TextInput
+                value={draftStart}
+                onChangeText={setDraftStart}
+                placeholder="Start — 09:00"
+                placeholderTextColor={palette.textTertiary}
+                style={[styles.input, styles.timeInput]}
+              />
+              <TextInput
+                value={draftEnd}
+                onChangeText={setDraftEnd}
+                placeholder="End — 17:00"
+                placeholderTextColor={palette.textTertiary}
+                style={[styles.input, styles.timeInput]}
+              />
+            </View>
+            <View style={styles.daysRow}>
+              {['Every day', 'Mon–Fri', 'Weekends'].map((d) => (
+                <Pressable
+                  key={d}
+                  onPress={() => setDraftDays(d)}
+                  style={[styles.dayChip, draftDays === d && styles.dayChipActive]}
+                >
+                  <Text style={[styles.dayChipText, draftDays === d && styles.dayChipTextActive]}>{d}</Text>
+                </Pressable>
+              ))}
+            </View>
 
-          <View style={{ height: 10 }} />
-          <GradientButton label="Save rule" onPress={save} />
-        </View>
+            <View style={{ height: 10 }} />
+            <GradientButton label="Save rule" onPress={save} />
+          </View>
+        </KeyboardAvoider>
       </SafeAreaView>
     );
   }
@@ -120,7 +123,11 @@ export default function ScheduleEditorScreen({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        {...keyboardScrollProps}
+      >
         {schedules.length === 0 && (
           <Text style={styles.empty}>No recurring blocks yet. Add one for the hours that matter most.</Text>
         )}
@@ -144,7 +151,7 @@ export default function ScheduleEditorScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,
@@ -179,12 +186,7 @@ const styles = StyleSheet.create({
   removeIcon: { color: palette.textSecondary, fontSize: 13 },
   form: { paddingHorizontal: 18, paddingTop: 20, gap: 12 },
   input: {
-    paddingVertical: 15,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    backgroundColor: palette.glass,
-    color: palette.text,
-    fontSize: 15.5,
+    ...fieldStyle,
   },
   timeRow: { flexDirection: 'row', gap: 10 },
   timeInput: { flex: 1 },

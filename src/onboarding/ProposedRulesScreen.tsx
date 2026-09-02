@@ -40,7 +40,7 @@ const RULES: Rule[] = [
     name: 'Work Time',
     action: 'Block',
     tint: ['#fff4d4', '#e2c67e'], // cream-yellow gradient
-    description: 'Automatically restricts distracting social, game, and video apps during core work hours to keep you focused on your career and outputs.',
+    description: 'Holds back social, games and video during your working hours, so the day does not disappear into your phone.',
     textColor: '#2e250f',
   },
   {
@@ -49,7 +49,7 @@ const RULES: Rule[] = [
     name: 'Sleep Mode',
     action: 'Block',
     tint: ['#e4ccff', '#a484e5'], // light purple gradient
-    description: 'Blocks scrolling feeds and late-night apps before bed to improve sleep hygiene, ensuring you rest deeply and feel recovered.',
+    description: 'Puts the feeds away before bed, so the last hour of your day is yours.',
     textColor: '#2c144d',
   },
   {

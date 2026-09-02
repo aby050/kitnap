@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { THEMES, ThemeKey } from '../data/themes';
 import Icon from '../ui/Icon';
-import { palette } from '../design/tokens';
+import { palette, space } from '../design/tokens';
+import Toggle from '../design/Toggle';
 
 /** What the shield actually shows. Themes stay swappable independent of
  *  onboarding — changing your mind later shouldn't mean redoing setup. */
@@ -104,11 +105,9 @@ function ToggleRow({
         <Text style={styles.toggleTitle}>{title}</Text>
         <Text style={styles.toggleDesc}>{desc}</Text>
       </View>
-      <Switch
+      <Toggle
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
-        thumbColor="#fff"
       />
     </View>
   );
@@ -116,7 +115,7 @@ function ToggleRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,

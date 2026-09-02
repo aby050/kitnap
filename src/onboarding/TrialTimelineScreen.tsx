@@ -9,7 +9,7 @@ import Icon, { IconName } from '../ui/Icon';
 const STEPS: { icon: IconName; title: string; body: string; done: boolean }[] = [
   {
     icon: 'check',
-    title: 'Begin your focus journey',
+    title: 'Start your first block',
     body: "You're on your way to turning intention into a daily habit.",
     done: true,
   },

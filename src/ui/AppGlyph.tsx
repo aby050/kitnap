@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image, ImageSourcePropType, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { palette, radius } from '../design/tokens';
+import BrandGlyph, { hasBrandGlyph } from './BrandGlyph';
 
 /**
  * A neutral, dignified stand-in for an app's icon.
@@ -10,10 +11,11 @@ import { palette, radius } from '../design/tokens';
  * Facebook, Instagram, TikTok, X and Reddit as coloured circles with a letter.
  * That looks amateur and is legally dicey (redistributing a mangled trademark).
  *
- * Instead we show a monogram on a tile whose tint is derived deterministically
- * from the package name, so the same app is always the same colour and a grid
- * of them reads as varied without pretending to be the real brand marks. If a
- * real icon URI ever becomes available, pass it as `uri` and it wins.
+ * Where the OS will hand us the real icon we use it — Android returns launcher
+ * icons as data URIs from `getInstalledApps()`. iOS never does, so there we
+ * fall back to a monogram on a tile whose tint is derived deterministically
+ * from the package name: the same app is always the same colour, and a grid of
+ * them reads as varied without pretending to be the real brand marks.
  */
 
 /** Six low-saturation tints pulled toward the app's mint/black world so the
@@ -44,17 +46,54 @@ function monogram(name: string): string {
 export default function AppGlyph({
   name,
   packageName,
+  uri,
+  source,
   size = 46,
   style,
 }: {
   name: string;
   /** Seeds the tint; falls back to `name` so it still varies without one. */
   packageName?: string;
+  /** The real launcher icon, when the platform gives us one (Android). */
+  uri?: string;
+  /** A bundled icon asset, for the curated list where no OS icon exists. */
+  source?: ImageSourcePropType;
   size?: number;
   style?: StyleProp<ViewStyle>;
 }) {
   const [bg, fg] = TILE_TINTS[hashIndex(packageName || name, TILE_TINTS.length)];
   const label = monogram(name);
+
+  const image: ImageSourcePropType | null = uri ? { uri } : (source ?? null);
+
+  // No OS icon and no bundled asset — fall back to a drawn brand mark before
+  // resorting to initials, so a curated list reads as apps rather than "IN/SN".
+  if (!image && hasBrandGlyph(packageName)) {
+    return (
+      <View style={[{ width: size, height: size }, style]}>
+        <BrandGlyph packageName={packageName} size={size} />
+      </View>
+    );
+  }
+
+  if (image) {
+    return (
+      <View
+        style={[
+          { width: size, height: size, borderRadius: size * 0.28, overflow: 'hidden' },
+          style,
+        ]}
+      >
+        <Image
+          source={image}
+          style={{ width: size, height: size }}
+          resizeMode="cover"
+          accessibilityLabel={name}
+        />
+      </View>
+    );
+  }
+
   return (
     <View
       style={[

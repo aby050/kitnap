@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { palette } from '../design/tokens';
+import { palette, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 
 /** What you actually see while the Gate is running. Not every family suits
@@ -70,7 +70,7 @@ export default function WaitingRoomScreen({ onBack }: { onBack: () => void }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,

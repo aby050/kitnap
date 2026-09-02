@@ -5,16 +5,16 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { palette } from '../design/tokens';
+import { control, palette, radius } from '../design/tokens';
 import { AppLimit } from '../data/store';
 import Icon from '../ui/Icon';
+import Toggle from '../design/Toggle';
 
 // Default distraction apps we can choose to add limits to
 const AVAILABLE_APPS = [
@@ -263,8 +263,10 @@ export default function BlocksScreen({
             </Pressable>
           ))}
 
-          {/* Suggested limits if not already active */}
-          {suggestions.map((sug) => {
+          {/* Suggested limits if not already active. Android only: these are
+              real package names it can act on, whereas on iOS they would be
+              seven names of apps we can neither see nor limit. */}
+          {(Platform.OS === 'android' ? suggestions : []).map((sug) => {
             const isActive = getLimitFor(sug.packageName);
             if (isActive) return null;
             return (
@@ -340,7 +342,7 @@ export default function BlocksScreen({
           <Pressable style={styles.dropdownOverlay} onPress={() => setShowAddList(false)}>
             <View style={styles.dropdownContainer}>
               <Text style={styles.dropdownTitle}>Choose an App</Text>
-              {AVAILABLE_APPS.map((app) => {
+              {(Platform.OS === 'android' ? AVAILABLE_APPS : []).map((app) => {
                 const limitExists = getLimitFor(app.packageName);
                 return (
                   <Pressable
@@ -516,11 +518,9 @@ function AppLimitModal({
                   You cannot use the app once the limit is reached
                 </Text>
               </View>
-              <Switch
+              <Toggle
                 value={strictMode}
                 onValueChange={setStrictMode}
-                trackColor={{ true: palette.accent, false: '#2C2C2E' }}
-                thumbColor="#ffffff"
               />
             </View>
 
@@ -937,8 +937,8 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     backgroundColor: '#ffffff',
-    height: 54,
-    borderRadius: 27,
+    height: control.lg,
+    borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

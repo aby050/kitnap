@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 /**
  * The gate draws from five families so the sequence is never the same twice —
  * fixed questions get memorised and the friction evaporates within ~2 weeks.
@@ -5,7 +6,7 @@
  * carry the weight and the rest are pacing.
  */
 import { IconName } from '../ui/Icon';
-import { ActivityKind } from '../shield/activity/types';
+import { ActivityKind, ACTIVITY_KINDS } from '../shield/activity/types';
 
 export type Family = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
@@ -164,8 +165,8 @@ export const FAMILY_F_QUIZ: Extract<GateQuestion, { kind: 'quiz' }>[] = [
 
 /** Family G — Hard unlock. Real movement with the camera up, counted
  *  automatically where the device can manage it and pace-checked where it
- *  can't. Never offered to anyone who flagged a physical limitation during
- *  onboarding — see isHealthLimited() and pickChallenge().
+ *  can't. Specific movements are skipped when the onboarding health answer
+ *  names that body part — see challengeFilterFromHealth() and pickChallenge().
  *
  *  The `reps` here are only cold-start defaults; the live number comes from
  *  computeRepTarget() via pickChallenge's `repsFor`. */
@@ -177,37 +178,111 @@ export const FAMILY_G: GateQuestion[] = [
 
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
 
-/**
- * healthLimited comes straight from the onboarding health-limitation answer:
- * if the user flagged anything, they always get the quiz/math/breathing
- * rotation, never a physical activity challenge. "Behavioral interruption,
- * not physical punishment" — never force movement on someone who told us
- * it might not be safe for them.
- */
-/**
- * Reads the free-text onboarding health-limitation answer and decides whether
- * to keep physical challenges away from this person.
- *
- * The question is optional and free-text, so people answer it every way you can
- * imagine: blank, "no", "none", "-", or an actual injury. Anything that isn't
- * clearly a blank or a refusal is treated as a limitation. That asymmetry is
- * deliberate — the cost of a false positive is a quiz instead of squats; the
- * cost of a false negative is telling someone with a bad knee to do squats.
- */
-export function isHealthLimited(raw: string | undefined | null): boolean {
-  if (!raw) return false;
-  const v = raw.trim().toLowerCase();
-  if (v.length === 0) return false;
-  return !NOT_LIMITED.has(v);
-}
-
 const NOT_LIMITED = new Set([
   'no', 'none', 'nope', 'nil', 'nothing', 'n/a', 'na', '-', '--', 'no.', 'none.',
   'not really', 'nothing really', 'no issues', 'no problems', 'all good', 'all fine',
   'im fine', "i'm fine", 'fine', 'healthy', 'no limitations', 'no limits',
 ]);
 
-function pickQuizChallenge(): GateQuestion {  const roll = Math.random();
+function hasToken(text: string, token: string): boolean {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`, 'i').test(text);
+}
+
+function hasAny(text: string, tokens: string[]): boolean {
+  return tokens.some((t) => hasToken(text, t));
+}
+
+export type ChallengeFilter = {
+  /** True when every camera/movement challenge is unsafe. */
+  skipPhysical: boolean;
+  banned: Set<ActivityKind>;
+};
+
+/**
+ * Maps the free-text onboarding health answer onto specific movements.
+ * A bad knee skips squats and jumping jacks but can still get push-ups;
+ * a wrist injury skips push-ups but can still squat. Unspecific illness or
+ * injury skips all physical work and falls back to a quiz/math/breathing round.
+ */
+export function challengeFilterFromHealth(raw: string | undefined | null): ChallengeFilter {
+  const empty = { skipPhysical: false, banned: new Set<ActivityKind>() };
+  if (!raw) return empty;
+  const v = raw.trim().toLowerCase();
+  if (v.length === 0 || NOT_LIMITED.has(v)) return empty;
+
+  const wholeBody = [
+    'wheelchair', 'paralysis', 'paralysed', 'paralyzed', 'paraplegic', 'quadriplegic',
+    'immobile', "can't walk", 'cannot walk', 'crutches', 'walker',
+    'fracture', 'broken bone', 'surgery', 'post-op', 'operation',
+    'heart', 'cardiac', 'asthma', 'copd', 'pregnant', 'pregnancy',
+    'concussion', 'vertigo', 'seizure', 'epilepsy', 'fever', 'flu', 'covid',
+    'pneumonia', 'chemo', 'cancer', 'fibromyalgia', 'multiple sclerosis',
+    'stroke', 'unwell', 'disabled', 'disability', 'chronic illness',
+  ];
+  if (hasAny(v, wholeBody) || hasToken(v, 'illness') || hasToken(v, 'sick')) {
+    return { skipPhysical: true, banned: new Set(ACTIVITY_KINDS) };
+  }
+
+  const banned = new Set<ActivityKind>();
+  const lowerBody = [
+    'knee', 'knees', 'acl', 'mcl', 'meniscus', 'patella',
+    'ankle', 'ankles', 'foot', 'feet', 'shin', 'calf', 'hip', 'hips',
+    'hamstring', 'quad', 'thigh', 'leg', 'legs', 'plantar',
+  ];
+  const upperBody = [
+    'wrist', 'wrists', 'carpal', 'hand', 'hands', 'elbow', 'elbows',
+    'shoulder', 'shoulders', 'rotator', 'chest', 'rib', 'ribs',
+  ];
+  const back = ['back', 'spine', 'disc', 'hernia', 'sciatica', 'lumbar'];
+
+  if (hasAny(v, lowerBody) || hasToken(v, 'squat') || hasToken(v, 'squats')) {
+    banned.add('squats');
+  }
+  if (
+    hasAny(v, lowerBody) ||
+    hasAny(v, ['jump', 'jumps', 'jumping']) ||
+    hasToken(v, 'jacks')
+  ) {
+    banned.add('jumping jacks');
+  }
+  if (
+    hasAny(v, upperBody) ||
+    hasToken(v, 'push-up') ||
+    hasToken(v, 'pushup') ||
+    hasToken(v, 'push-ups') ||
+    hasToken(v, 'pushups')
+  ) {
+    banned.add('push-ups');
+  }
+  if (hasAny(v, back)) {
+    banned.add('squats');
+    banned.add('jumping jacks');
+    banned.add('push-ups');
+  }
+
+  if (banned.size >= ACTIVITY_KINDS.length) {
+    return { skipPhysical: true, banned };
+  }
+  if (banned.size > 0) {
+    return { skipPhysical: false, banned };
+  }
+
+  // Injury/pain mentioned without a body part we recognise — skip all physical.
+  return { skipPhysical: true, banned: new Set(ACTIVITY_KINDS) };
+}
+
+/**
+ * True when the onboarding health answer rules out at least one (or every)
+ * physical challenge.
+ */
+export function isHealthLimited(raw: string | undefined | null): boolean {
+  const f = challengeFilterFromHealth(raw);
+  return f.skipPhysical || f.banned.size > 0;
+}
+
+function pickQuizChallenge(): GateQuestion {
+  const roll = Math.random();
   if (roll < 0.4) return pick(FAMILY_F_BREATHE);
   if (roll < 0.75) return randomMathChallenge();
   return pick(FAMILY_F_QUIZ);
@@ -216,9 +291,9 @@ function pickQuizChallenge(): GateQuestion {  const roll = Math.random();
 /**
  * Every unlock requires exactly one challenge, always — no free early
  * unlocks and no ladder buildup. Steady always gets the quiz/math/breathing
- * rotation; Strict always gets a physical activity challenge (or the same
- * quiz rotation if health-limited). The only way around it is spending an
- * emergency token, handled by the caller (GateScreen), not here.
+ * rotation. Strict picks a physical movement that is still safe given the
+ * onboarding health answer; banned movements are replaced by another Family G
+ * activity, or by the quiz rotation if none remain safe.
  *
  * `repsFor` is the adaptive rep-target resolver. It is applied here rather than
  * in the challenge component so the prompt and the count can never disagree —
@@ -227,11 +302,22 @@ function pickQuizChallenge(): GateQuestion {  const roll = Math.random();
  */
 export function pickChallenge(
   intensityKey: 'steady' | 'strict',
-  healthLimited: boolean,
+  healthLimitRaw?: string | null,
   repsFor?: (activity: ActivityKind) => number,
 ): GateQuestion {
-  if (intensityKey === 'steady' || healthLimited) return pickQuizChallenge();
-  const chosen = pick(FAMILY_G) as Extract<GateQuestion, { kind: 'activity' }>;
+  const filter = challengeFilterFromHealth(healthLimitRaw);
+  if (intensityKey === 'steady' || filter.skipPhysical) return pickQuizChallenge();
+  const pool = FAMILY_G.filter(
+    (q): q is Extract<GateQuestion, { kind: 'activity' }> =>
+      q.kind === 'activity' && !filter.banned.has(q.activity),
+  );
+  if (pool.length === 0) return pickQuizChallenge();
+  // One movement per day, not one per unlock. Rolling fresh every time meant
+  // squats, then push-ups, then jacks within an hour, which reads as the app
+  // making it up — and it robs you of the one thing that makes the reps get
+  // easier: doing the same movement repeatedly.
+  const day = Math.floor(Date.now() / 86_400_000);
+  const chosen = pool[day % pool.length];
   if (!repsFor) return chosen;
   const resolved = repsFor(chosen.activity);
   if (!Number.isFinite(resolved)) return chosen;
@@ -240,14 +326,24 @@ export function pickChallenge(
   return { ...chosen, reps, prompt: `Do ${reps} ${chosen.activity} to unlock.` };
 }
 
-export const ESSENTIALS: { name: string; mark: IconName; locked: boolean; note: string }[] = [
-  { name: 'Phone', mark: 'phone', locked: true, note: 'Guaranteed by iOS — can never be blocked' },
-  { name: 'Emergency SOS', mark: 'alert', locked: true, note: 'Guaranteed by iOS — can never be blocked' },
-  { name: 'Messages', mark: 'message', locked: false, note: '' },
-  { name: 'Maps', mark: 'pin', locked: false, note: 'Never blocked while navigating' },
-  { name: 'Banking & UPI', mark: 'card', locked: false, note: 'A blocked OTP is a failed payment' },
-  { name: 'Wallet', mark: 'wallet', locked: false, note: '' },
-  { name: 'Camera', mark: 'camera', locked: false, note: '' },
-  { name: 'Clock', mark: 'clock', locked: false, note: '' },
-  { name: 'Health', mark: 'heart', locked: false, note: '' },
+/** Four categories, not nine. An essentials list long enough to browse is a
+ *  loophole, so this is only the things you genuinely cannot be locked out of.
+ *  `url` is what the Emergency sheet opens; where a platform gives no public
+ *  scheme the row says the category is allowed rather than pretending to
+ *  launch something. */
+export type EssentialKey = 'call' | 'payment' | 'maps' | 'health';
+
+export const ESSENTIALS: {
+  key: EssentialKey;
+  name: string;
+  mark: IconName;
+  note: string;
+  url?: string;
+}[] = [
+  { key: 'call', name: 'Call', mark: 'phone', note: 'Opens the dialer. Emergency calls always work — that is the OS, not us.', url: 'tel:' },
+  { key: 'payment', name: 'Payments', mark: 'card', note: 'Banking, UPI and wallets stay reachable. A blocked OTP is a failed payment.' },
+  { key: 'maps', name: 'Maps', mark: 'pin', note: 'Never blocked while you are finding your way somewhere.', url: Platform.OS === 'android' ? 'geo:0,0' : 'maps:' },
+  // No public scheme opens a health app on Android, so that row states the
+  // category is allowed rather than pretending to launch something.
+  { key: 'health', name: 'Health', mark: 'heart', note: 'Medical and health apps are never held back.', url: Platform.OS === 'ios' ? 'x-apple-health://' : undefined },
 ];

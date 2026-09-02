@@ -2,6 +2,12 @@ package expo.modules.devicepermissions
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -20,6 +26,27 @@ import expo.modules.kotlin.modules.ModuleDefinition
 class DevicePermissionsModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("DevicePermissions")
+
+    // The running session, as an ongoing notification the system counts down
+    // itself. Also keeps the process alive so a block survives the user
+    // switching away, which is exactly when a block matters.
+    Function("startSessionNotification") { endsAt: Double, label: String, blockedCount: Int ->
+      val context = appContext.reactContext ?: return@Function false
+      SessionTimerService.start(context, endsAt.toLong(), label, blockedCount)
+      true
+    }
+
+    Function("stopSessionNotification") {
+      val context = appContext.reactContext ?: return@Function false
+      SessionTimerService.stop(context)
+      true
+    }
+
+    /** True when the OS is in battery saver, so the UI can go quiet. */
+    Function("isPowerSaveMode") {
+      val context = appContext.reactContext ?: return@Function false
+      isPowerSaveMode(context)
+    }
 
     Function("canDrawOverlays") {
       val ctx = appContext.reactContext ?: return@Function false
@@ -41,7 +68,7 @@ class DevicePermissionsModule : Module() {
 
     Function("isAccessibilityServiceEnabled") {
       val ctx = appContext.reactContext ?: return@Function false
-      val expectedComponent = "${ctx.packageName}/${WendAccessibilityService::class.java.canonicalName}"
+      val expectedComponent = "${ctx.packageName}/${ByreAccessibilityService::class.java.canonicalName}"
       val enabled = Settings.Secure.getString(
         ctx.contentResolver,
         Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
@@ -73,7 +100,7 @@ class DevicePermissionsModule : Module() {
     }
 
     // Called from JS whenever the blocked-apps list changes (and once on
-    // every app start) so WendAccessibilityService always checks against
+    // every app start) so ByreAccessibilityService always checks against
     // the current list, not whatever was blocked at install time.
     Function("setBlockedPackages") { packages: List<String> ->
       val ctx = appContext.reactContext ?: return@Function null
@@ -157,13 +184,41 @@ class DevicePermissionsModule : Module() {
           }
         }
 
+        // The real launcher icon, as a data URI. Android is the only platform
+        // that will hand these over — iOS never exposes installed-app icons to
+        // third-party apps, so JS falls back to a monogram tile there.
+        val icon = try {
+          drawableToDataUri(resolveInfo.loadIcon(pm))
+        } catch (e: Exception) {
+          null
+        }
+
         list.add(mapOf(
           "packageName" to packageName,
           "label" to label,
-          "category" to category
+          "category" to category,
+          "icon" to (icon ?: "")
         ))
       }
       list.sortedBy { (it["label"] as String).lowercase() }
     }
+  }
+
+  /** Rasterises a launcher drawable to a small PNG data URI. Capped at 96px:
+   *  adaptive icons can be large, and a few hundred of them crossing the
+   *  bridge at full size is what makes an app-list screen janky. */
+  private fun drawableToDataUri(drawable: Drawable, sizePx: Int = 96): String? {
+    val bitmap = if (drawable is BitmapDrawable && drawable.bitmap != null) {
+      Bitmap.createScaledBitmap(drawable.bitmap, sizePx, sizePx, true)
+    } else {
+      val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+      val canvas = Canvas(bmp)
+      drawable.setBounds(0, 0, canvas.width, canvas.height)
+      drawable.draw(canvas)
+      bmp
+    }
+    val out = ByteArrayOutputStream()
+    if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) return null
+    return "data:image/png;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
   }
 }

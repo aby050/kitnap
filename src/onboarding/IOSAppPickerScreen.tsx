@@ -1,37 +1,54 @@
-import React, { useState } from 'react';
-import { NativeSyntheticEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { NativeSyntheticEvent, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
+import { Button } from '../design/primitives';
 import {
-  blockSelectedApps,
+  getScreenTimeAuthorizationStatus,
+  getSelectionCounts,
   requestScreenTimeAuthorization,
-  saveBlockedSelection,
   screenTimeAvailable,
 } from '../data/iosScreenTime';
+import ScreenTimeLabels, { screenTimeLabelsAvailable } from 'screen-time-labels';
+import { SELECTION_ID } from '../data/iosScreenTime';
 import { palette } from '../design/tokens';
 
-let DeviceActivitySelectionSheetView: any = null;
+let DeviceActivitySelectionViewPersisted: any = null;
 if (Platform.OS === 'ios') {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    DeviceActivitySelectionSheetView = require('react-native-device-activity').DeviceActivitySelectionSheetView;
+    DeviceActivitySelectionViewPersisted =
+      require('react-native-device-activity').DeviceActivitySelectionViewPersisted;
   } catch {
-    DeviceActivitySelectionSheetView = null;
+    DeviceActivitySelectionViewPersisted = null;
   }
 }
 
 type SelectionEvent = NativeSyntheticEvent<{ familyActivitySelection: string | null; applicationCount: number }>;
 
-/** iOS equivalent of AppPickerScreen — picks real apps via Apple's own
- *  FamilyActivityPicker (a system sheet, not custom UI; Apple requires
- *  this exact picker so the selection itself stays opaque to the app).
- *  Only reachable once Screen Time authorization is granted, which itself
- *  only works once Apple has approved the Family Controls entitlement. */
-export default function IOSAppPickerScreen({ onContinue }: { onContinue: () => void }) {
-  const [authStatus, setAuthStatus] = useState<'idle' | 'requesting' | 'approved' | 'denied'>('idle');
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [appCount, setAppCount] = useState(0);
+/** iOS equivalent of AppPickerScreen — Apple's FamilyActivityPicker is a
+ *  system sheet we cannot restyle. This screen is our chrome around it. */
+export default function IOSAppPickerScreen({
+  onContinue,
+  hint,
+}: {
+  onContinue: () => void;
+  hint?: string;
+}) {
+  // Screen Time is granted up front on the boarding pass, so start from the
+  // real OS state — starting at 'idle' asked a second time for something the
+  // user had already allowed, which is what made this screen feel like a
+  // repeat of the permission flow.
+  const [authStatus, setAuthStatus] = useState<'idle' | 'requesting' | 'approved' | 'denied'>(
+    () => (getScreenTimeAuthorizationStatus() === 'approved' ? 'approved' : 'idle'),
+  );
+  // Seeded from the saved selection so returning to this screen shows what is
+  // already picked instead of "0 apps selected".
+  const [counts, setCounts] = useState(() => getSelectionCounts());
+  // The icons are drawn natively from the app group; SwiftUI can't see that
+  // another process wrote to it, so bumping this re-reads after the picker.
+  const [revision, setRevision] = useState(0);
 
   const requestAccess = async () => {
     setAuthStatus('requesting');
@@ -39,27 +56,72 @@ export default function IOSAppPickerScreen({ onContinue }: { onContinue: () => v
     setAuthStatus(status === 'approved' ? 'approved' : 'denied');
   };
 
-  const handleSelectionChange = (event: SelectionEvent) => {
-    const token = event.nativeEvent.familyActivitySelection;
-    if (token) {
-      saveBlockedSelection(token);
-      blockSelectedApps();
-      setAppCount(event.nativeEvent.applicationCount);
-    }
-    setPickerOpen(false);
+  // The persisted picker has already saved the selection by the time this
+  // fires — there's nothing to write, only to re-read.
+  const handleSelectionChange = () => {
+    setCounts(getSelectionCounts());
+    setRevision((r) => r + 1);
   };
+
+  const body = (
+    <Animated.View entering={FadeIn.duration(350)} style={styles.cluster}>
+      <Text style={styles.heading}>Which apps should Byre block?</Text>
+      <Text style={styles.sub}>
+        {hint ??
+          "This uses Apple's picker — Byre never sees the names, only that they're blocked. Choose the ones that usually steal your hours."}
+      </Text>
+
+      {authStatus !== 'approved' ? (
+        <Button
+          label={
+            authStatus === 'requesting'
+              ? 'Requesting…'
+              : authStatus === 'denied'
+                ? 'Access denied — tap to retry'
+                : 'Allow Screen Time access'
+          }
+          variant="outline"
+          disabled={authStatus === 'requesting'}
+          onPress={requestAccess}
+        />
+      ) : (
+        // Inline, not a sheet: Apple's picker carries its own search field and
+        // category list, and hiding it behind a button meant there was no way
+        // to search for an app to block.
+        DeviceActivitySelectionViewPersisted && (
+          <View style={styles.pickerFrame}>
+            <DeviceActivitySelectionViewPersisted
+              style={styles.picker}
+              familyActivitySelectionId={SELECTION_ID}
+              includeEntireCategory
+              onSelectionChange={handleSelectionChange}
+            />
+          </View>
+        )
+      )}
+
+      {ScreenTimeLabels && screenTimeLabelsAvailable() && (counts?.apps ?? 0) > 0 && (
+        <ScreenTimeLabels
+          selectionId={SELECTION_ID}
+          iconSize={40}
+          maxCount={6}
+          revision={revision}
+          style={styles.icons}
+        />
+      )}
+      <SelectionSummary counts={counts} />
+      <GradientButton label="Continue" onPress={onContinue} />
+    </Animated.View>
+  );
 
   if (!screenTimeAvailable()) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.body}>
+        <View style={styles.center}>
           <Text style={styles.heading}>Screen Time isn't available yet</Text>
           <Text style={styles.sub}>
-            This needs a real iOS build with Apple's Family Controls entitlement approved — not available in this
-            preview.
+            This needs a real iOS build with Apple's Family Controls entitlement — not this preview.
           </Text>
-        </View>
-        <View style={styles.ctaWrap}>
           <GradientButton label="Continue" onPress={onContinue} />
         </View>
       </SafeAreaView>
@@ -68,66 +130,59 @@ export default function IOSAppPickerScreen({ onContinue }: { onContinue: () => v
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.body}>
-        <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          Which apps do you want blocked?
-        </Animated.Text>
-        <Text style={styles.sub}>
-          This uses Apple's own picker — Wend never sees the names of the apps you choose, only that they're
-          blocked.
-        </Text>
-
-        {authStatus !== 'approved' ? (
-          <Pressable style={styles.authBtn} onPress={requestAccess} disabled={authStatus === 'requesting'}>
-            <Text style={styles.authBtnText}>
-              {authStatus === 'requesting' ? 'Requesting…' : authStatus === 'denied' ? 'Access denied — tap to retry' : 'Allow Screen Time access'}
-            </Text>
-          </Pressable>
-        ) : (
-          <>
-            <Pressable style={styles.pickBtn} onPress={() => setPickerOpen(true)}>
-              <Text style={styles.pickBtnText}>{appCount > 0 ? `${appCount} apps selected — change` : 'Choose apps'}</Text>
-            </Pressable>
-            {pickerOpen && DeviceActivitySelectionSheetView && (
-              <DeviceActivitySelectionSheetView
-                style={{ width: 1, height: 1, position: 'absolute' }}
-                onDismissRequest={() => setPickerOpen(false)}
-                onSelectionChange={handleSelectionChange}
-              />
-            )}
-          </>
-        )}
-      </View>
-
-      <View style={styles.ctaWrap}>
-        <GradientButton label="Continue" onPress={onContinue} />
-      </View>
+      <View style={styles.center}>{body}</View>
     </SafeAreaView>
   );
 }
 
+/** Apple hands back an opaque token: the app is never told which apps were
+ *  picked, so there are no names or icons to show — only how much is covered.
+ *  Whole categories are counted separately because "Social" is one pick that
+ *  covers dozens of apps. */
+function SelectionSummary({ counts }: { counts: ReturnType<typeof getSelectionCounts> }) {
+  if (!counts || counts.apps + counts.categories + counts.sites === 0) {
+    return <Text style={styles.count}>Nothing selected yet</Text>;
+  }
+  const parts: string[] = [];
+  if (counts.apps) parts.push(`${counts.apps} ${counts.apps === 1 ? 'app' : 'apps'}`);
+  if (counts.categories)
+    parts.push(`${counts.categories} ${counts.categories === 1 ? 'category' : 'categories'}`);
+  if (counts.sites) parts.push(`${counts.sites} ${counts.sites === 1 ? 'site' : 'sites'}`);
+  return (
+    <View style={styles.summary}>
+      <View style={styles.dot} />
+      <Text style={styles.count}>{parts.join(' · ')} blocked</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  icons: { height: 44, alignSelf: 'center' },
+  pickerFrame: {
+    height: 380,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: palette.surfaceRaised,
+  },
+  picker: { flex: 1 },
+  summary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.accent },
   container: { flex: 1, backgroundColor: 'transparent' },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 20 },
+  center: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
+  cluster: { width: '100%', alignItems: 'stretch', gap: 16 },
   heading: { color: palette.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 31 },
-  sub: { color: palette.textSecondary, fontSize: 14.5, textAlign: 'center', lineHeight: 21, maxWidth: 300 },
-  authBtn: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    backgroundColor: palette.accentSoft,
-    borderWidth: 1,
-    borderColor: palette.accent,
+  sub: {
+    color: palette.textSecondary,
+    fontSize: 14.5,
+    textAlign: 'center',
+    lineHeight: 21,
+    alignSelf: 'center',
+    maxWidth: 320,
   },
-  authBtnText: { color: palette.accent, fontSize: 15.5, fontWeight: '700' },
-  pickBtn: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 24,
-    backgroundColor: palette.glass,
-    borderWidth: 1,
-    borderColor: palette.border,
+  count: {
+    color: palette.textTertiary,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  pickBtnText: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
-  ctaWrap: { paddingHorizontal: 22, paddingBottom: 14 },
 });

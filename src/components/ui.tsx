@@ -1,9 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import Icon from '../ui/Icon';
-import { gradients, palette, radius, space, type } from '../design/tokens';
+import { Button } from '../design/primitives';
+import { palette, radius, space } from '../design/tokens';
 
 /**
  * Legacy shared components. New screens should assemble from `design/primitives`
@@ -11,45 +10,24 @@ import { gradients, palette, radius, space, type } from '../design/tokens';
  * imports them reads as the same product as the rest of the app.
  */
 
-/** The signature pill button. `aurora` is the mint primary CTA; `light` a white
- *  fill; `ghost` a quiet glass action. */
+/** The signature pill CTA. Delegates to `Button` so height, width, radius and
+ *  type stay in one place. `light` is the default primary (white); `aurora` is
+ *  mint, reserved for starting a session; `ghost` is the outlined workhorse. */
 export function GradientButton({
   label,
   onPress,
-  variant = 'aurora',
+  variant = 'light',
+  disabled,
   style,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'aurora' | 'light' | 'ghost';
+  disabled?: boolean;
   style?: ViewStyle;
 }) {
-  const scale = useSharedValue(1);
-  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const labelColor = variant === 'aurora' ? '#04140c' : variant === 'light' ? '#000000' : palette.text;
-
-  return (
-    <Animated.View style={[aStyle, style]}>
-      <Pressable
-        onPressIn={() => (scale.value = withTiming(0.97, { duration: 90 }))}
-        onPressOut={() => (scale.value = withSpring(1, { damping: 13, stiffness: 220 }))}
-        onPress={onPress}
-        style={styles.btnBase}
-      >
-        {variant === 'aurora' && (
-          <LinearGradient
-            colors={gradients.accent}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        )}
-        {variant === 'light' && <View style={styles.btnLightFill} />}
-        {variant === 'ghost' && <View style={styles.btnGhostFill} />}
-        <Text style={[styles.btnLabel, { color: labelColor }]}>{label}</Text>
-      </Pressable>
-    </Animated.View>
-  );
+  const mapped = variant === 'aurora' ? 'accent' : variant === 'ghost' ? 'outline' : 'primary';
+  return <Button label={label} onPress={onPress} variant={mapped} disabled={disabled} style={style} />;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
@@ -97,16 +75,6 @@ export function SettingRow({
 }
 
 const styles = StyleSheet.create({
-  btnBase: {
-    height: 56,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  btnLightFill: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255,255,255,0.95)' },
-  btnGhostFill: { ...StyleSheet.absoluteFill, backgroundColor: palette.glass },
-  btnLabel: { fontSize: 16.5, fontWeight: '800', letterSpacing: -0.2 },
   card: {
     backgroundColor: palette.surface,
     borderWidth: 1,

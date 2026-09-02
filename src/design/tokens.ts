@@ -1,7 +1,7 @@
 import { Platform, TextStyle, ViewStyle } from 'react-native';
 
 /**
- * Wend design tokens — the single source of truth for colour, type, spacing,
+ * Byre design tokens — the single source of truth for colour, type, spacing,
  * radius, elevation and motion.
  *
  * Why this file exists: the app had grown six competing accent colours (mint,
@@ -13,7 +13,7 @@ import { Platform, TextStyle, ViewStyle } from 'react-native';
 /* ─────────────────────────────────────────────────────────────
  * COLOUR
  *
- * Neutrals are true-black-based: Wend is a full-screen interrupt running on
+ * Neutrals are true-black-based: Byre is a full-screen interrupt running on
  * OLED Android hardware, and #000 is the only value that actually goes dark.
  * Elevation is expressed by lifting the surface a few points, never by a
  * drop shadow on a dark background (shadows are invisible there).
@@ -102,7 +102,7 @@ export const dataRamp = [
  *
  * Geometric sans carries every functional label — rows, buttons, data. A serif
  * carries the app's *own voice*: the Shield's one line, the reflection prompts,
- * the moments where Wend is talking to you rather than reporting to you. That
+ * the moments where Byre is talking to you rather than reporting to you. That
  * split is what stops a wall of sans from reading like a settings menu.
  *
  * Both faces ship with the OS, so there is no font download, no flash of
@@ -200,7 +200,7 @@ export const type = {
 
   /* ── Hero figures ──────────────────────────────────────────────
    * A large figure at *light* weight reads as calm and expensive; the same
-   * figure at 700 reads as an alarm clock. Wend counts down time you chose
+   * figure at 700 reads as an alarm clock. Byre counts down time you chose
    * to give up, so it should never shout. Always paired with `unit`, never
    * with the unit baked into the same string. */
   hero: {
@@ -296,6 +296,17 @@ export const control = {
   touch: 44,
 } as const;
 
+/** Single-line pill field — same height and radius as a large Button. */
+export const fieldStyle: TextStyle = {
+  height: control.lg,
+  borderRadius: radius.pill,
+  backgroundColor: palette.glass,
+  paddingHorizontal: space.lg,
+  color: palette.text,
+  fontSize: 16,
+  fontWeight: '500',
+};
+
 /* ─────────────────────────────────────────────────────────────
  * ELEVATION
  * Used sparingly: on a true-black background a shadow reads as haze, so
@@ -341,7 +352,7 @@ export const elevation = {
 /* ─────────────────────────────────────────────────────────────
  * MOTION
  *
- * Four durations, one spring. Wend's motion job is to make an interruption
+ * Four durations, one spring. Byre's motion job is to make an interruption
  * feel deliberate rather than abrupt, so entrances are unhurried (320ms)
  * while feedback is near-instant (120ms).
  * ───────────────────────────────────────────────────────────── */

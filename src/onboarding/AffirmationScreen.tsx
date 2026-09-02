@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import WendOrb from '../components/WendOrb';
+import ByreOrb from '../components/ByreOrb';
 import { GradientButton } from '../components/ui';
 import { palette } from '../design/tokens';
 
@@ -29,7 +29,7 @@ export default function AffirmationScreen({
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.body}>
         <Animated.View entering={FadeIn.duration(700)}>
-          <WendOrb size={150} awake />
+          <ByreOrb size={150} awake />
         </Animated.View>
 
         <Animated.Text entering={FadeInDown.delay(200).duration(450)} style={styles.headline}>

@@ -1,23 +1,10 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { palette } from '../design/tokens';
+import { palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
-
-function ParachuteGlyph({ size = 64, color = palette.accent }: { size?: number; color?: string }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M2 11a10 10 0 0 1 20 0c-2.5-1.3-5-2-10-2s-7.5.7-10 2z"
-        fill={color}
-      />
-      <Path d="M4 11l3 9M9 11l1.5 9M15 11L13.5 20M20 11l-3 9" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-      <Path d="M10.5 20h3l-1.5 2z" fill={color} />
-    </Svg>
-  );
-}
+import BailoutGlyph from '../components/BailoutGlyph';
 
 const PACKS = [
   { id: 'single', label: '1 Bailout', desc: 'One extra way out of a locked timer.', price: '₹49' },
@@ -44,7 +31,7 @@ export default function EmergencyTokensScreen({
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
-          <ParachuteGlyph size={72} />
+          <BailoutGlyph size={64} />
           <Text style={styles.balanceValue}>{tokenBalance}</Text>
           <Text style={styles.balanceLabel}>{tokenBalance === 1 ? 'Bailout' : 'Bailouts'} available</Text>
         </Animated.View>
@@ -97,7 +84,7 @@ export default function EmergencyTokensScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,

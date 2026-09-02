@@ -3,7 +3,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { wendColors as c } from '../theme';
+import { byreColors as c } from '../theme';
 
 export default function WealthAxisScreen() {
   return (

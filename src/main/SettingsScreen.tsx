@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingRow } from '../components/ui';
-import { palette } from '../design/tokens';
+import { palette, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 
 function Group({ children }: { children: React.ReactNode }) {
@@ -29,35 +29,35 @@ export default function SettingsScreen({
   onOpenGuardian,
   onOpenWaitingRoom,
   onOpenBlockScreens,
-  onOpenAutofocus,
   onOpenSchedules,
-  onOpenPin,
   onOpenAccount,
   accountLabel,
   onOpenFutureSelf,
-  onOpenTogether,
   onOpenBlockedApps,
   onOpenDifficulty,
   onOpenDeleteAccount,
+  onOpenScreenTimeDiagnostics,
+  onLoadDemoData,
+  onClearDemoData,
   difficultyLabel,
-  pinEnabled,
 }: {
   onBack: () => void;
   onOpenGuardian?: () => void;
   onOpenWaitingRoom?: () => void;
   onOpenBlockScreens?: () => void;
-  onOpenAutofocus?: () => void;
   onOpenSchedules?: () => void;
-  onOpenPin?: () => void;
   onOpenAccount?: () => void;
   accountLabel?: string;
   onOpenFutureSelf?: () => void;
-  onOpenTogether?: () => void;
   onOpenBlockedApps?: () => void;
   onOpenDifficulty?: () => void;
   onOpenDeleteAccount?: () => void;
+  /** iOS only — reads the live Family Controls state. */
+  onOpenScreenTimeDiagnostics?: () => void;
+  /** __DEV__ only — see the Developer group below. */
+  onLoadDemoData?: () => void;
+  onClearDemoData?: () => void;
   difficultyLabel?: string;
-  pinEnabled?: boolean;
 }) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -102,12 +102,6 @@ export default function SettingsScreen({
             title="Schedules"
             subtitle="Add or edit recurring block windows"
             onPress={onOpenSchedules}
-          />
-          <SettingRow
-            icon={<RowIcon name="target" />}
-            title="Autofocus"
-            subtitle="Configure distracting score interventions"
-            onPress={onOpenAutofocus}
             last
           />
         </Group>
@@ -131,19 +125,6 @@ export default function SettingsScreen({
             subtitle="A friend holds the code to loosen your own rules"
             onPress={onOpenGuardian}
           />
-          <SettingRow
-            icon={<RowIcon name="lock" />}
-            title="PIN code access"
-            value={pinEnabled ? 'On' : 'Off'}
-            onPress={onOpenPin}
-          />
-          <SettingRow
-            icon={<RowIcon name="heart" />}
-            title="Together"
-            subtitle="Guardian and shared groves"
-            onPress={onOpenTogether}
-            last
-          />
         </Group>
 
         <GroupLabel>Account</GroupLabel>
@@ -159,9 +140,43 @@ export default function SettingsScreen({
             title="Delete Account"
             subtitle="Permanently erase your data from this device"
             onPress={onOpenDeleteAccount}
-            last
+            last={!onOpenScreenTimeDiagnostics}
           />
+          {onOpenScreenTimeDiagnostics && (
+            <SettingRow
+              icon={<RowIcon name="chart" />}
+              title="Screen Time diagnostics"
+              subtitle="Check whether blocking is actually wired up"
+              onPress={onOpenScreenTimeDiagnostics}
+              last
+            />
+          )}
         </Group>
+
+        {/* Development only. Real users must never be able to fill their own
+            history with numbers the app made up — the entire premise is that
+            what you see happened. Gated here rather than behind a hidden
+            gesture so it simply does not exist in a release build. */}
+        {__DEV__ && (
+          <>
+            <GroupLabel>Developer</GroupLabel>
+            <Group>
+              <SettingRow
+                icon={<RowIcon name="chart" />}
+                title="Load demo data"
+                subtitle="Fill 2 months of history to preview populated screens"
+                onPress={onLoadDemoData}
+              />
+              <SettingRow
+                icon={<RowIcon name="trash" />}
+                title="Clear demo data"
+                subtitle="Reset history back to empty"
+                onPress={onClearDemoData}
+                last
+              />
+            </Group>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,7 +184,7 @@ export default function SettingsScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,

@@ -11,7 +11,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import WendOrb from '../components/WendOrb';
+import ByreOrb from '../components/ByreOrb';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
@@ -66,7 +66,7 @@ export default function WelcomeScreen({ onDone }: { onDone: () => void }) {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.body}>
           <Animated.View entering={FadeIn.duration(800)} style={styles.orbWrap}>
-            <WendOrb size={200} awake />
+            <ByreOrb size={200} awake />
             <View style={styles.pedestal} />
           </Animated.View>
 

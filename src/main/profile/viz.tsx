@@ -12,6 +12,7 @@ import Svg, {
   RadialGradient,
   Stop,
   G,
+  Text as SvgText,
 } from 'react-native-svg';
 import Icon, { IconName } from '../../ui/Icon';
 import { palette } from '../../design/tokens';
@@ -186,6 +187,140 @@ export function IntensityBars({
 /* ─────────────────────────────────────────────────────────────
  * DONUT — segmented usage ring
  * ───────────────────────────────────────────────────────────── */
+
+/**
+ * Calendar heatmap — one cell per day, weeks as columns.
+ *
+ * Exists alongside IntensityBars rather than replacing it because the two
+ * answer different questions: bars read a week precisely, and turn to slivers
+ * past a month. Ten weeks of cells fit in the space seven bars need, and
+ * streaks and gaps become shapes you can see instead of count.
+ *
+ * The cell size is derived from the width it is given rather than fixed, so
+ * the grid always spans its card instead of huddling in one corner.
+ *
+ * Magnitude is one hue at increasing opacity — never a rainbow. A slip day is
+ * coral *and* carries a notch, so it is never identified by colour alone.
+ */
+export function CalendarHeatmap({
+  data,
+  width,
+  gap = 4,
+  style,
+}: {
+  /** Oldest first, aligned so index 0 is the top-left cell. */
+  data: { value: number; flag?: boolean; date?: string; today?: boolean }[];
+  width: number;
+  gap?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const weeks = Math.max(1, Math.ceil(data.length / 7));
+  const GUTTER = 20; // weekday initials
+  const HEAD = 16; // month markers
+  const cell = Math.max(8, (width - GUTTER - gap * (weeks - 1)) / weeks);
+  const h = HEAD + 7 * (cell + gap) - gap;
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const r = Math.min(6, cell * 0.28);
+
+  // A month label sits above the first column that contains that month.
+  const months: { x: number; label: string }[] = [];
+  let lastMonth = '';
+  for (let w = 0; w < weeks; w++) {
+    const d = data[w * 7];
+    if (!d?.date) continue;
+    const m = d.date.slice(0, 7);
+    if (m !== lastMonth) {
+      lastMonth = m;
+      const name = new Date(`${d.date}T00:00:00`).toLocaleString('en', { month: 'short' });
+      months.push({ x: GUTTER + w * (cell + gap), label: name });
+    }
+  }
+
+  const dayInitials = ['M', '', 'W', '', 'F', '', 'S'];
+
+  return (
+    <View style={style}>
+      <Svg width={width} height={h}>
+        {months.map((m, i) => (
+          <SvgText
+            key={`m${i}`}
+            x={m.x}
+            y={HEAD - 6}
+            fill={palette.textQuaternary}
+            fontSize={9.5}
+            fontWeight="600"
+          >
+            {m.label}
+          </SvgText>
+        ))}
+
+        {dayInitials.map((t, row) =>
+          t ? (
+            <SvgText
+              key={`d${row}`}
+              x={0}
+              y={HEAD + row * (cell + gap) + cell / 2 + 3.5}
+              fill={palette.textQuaternary}
+              fontSize={9.5}
+              fontWeight="600"
+            >
+              {t}
+            </SvgText>
+          ) : null,
+        )}
+
+        {data.map((d, i) => {
+          const w = Math.floor(i / 7);
+          const row = i % 7;
+          const x = GUTTER + w * (cell + gap);
+          const y = HEAD + row * (cell + gap);
+          // Empty days keep a faint cell so the grid still reads as a grid.
+          const t = d.value / max;
+          const opacity = d.value <= 0 ? 0.06 : 0.2 + t * 0.8;
+          return (
+            <React.Fragment key={i}>
+              <Rect
+                x={x}
+                y={y}
+                width={cell}
+                height={cell}
+                rx={r}
+                fill={d.flag ? palette.danger : palette.accent}
+                fillOpacity={d.flag ? 0.9 : opacity}
+              />
+              {/* Slips carry a shape as well as a hue. */}
+              {d.flag && cell >= 14 && (
+                <Rect
+                  x={x + cell / 2 - cell * 0.18}
+                  y={y + cell / 2 - 1}
+                  width={cell * 0.36}
+                  height={2}
+                  rx={1}
+                  fill="#0B0B0D"
+                  fillOpacity={0.55}
+                />
+              )}
+              {/* Today keeps a position of its own even on a blank day. */}
+              {d.today && (
+                <Rect
+                  x={x - 1.5}
+                  y={y - 1.5}
+                  width={cell + 3}
+                  height={cell + 3}
+                  rx={r + 1.5}
+                  fill="none"
+                  stroke={palette.text}
+                  strokeWidth={1.5}
+                  strokeOpacity={0.85}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </Svg>
+    </View>
+  );
+}
 
 export function Donut({
   segments,
@@ -371,26 +506,6 @@ export function DotProgress({
  * REWARD TIMELINE — medallion tile + laurel, and the ↓ connector
  * ───────────────────────────────────────────────────────────── */
 
-function Laurel({ size, color, opacity }: { size: number; color: string; opacity: number }) {
-  const c = size / 2;
-  return (
-    <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFill}>
-      <G opacity={opacity}>
-        {/* two symmetric wreath arcs */}
-        <Path d="M30 78 C14 64 14 40 26 24" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" />
-        <Path d="M70 78 C86 64 86 40 74 24" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" />
-        {[26, 38, 50, 62].map((y, i) => (
-          <G key={i}>
-            <Ellipse cx={22 - i} cy={y} rx={5} ry={2.6} fill={color} transform={`rotate(${-40 + i * 6} ${22 - i} ${y})`} />
-            <Ellipse cx={78 + i} cy={y} rx={5} ry={2.6} fill={color} transform={`rotate(${40 - i * 6} ${78 + i} ${y})`} />
-          </G>
-        ))}
-        <Circle cx={c} cy={20} r={2.4} fill={color} />
-      </G>
-    </Svg>
-  );
-}
-
 export function TierThumb({
   def,
   earned,
@@ -400,26 +515,12 @@ export function TierThumb({
   earned: boolean;
   size?: number;
 }) {
+  // No plate, no laurel, no gradient. The artwork carries its own shape, rim
+  // and gloss — wrapping it in a coloured box put a second silhouette behind
+  // the first and shrank the badge to 62% of the space it was given.
   return (
-    <View style={[styles.thumb, { width: size, height: size, borderRadius: 20 }]}>
-      {earned ? (
-        <>
-          <LinearGradient
-            colors={['#8BEFBC', '#5FE0D6', '#8FA9FF']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Laurel size={size} color="#04140c" opacity={0.16} />
-          <Medal medal={def.medal} size={size * 0.62} id={`tier-${def.id}`} />
-        </>
-      ) : (
-        <>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: palette.surfaceHigh }]} />
-          <Laurel size={size} color={palette.text} opacity={0.05} />
-          <Medal medal={def.medal} size={size * 0.6} locked id={`tier-${def.id}`} />
-        </>
-      )}
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Medal def={def} size={size} locked={!earned} id={`tier-${def.id}`} />
     </View>
   );
 }
@@ -506,6 +607,5 @@ const styles = StyleSheet.create({
   segCell: { flex: 1 },
   dotRow: { flexDirection: 'row', gap: 5, flexWrap: 'wrap' },
   dot: { width: 9, height: 9, borderRadius: 5 },
-  thumb: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   connector: { alignItems: 'center', height: 26, marginVertical: 2 },
 });

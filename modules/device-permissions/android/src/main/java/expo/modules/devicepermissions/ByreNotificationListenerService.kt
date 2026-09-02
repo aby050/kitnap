@@ -6,8 +6,8 @@ import android.util.Log
 
 /** Minimal stub — logs which package posted a notification. Not yet wired to
  *  suppress or act on notifications from distracting apps. */
-class WendNotificationListenerService : NotificationListenerService() {
+class ByreNotificationListenerService : NotificationListenerService() {
   override fun onNotificationPosted(sbn: StatusBarNotification?) {
-    if (sbn != null) Log.d("WendNotifListener", "Notification from: ${sbn.packageName}")
+    if (sbn != null) Log.d("ByreNotifListener", "Notification from: ${sbn.packageName}")
   }
 }

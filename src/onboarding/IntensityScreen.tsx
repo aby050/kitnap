@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Defs, RadialGradient, Stop } from 'react-native-svg';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { INTENSITIES, IntensityKey } from '../data/themes';
 import { palette } from '../design/tokens';
@@ -85,7 +85,11 @@ export default function IntensityScreen({
         </View>
 
         {recommended && recommendedReasons && recommendedReasons.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(420)} style={styles.recommendBox}>
+          <Animated.View
+            layout={LinearTransition.duration(260)}
+            entering={FadeInDown.duration(420)}
+            style={styles.recommendBox}
+          >
             <Text style={styles.recommendTitle}>
               We recommend {INTENSITIES.find((i) => i.key === recommended)?.name} for you
             </Text>
@@ -98,11 +102,20 @@ export default function IntensityScreen({
         )}
 
         {/* Spec Table */}
-        <Animated.View key={selected} entering={FadeIn.duration(300)} style={styles.table}>
+        {/* The table stays mounted and only the values cross-fade. Remounting
+            the whole card on every switch made the spec pop out and back in,
+            which read as a load rather than a change. */}
+        <Animated.View layout={LinearTransition.duration(260)} style={styles.table}>
           {ROWS.map((row, i) => (
             <View key={row.label} style={[styles.row, i < ROWS.length - 1 && styles.rowBorder]}>
               <Text style={styles.rowLabel}>{row.label}</Text>
-              <Text style={styles.rowValue}>{row.get(current)}</Text>
+              <Animated.Text
+                key={row.get(current)}
+                entering={FadeIn.duration(240)}
+                style={styles.rowValue}
+              >
+                {row.get(current)}
+              </Animated.Text>
             </View>
           ))}
         </Animated.View>

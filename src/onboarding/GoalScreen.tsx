@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoider } from '../components/KeyboardAware';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
@@ -35,78 +36,80 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.body}>
-        <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          What do you want back?
-        </Animated.Text>
-        <Animated.Text entering={FadeInDown.delay(120).duration(420)} style={styles.sub}>
-          This resurfaces on your block screen, in your own words. One line is plenty.
-        </Animated.Text>
+      <KeyboardAvoider>
+        <View style={styles.body}>
+          <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
+            What do you want back?
+          </Animated.Text>
+          <Animated.Text entering={FadeInDown.delay(120).duration(420)} style={styles.sub}>
+            This resurfaces on your block screen, in your own words. One line is plenty.
+          </Animated.Text>
 
-        <Animated.View entering={FadeIn.delay(260).duration(400)} style={{ width: '100%', maxWidth: 320 }}>
-          <TextInput
-            value={line}
-            onChangeText={setLine}
-            placeholder="e.g. my evenings back"
-            placeholderTextColor={palette.textTertiary}
-            style={styles.input}
-            maxLength={80}
+          <Animated.View entering={FadeIn.delay(260).duration(400)} style={{ width: '100%', maxWidth: 320 }}>
+            <TextInput
+              value={line}
+              onChangeText={setLine}
+              placeholder="e.g. my evenings back"
+              placeholderTextColor={palette.textTertiary}
+              style={styles.input}
+              maxLength={80}
+            />
+          </Animated.View>
+
+          <Animated.View entering={FadeIn.delay(380).duration(400)} style={styles.photoRow}>
+            <Pressable onPress={pickPhoto} style={styles.photoPicker}>
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.photoImg} />
+              ) : (
+                <Icon name="plus" size={22} color={palette.textSecondary} />
+              )}
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.photoTitle}>A photo, if you want one</Text>
+              <Text style={styles.photoSub}>The goal, the person, the place. Becomes your shield icon.</Text>
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeIn.delay(480).duration(400)} style={styles.deadlineBlock}>
+            <Text style={styles.deadlineLabel}>Optional — a deadline</Text>
+            <View style={styles.deadlineRow}>
+              <TextInput
+                value={deadlineName}
+                onChangeText={setDeadlineName}
+                placeholder="Exam, launch, trip…"
+                placeholderTextColor={palette.textTertiary}
+                style={[styles.input, styles.deadlineInput]}
+              />
+              <TextInput
+                value={deadlineDate}
+                onChangeText={setDeadlineDate}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={palette.textTertiary}
+                style={[styles.input, styles.deadlineInput]}
+              />
+            </View>
+            {deadlineName.trim() && deadlineDate.trim() ? (
+              <Text style={styles.deadlinePreview}>
+                The shield will say things like “{deadlineName.trim()} in 12 days.”
+              </Text>
+            ) : null}
+          </Animated.View>
+        </View>
+
+        <View style={styles.ctaWrap}>
+          <GradientButton
+            label={canContinue ? 'Continue' : 'Skip for now'}
+            onPress={() =>
+              onContinue({
+                line: line.trim(),
+                deadlineName: deadlineName.trim(),
+                deadlineDate: deadlineDate.trim() || null,
+                photoUri,
+              })
+            }
           />
-        </Animated.View>
-
-        <Animated.View entering={FadeIn.delay(380).duration(400)} style={styles.photoRow}>
-          <Pressable onPress={pickPhoto} style={styles.photoPicker}>
-            {photoUri ? (
-              <Image source={{ uri: photoUri }} style={styles.photoImg} />
-            ) : (
-              <Icon name="plus" size={22} color={palette.textSecondary} />
-            )}
-          </Pressable>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.photoTitle}>A photo, if you want one</Text>
-            <Text style={styles.photoSub}>The goal, the person, the place. Becomes your shield icon.</Text>
-          </View>
-        </Animated.View>
-
-        <Animated.View entering={FadeIn.delay(480).duration(400)} style={styles.deadlineBlock}>
-          <Text style={styles.deadlineLabel}>Optional — a deadline</Text>
-          <View style={styles.deadlineRow}>
-            <TextInput
-              value={deadlineName}
-              onChangeText={setDeadlineName}
-              placeholder="Exam, launch, trip…"
-              placeholderTextColor={palette.textTertiary}
-              style={[styles.input, styles.deadlineInput]}
-            />
-            <TextInput
-              value={deadlineDate}
-              onChangeText={setDeadlineDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={palette.textTertiary}
-              style={[styles.input, styles.deadlineInput]}
-            />
-          </View>
-          {deadlineName.trim() && deadlineDate.trim() ? (
-            <Text style={styles.deadlinePreview}>
-              The shield will say things like “{deadlineName.trim()} in 12 days.”
-            </Text>
-          ) : null}
-        </Animated.View>
-      </View>
-
-      <View style={styles.ctaWrap}>
-        <GradientButton
-          label={canContinue ? 'Continue' : 'Skip for now'}
-          onPress={() =>
-            onContinue({
-              line: line.trim(),
-              deadlineName: deadlineName.trim(),
-              deadlineDate: deadlineDate.trim() || null,
-              photoUri,
-            })
-          }
-        />
-      </View>
+        </View>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

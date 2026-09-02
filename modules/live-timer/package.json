@@ -1,0 +1,7 @@
+{
+  "name": "live-timer",
+  "version": "1.0.0",
+  "description": "Local Expo module: the running session as an iOS Live Activity — Lock Screen, Dynamic Island and always-on display.",
+  "main": "index.ts",
+  "peerDependencies": { "expo": "*", "react-native": "*" }
+}

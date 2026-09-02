@@ -128,7 +128,7 @@ export default function ProgressPhotosScreen({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.base },
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.sm },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.md },
   circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.glass, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
   scroll: { paddingHorizontal: space.gutter, paddingTop: space.xs, paddingBottom: 110, gap: space.base },

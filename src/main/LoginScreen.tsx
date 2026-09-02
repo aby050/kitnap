@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import AppleSignInButton from './AppleSignInButton';
 import { Account } from '../data/store';
+import { Field } from '../design/primitives';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
@@ -71,12 +72,10 @@ export default function LoginScreen({
         </Animated.View>
       ) : (
         <Animated.View entering={FadeIn.duration(300)} style={styles.emailForm}>
-          <TextInput
+          <Field
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-              placeholderTextColor={palette.textTertiary}
-            style={styles.input}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
@@ -103,17 +102,17 @@ export default function LoginScreen({
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', paddingHorizontal: 26, paddingTop: 10 },
+  wrap: { alignItems: 'stretch', paddingHorizontal: 26, paddingTop: 10 },
   heading: { color: palette.text, fontSize: 21, fontWeight: '800', textAlign: 'center' },
-  sub: { color: palette.textSecondary, fontSize: 13.5, textAlign: 'center', lineHeight: 19, marginTop: 10, maxWidth: 300 },
-  buttons: { width: '100%', maxWidth: 320, gap: 12, marginTop: 26 },
+  sub: { color: palette.textSecondary, fontSize: 13.5, textAlign: 'center', lineHeight: 19, marginTop: 10, maxWidth: 300, alignSelf: 'center' },
+  buttons: { width: '100%', gap: 12, marginTop: 26 },
   providerBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    height: 52,
-    borderRadius: 26,
+    height: 56,
+    borderRadius: 999,
   },
   googleBtn: { backgroundColor: '#fff' },
   googleG: { fontSize: 17, fontWeight: '900', color: '#4285F4' },
@@ -121,18 +120,10 @@ const styles = StyleSheet.create({
   emailBtn: { backgroundColor: palette.glass, borderWidth: 1, borderColor: palette.border },
   emailGlyph: { fontSize: 16, color: palette.text },
   emailBtnText: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
-  emailForm: { width: '100%', maxWidth: 320, marginTop: 26 },
-  input: {
-    paddingVertical: 15,
-    paddingHorizontal: 18,
-    borderRadius: 24,
-    backgroundColor: palette.glass,
-    color: palette.text,
-    fontSize: 16,
-  },
+  emailForm: { width: '100%', marginTop: 26 },
   backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 14 },
   backLinkText: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
   error: { color: palette.danger, fontSize: 13, textAlign: 'center', marginTop: 14, maxWidth: 300 },
-  skip: { marginTop: 22, paddingVertical: 8 },
+  skip: { marginTop: 22, paddingVertical: 8, alignSelf: 'center' },
   skipText: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600' },
 });

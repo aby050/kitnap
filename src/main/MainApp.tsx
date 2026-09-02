@@ -11,9 +11,8 @@ import SettingsScreen from './SettingsScreen';
 import TimerScreen from './TimerScreen';
 import EmergencyTokensScreen from './EmergencyTokensScreen';
 import DeleteAccountScreen from './DeleteAccountScreen';
-import ReflectionScreen from './ReflectionScreen';
 import EssentialsScreen from './EssentialsScreen';
-// World feature — deprioritized per product decision (Wend-style apps don't
+// World feature — deprioritized per product decision (Byre-style apps don't
 // have a "world" concept; focus is the core Shield/Gate/timer loop instead).
 // Code kept, commented, in case we revisit it later.
 // import WorldScreen from './WorldScreen';
@@ -23,11 +22,8 @@ import EssentialsScreen from './EssentialsScreen';
 import GuardianScreen from './GuardianScreen';
 import WaitingRoomScreen from './WaitingRoomScreen';
 import BlockScreensScreen from './BlockScreensScreen';
-import AutofocusScreen from './AutofocusScreen';
 import ScheduleEditorScreen from './ScheduleEditorScreen';
-import PinAccessScreen from './PinAccessScreen';
 import AccountScreen from './AccountScreen';
-import TogetherScreen from './TogetherScreen';
 import FutureSelfScreen from '../onboarding/FutureSelfScreen';
 import IntensityScreen from '../onboarding/IntensityScreen';
 import BlockedAppsScreen from './BlockedAppsScreen';
@@ -38,13 +34,16 @@ import GrantScreen from '../shield/GrantScreen';
 import { alertGrantEnded, cancelGrantEndedNotification, scheduleGrantEndedNotification } from '../data/grantNotify';
 import LiveActivityBar from '../shield/LiveActivityBar';
 import { getIntensity, getTheme, IntensityKey, ThemeKey } from '../data/themes';
-import { isHealthLimited } from '../data/gateQuestions';
 import { computeRepTarget, parseAge, parseLifeChange } from '../data/activityDifficulty';
 import { ActivityKind, ActivitySessionResult } from '../shield/activity/types';
 import { EMPTY_GOAL, GoalData } from '../data/goal';
-import { Account, DEFAULT_STATE, PersistedState, AppLimit, startingEmergencyTokens } from '../data/store';
+import { Account, DEFAULT_STATE, PersistedState, AppLimit, FocusSession, startingEmergencyTokens } from '../data/store';
 import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, globalPercentile, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
+import { startSessionNotification, stopSessionNotification } from 'device-permissions';
 import { useTodayUsage } from '../data/useTodayUsage';
+import ScreenTimeDiagnostics from './ScreenTimeDiagnostics';
+import { EssentialKey } from '../data/gateQuestions';
+import { buildDemoState, clearDemoState } from '../data/demoData';
 import { recordGateReflection, recordActivitySession } from '../data/store';
 import { DEFAULT_BEDTIME, isWithinBedtime } from '../data/bedtime';
 import { shouldShowCheckIn } from '../data/checkin';
@@ -54,29 +53,34 @@ import { ProgressPhoto } from '../data/progressPhotos';
 import CalendarScreen from './CalendarScreen';
 import WeeklyInsight from './WeeklyInsight';
 import RealUsageScreen from './RealUsageScreen';
-import { configureShield, grantTemporaryAccess, hasBlockedSelection, isCurrentlyShielded } from '../data/iosScreenTime';
+import { endLiveTimer, startLiveTimer } from 'live-timer';
+import {
+  blockSelectedApps,
+  configureShield,
+  getSelectionCounts,
+  grantTemporaryAccess,
+  hasBlockedSelection,
+  isCurrentlyShielded,
+  unblockSelectedApps,
+} from '../data/iosScreenTime';
 import { palette, space } from '../design/tokens';
 import { Screen, ScreenHeader } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';
 
-type Tab = 'home' | 'apps' | 'reflect' | 'timer';
+type Tab = 'home' | 'apps' | 'timer';
 type Overlay =
   | null
   | 'profile'
   | 'milestones'
   | 'settings'
-  | 'settingsLocked'
   | 'essentials'
   // | 'ledger'
   // | 'landmarks'
   // | 'seasons'
-  | 'together'
   | 'guardian'
   | 'waitingRoom'
   | 'blockScreens'
-  | 'autofocus'
   | 'schedules'
-  | 'pin'
   | 'account'
   | 'futureSelf'
   | 'progressPhotos'
@@ -87,14 +91,19 @@ type Overlay =
   | 'weeklyInsight'
   | 'blocks'
   | 'emergencyTokens'
-  | 'deleteAccount';
+  | 'deleteAccount'
+  | 'screenTimeDiagnostics';
 type Block = null | 'shield' | 'gate' | 'grant' | 'emergency';
-type TimerPreset = { minutes: number; label: string; autoStart: boolean; hardMode?: boolean };
+
+/** The only overlays reachable while a session is locked — each is a door the
+ *  locked timer screen itself puts on screen (essentials/emergency access, the
+ *  blocked-app list, and the Bailout store). */
+const SESSION_OVERLAYS: Overlay[] = ['essentials', 'blockedApps', 'emergencyTokens'];
+type TimerPreset = { minutes: number; label: string; autoStart: boolean; hardMode?: boolean; nonce?: number };
 
 const TABS: { key: Tab; label: string; mark: IconName }[] = [
   { key: 'home', label: 'Home', mark: 'home' },
   { key: 'apps', label: 'My apps', mark: 'grid' },
-  { key: 'reflect', label: 'Reflect', mark: 'chart' },
   { key: 'timer', label: 'Timer', mark: 'timer' },
 ];
 
@@ -124,7 +133,11 @@ export default function MainApp({
    *  App.tsx since it has to reset top-level state this component doesn't. */
   onDeleteAccount?: () => Promise<void>;
 }) {
-  const [tab, setTab] = useState<Tab>('home');
+  // Relaunching mid-session must land back on the locked screen, not on Home
+  // — otherwise force-quitting is a way to browse the app during a block.
+  const [tab, setTab] = useState<Tab>(() =>
+    persisted.session && persisted.session.endsAt > Date.now() ? 'timer' : 'home',
+  );
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [block, setBlock] = useState<Block>(null);
   const [grantMinutes, setGrantMinutes] = useState(5);
@@ -132,9 +145,43 @@ export default function MainApp({
   const [grantIsEmergency, setGrantIsEmergency] = useState(false);
   const [activeThemeKey, setActiveThemeKey] = useState<ThemeKey>(themeKey);
   const [activeIntensityKey, setActiveIntensityKey] = useState<IntensityKey>(intensityKey);
+  // The live session lives here, not in TimerScreen: it has to survive opening
+  // an overlay (checking which apps are blocked used to unmount the timer and
+  // silently end the lock) and survive the app being killed.
+  const [session, setSession] = useState<FocusSession | null>(persisted.session ?? null);
+  const timerRunning = !!session && session.endsAt > Date.now();
+
+  const startSession = (minutes: number, label: string, hardMode: boolean) => {
+    const next: FocusSession = {
+      endsAt: Date.now() + minutes * 60 * 1000,
+      totalSec: minutes * 60,
+      label,
+      hardMode,
+    };
+    setSession(next);
+    onPatch({ session: next });
+    setTimerPreset((p) => ({ ...p, minutes, label, hardMode, autoStart: false }));
+    setTab('timer');
+    // Actually apply the block. Without this the session was only ever a
+    // countdown in JS — the OS was never told to shield anything, which is
+    // why blocked apps still opened normally on iOS.
+    if (Platform.OS === 'ios' && hasBlockedSelection()) blockSelectedApps();
+    // The countdown outlives the app from here: iOS renders and ticks it on
+    // the Lock Screen, in the Dynamic Island and on the always-on display.
+    const blockedCount = getSelectionCounts()?.apps ?? blockedPackages.length;
+    if (Platform.OS === 'ios') startLiveTimer(next.endsAt, label, blockedCount);
+    else startSessionNotification(next.endsAt, label, blockedCount);
+  };
+
+  const endSession = () => {
+    setSession(null);
+    onPatch({ session: null });
+    if (Platform.OS === 'ios' && hasBlockedSelection()) unblockSelectedApps();
+    endLiveTimer();
+    stopSessionNotification();
+  };
   const [timerPreset, setTimerPreset] = useState<TimerPreset>({ minutes: 25, label: 'Focus Timer', autoStart: false });
   // Once verified this session, Settings stays unlocked until the app is reloaded.
-  const [settingsUnlocked, setSettingsUnlocked] = useState(false);
 
   const [hoursReclaimed, setHoursReclaimed] = useState(persisted.hoursReclaimed);
   const [reclaimedToday, setReclaimedToday] = useState(persisted.reclaimedToday);
@@ -144,8 +191,22 @@ export default function MainApp({
   const [accountName, setAccountName] = useState(persisted.account?.name ?? '');
   const [account, setAccount] = useState<Account | null>(persisted.account);
   const [guardian, setGuardian] = useState(persisted.guardian);
-  const [pin, setPin] = useState(persisted.pin);
   const joinedDays = daysSinceJoin(persisted.firstOpenDate);
+
+  // Demo data (__DEV__ only, see SettingsScreen): writes the persisted copy
+  // *and* the local mirrors this component keeps, so the populated screens
+  // appear immediately instead of after a relaunch.
+  const applyDevState = (next: Partial<PersistedState>) => {
+    onPatch(next);
+    if (next.progress) setProgress(next.progress);
+    if (next.hoursReclaimed !== undefined) setHoursReclaimed(next.hoursReclaimed);
+    if (next.reclaimedToday !== undefined) setReclaimedToday(next.reclaimedToday);
+    if (next.unlockNumber !== undefined) setUnlockNumber(next.unlockNumber);
+    if (next.gateReflections) setGateReflections(next.gateReflections);
+    if (next.checkIns) setCheckIns(next.checkIns);
+    setOverlay(null);
+    setTab('home');
+  };
   // Computed once at mount so finishing (or skipping) the check-in doesn't
   // immediately re-trigger it within the same session.
   const [checkInDue, setCheckInDue] = useState(() =>
@@ -154,6 +215,10 @@ export default function MainApp({
   const [checkIns, setCheckIns] = useState(persisted.checkIns);
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>(persisted.progressPhotos);
   const [blockedPackages, setBlockedPackagesState] = useState<string[]>(persisted.blockedPackages);
+  const [blockedAppModes, setBlockedAppModes] = useState(persisted.blockedAppModes ?? {});
+  const [essentials, setEssentials] = useState<Record<EssentialKey, boolean>>(
+    persisted.essentials ?? DEFAULT_STATE.essentials,
+  );
   const [schedules, setSchedules] = useState(persisted.schedules);
   const [gateReflections, setGateReflections] = useState(persisted.gateReflections);
   const [activitySessions, setActivitySessions] = useState(persisted.activitySessions ?? []);
@@ -264,7 +329,7 @@ export default function MainApp({
 
   // iOS equivalent: Apple's own Shield UI is what the user actually sees
   // over a blocked app (not our RN ShieldScreen — Apple doesn't allow custom
-  // UI inside that extension). Its button opens Wend, so on foreground we
+  // UI inside that extension). Its button opens Byre, so on foreground we
   // check whether a shield is currently active and, if so, skip straight to
   // the Gate — the "I need it" step already happened on Apple's screen.
   useEffect(() => {
@@ -344,7 +409,7 @@ export default function MainApp({
       <GateScreen
         intensity={intensity}
         futureSelfMessage={futureSelf}
-        healthLimited={isHealthLimited(persisted.onboardingAnswers?.healthLimit?.value)}
+        healthLimitRaw={persisted.onboardingAnswers?.healthLimit?.value}
         repsFor={repsFor}
         onActivityComplete={commitActivitySession}
         tokenBalance={emergencyTokens}
@@ -409,51 +474,57 @@ export default function MainApp({
   }
 
   function openSettings() {
-    if (pin && !settingsUnlocked) setOverlay('settingsLocked');
-    else setOverlay('settings');
+    setOverlay('settings');
   }
 
   function renderMain(): React.ReactNode {
-    if (overlay === 'settingsLocked')
-      return (
-        <PinAccessScreen
-          existingPin={pin}
-          onBack={() => setOverlay('profile')}
-          onVerified={() => {
-            setSettingsUnlocked(true);
-            setOverlay('settings');
-          }}
-        />
-      );
-    if (overlay === 'settings')
+    // A running session is a locked screen, so only the doors that screen
+    // itself offers stay open. Everything else — Settings, Profile, and the
+    // whole tree behind them — is unreachable until the block ends. Without
+    // this, opening "which apps are blocked" and pressing back walked you out
+    // of the session entirely.
+    const ov = timerRunning && overlay && !SESSION_OVERLAYS.includes(overlay) ? null : overlay;
+    if (ov === 'settings')
       return (
         <SettingsScreen
           onBack={() => setOverlay('profile')}
+          onLoadDemoData={() => applyDevState(buildDemoState())}
+          onClearDemoData={() => applyDevState(clearDemoState())}
           onOpenGuardian={() => setOverlay('guardian')}
           onOpenWaitingRoom={() => setOverlay('waitingRoom')}
           onOpenBlockScreens={() => setOverlay('blockScreens')}
-          onOpenAutofocus={() => setOverlay('autofocus')}
           onOpenSchedules={() => setOverlay('schedules')}
-          onOpenPin={() => setOverlay('pin')}
           onOpenAccount={() => setOverlay('account')}
           accountLabel={account ? account.identifier : undefined}
           onOpenFutureSelf={() => setOverlay('futureSelf')}
-          onOpenTogether={() => setOverlay('together')}
           onOpenBlockedApps={() => setOverlay('blockedApps')}
           onOpenDifficulty={() => setOverlay('difficulty')}
           onOpenDeleteAccount={() => setOverlay('deleteAccount')}
+          onOpenScreenTimeDiagnostics={
+            Platform.OS === 'ios' ? () => setOverlay('screenTimeDiagnostics') : undefined
+          }
           difficultyLabel={intensity.name}
-          pinEnabled={!!pin}
         />
       );
-    if (overlay === 'deleteAccount')
+    if (ov === 'screenTimeDiagnostics')
+      return (
+        <ScreenTimeDiagnostics
+          onBack={() => setOverlay('settings')}
+          onAddBailouts={(count) => {
+            const next = emergencyTokens + count;
+            setEmergencyTokens(next);
+            onPatch({ emergencyTokens: next });
+          }}
+        />
+      );
+    if (ov === 'deleteAccount')
       return (
         <DeleteAccountScreen
           onBack={() => setOverlay('settings')}
           onConfirmDelete={onDeleteAccount}
         />
       );
-    if (overlay === 'blockedApps')
+    if (ov === 'blockedApps')
       return (
         <BlockedAppsScreen
           blockedPackages={blockedPackages}
@@ -461,10 +532,16 @@ export default function MainApp({
             setBlockedPackagesState(next);
             onPatch({ blockedPackages: next });
           }}
+          appModes={blockedAppModes}
+          onChangeModes={(next) => {
+            setBlockedAppModes(next);
+            onPatch({ blockedAppModes: next });
+          }}
+          defaultMode={activeIntensityKey}
           onBack={() => setOverlay('settings')}
         />
       );
-    if (overlay === 'blocks')
+    if (ov === 'blocks')
       return (
         <BlocksScreen
           appLimits={appLimits}
@@ -474,14 +551,14 @@ export default function MainApp({
           onBack={() => setOverlay(null)}
         />
       );
-    if (overlay === 'emergencyTokens')
+    if (ov === 'emergencyTokens')
       return (
         <EmergencyTokensScreen
           tokenBalance={emergencyTokens}
           onBack={() => setOverlay(null)}
         />
       );
-    if (overlay === 'difficulty')
+    if (ov === 'difficulty')
       return (
         <IntensityScreen
           recommended={activeIntensityKey}
@@ -491,20 +568,11 @@ export default function MainApp({
           }}
         />
       );
-    if (overlay === 'together')
-      return (
-        <TogetherScreen
-          guardian={guardian}
-          hoursReclaimed={hoursReclaimed}
-          onOpenGuardian={() => setOverlay('guardian')}
-          onInvite={() => setOverlay('guardian')}
-          onBack={() => setOverlay('settings')}
-        />
-      );
-    if (overlay === 'guardian')
+    if (ov === 'guardian')
       return (
         <GuardianScreen
           initial={guardian}
+          hoursReclaimed={hoursReclaimed}
           onBack={() => setOverlay('settings')}
           onSave={(g) => {
             setGuardian(g);
@@ -512,8 +580,8 @@ export default function MainApp({
           }}
         />
       );
-    if (overlay === 'waitingRoom') return <WaitingRoomScreen onBack={() => setOverlay('settings')} />;
-    if (overlay === 'blockScreens')
+    if (ov === 'waitingRoom') return <WaitingRoomScreen onBack={() => setOverlay('settings')} />;
+    if (ov === 'blockScreens')
       return (
         <BlockScreensScreen
           themeKey={activeThemeKey}
@@ -521,8 +589,7 @@ export default function MainApp({
           onBack={() => setOverlay('settings')}
         />
       );
-    if (overlay === 'autofocus') return <AutofocusScreen onBack={() => setOverlay('settings')} />;
-    if (overlay === 'schedules')
+    if (ov === 'schedules')
       return (
         <ScheduleEditorScreen
           schedules={schedules}
@@ -533,19 +600,7 @@ export default function MainApp({
           onBack={() => setOverlay(null)}
         />
       );
-    if (overlay === 'pin')
-      return (
-        <PinAccessScreen
-          existingPin={null}
-          onBack={() => setOverlay('settings')}
-          onSet={(p) => {
-            setPin(p);
-            setSettingsUnlocked(true);
-            onPatch({ pin: p });
-          }}
-        />
-      );
-    if (overlay === 'account')
+    if (ov === 'account')
       return (
         <AccountScreen
           name={accountName}
@@ -562,7 +617,7 @@ export default function MainApp({
           onBack={() => setOverlay('settings')}
         />
       );
-    if (overlay === 'futureSelf')
+    if (ov === 'futureSelf')
       return (
         <FutureSelfScreen
           editing
@@ -575,10 +630,20 @@ export default function MainApp({
           }}
         />
       );
-    if (overlay === 'milestones')
+    if (ov === 'milestones')
       return <MilestonesScreen onBack={() => setOverlay('profile')} progress={progress} firstOpenDate={persisted.firstOpenDate} />;
-    if (overlay === 'essentials') return <EssentialsScreen onBack={() => setOverlay(null)} />;
-    if (overlay === 'progressPhotos')
+    if (ov === 'essentials')
+      return (
+        <EssentialsScreen
+          enabled={essentials}
+          onChange={(next) => {
+            setEssentials(next);
+            onPatch({ essentials: next });
+          }}
+          onBack={() => setOverlay(null)}
+        />
+      );
+    if (ov === 'progressPhotos')
       return (
         <ProgressPhotosScreen
           photos={progressPhotos}
@@ -591,8 +656,8 @@ export default function MainApp({
           onBack={() => setOverlay('profile')}
         />
       );
-    if (overlay === 'calendar') return <CalendarScreen progress={progress} onBack={() => setOverlay('profile')} />;
-    if (overlay === 'weeklyInsight')
+    if (ov === 'calendar') return <CalendarScreen progress={progress} onBack={() => setOverlay('profile')} />;
+    if (ov === 'weeklyInsight')
       return (
         <Screen edges={['top']}>
           <ScreenHeader title="Weekly insight" onBack={() => setOverlay('profile')} />
@@ -601,16 +666,16 @@ export default function MainApp({
           </ScrollView>
         </Screen>
       );
-    if (overlay === 'realUsage') return <RealUsageScreen onBack={() => setOverlay('profile')} />;
+    if (ov === 'realUsage') return <RealUsageScreen onBack={() => setOverlay('profile')} />;
     // World feature — deprioritized, code kept for later.
-    // if (overlay === 'ledger')
+    // if (ov === 'ledger')
     //   return <TimeLedgerScreen hoursReclaimed={hoursReclaimed} onBack={() => setOverlay(null)} />;
-    // if (overlay === 'landmarks')
+    // if (ov === 'landmarks')
     //   return (
     //     <LandmarksScreen hoursReclaimed={hoursReclaimed} dayNumber={dayNumber} onBack={() => setOverlay(null)} />
     //   );
-    // if (overlay === 'seasons') return <SeasonsScreen onBack={() => setOverlay(null)} />;
-    if (overlay === 'profile') {
+    // if (ov === 'seasons') return <SeasonsScreen onBack={() => setOverlay(null)} />;
+    if (ov === 'profile') {
       return (
         <ProfileScreen
           onBack={() => setOverlay(null)}
@@ -620,6 +685,7 @@ export default function MainApp({
           onOpenCalendar={() => setOverlay('calendar')}
           onOpenRealUsage={() => setOverlay('realUsage')}
           onOpenWeeklyInsight={() => setOverlay('weeklyInsight')}
+          gateReflections={gateReflections}
           progress={progress}
           username={accountName || account?.name || 'You'}
           firstOpenDate={persisted.firstOpenDate}
@@ -636,24 +702,18 @@ export default function MainApp({
               onOpenProfile={() => setOverlay('profile')}
               onOpenApps={() => setTab('apps')}
               onTriggerShield={() => setBlock('shield')}
-              onOpenEssentials={() => setOverlay('essentials')}
-              onStartFocus={() => {
-                setTimerPreset({ minutes: 25, label: 'Focus Timer', autoStart: false });
-                setTab('timer');
-              }}
+              onStartBlock={(minutes) => startSession(minutes, 'Focus Timer', false)}
               onStartRest={() => {
                 setTimerPreset({ minutes: 10, label: 'Rest Timer', autoStart: false });
                 setTab('timer');
               }}
-              onStartPreset={(minutes, label, hardMode) => {
-                setTimerPreset({ minutes, label, autoStart: true, hardMode: !!hardMode });
-                setTab('timer');
-              }}
+              onStartPreset={(minutes, label, hardMode) => startSession(minutes, label, !!hardMode)}
               onOpenSleepSchedule={() => setOverlay('schedules')}
               onOpenBlockedApps={() => setOverlay('blockedApps')}
+              onBuyBailouts={() => setOverlay('emergencyTokens')}
+              bailoutBalance={emergencyTokens}
               blockedPackages={blockedPackages}
               unlockNumber={unlockNumber}
-              streakDays={progress.currentStreak}
               score={rank.percent}
               scoreTrendUp={scoreTrendUp}
               focusPresetMinutes={25}
@@ -678,18 +738,17 @@ export default function MainApp({
               onOpenBlocks={() => setOverlay('blocks')}
             />
           )}
-          {tab === 'reflect' && (
-            <ReflectionScreen progress={progress} gateReflections={gateReflections} />
-          )}
           {tab === 'timer' && (
             <TimerScreen
-              key={`${timerPreset.minutes}-${timerPreset.label}`}
+              key={`${timerPreset.minutes}-${timerPreset.label}-${timerPreset.nonce ?? 0}`}
               initialMinutes={timerPreset.minutes}
               label={timerPreset.label}
               motivationLine={goal.line ? `Protecting: ${goal.line}` : theme.forWho}
-              autoStart={timerPreset.autoStart}
+              essentials={essentials}
+              session={session}
+              onStartSession={startSession}
+              onEndSession={endSession}
               hardMode={!!timerPreset.hardMode}
-              onOpenEssentials={() => setOverlay('essentials')}
               onFocusComplete={(mins) => {
                 applyProgress([{ type: 'focus', minutes: mins }, { type: 'lockSession' }]);
               }}
@@ -710,6 +769,9 @@ export default function MainApp({
           )}
         </Animated.View>
 
+        {/* A running session takes the whole screen — the point of a locked
+            block is that there is nowhere else to go. */}
+        {!timerRunning && (
         <View style={styles.tabBarWrap}>
           <View style={styles.tabBar}>
             {TABS.map((t) => {
@@ -741,6 +803,7 @@ export default function MainApp({
             })}
           </View>
         </View>
+        )}
       </View>
     );
   }

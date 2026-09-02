@@ -1,23 +1,25 @@
 {
   "expo": {
-    "name": "Wend",
-    "slug": "wend",
-    "scheme": "wend",
+    "name": "Byre",
+    "slug": "byre",
+    "scheme": ["byre", "device-activity"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "bundleIdentifier": "com.abhay050.wend",
+      "bundleIdentifier": "com.abhay.byre",
       "appleTeamId": "RG96N3U9GH",
       "supportsTablet": true,
+      "buildNumber": "1",
       "infoPlist": {
+        "NSSupportsLiveActivities": true,
         "NSCameraUsageDescription": "Used only during Hard unlock challenges to confirm you're actually up and moving. Nothing is recorded or leaves your phone."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#020C09",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -26,11 +28,16 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.QUERY_ALL_PACKAGES",
-        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "package": "com.abhay050.wend"
+      "versionCode": 1,
+      "package": "com.abhay.byre"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -46,6 +53,7 @@
       "expo-audio",
       "expo-notifications",
       "./plugins/withUsageStatsPermission.js",
+      "./plugins/withAndroidReleaseSigning.js",
       [
         "expo-build-properties",
         {
@@ -61,9 +69,53 @@
         "react-native-device-activity",
         {
           "appleTeamId": "RG96N3U9GH",
-          "appGroup": "group.com.abhay050.wend"
+          "appGroup": "group.com.abhay.byre"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "bundleIdentifier": "com.abhay.byre.ShieldConfiguration",
+                  "targetName": "ShieldConfiguration",
+                  "entitlements": {
+                    "com.apple.developer.family-controls": true,
+                    "com.apple.security.application-groups": [
+                      "group.com.abhay.byre"
+                    ]
+                  }
+                },
+                {
+                  "bundleIdentifier": "com.abhay.byre.ShieldAction",
+                  "targetName": "ShieldAction",
+                  "entitlements": {
+                    "com.apple.developer.family-controls": true,
+                    "com.apple.security.application-groups": [
+                      "group.com.abhay.byre"
+                    ]
+                  }
+                },
+                {
+                  "bundleIdentifier": "com.abhay.byre.ActivityMonitorExtension",
+                  "targetName": "ActivityMonitorExtension",
+                  "entitlements": {
+                    "com.apple.developer.family-controls": true,
+                    "com.apple.security.application-groups": [
+                      "group.com.abhay.byre"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "aef6ccde-8b87-4758-964e-b2f8a8139efe"
+      }
+    },
+    "owner": "abhay050"
   }
 }

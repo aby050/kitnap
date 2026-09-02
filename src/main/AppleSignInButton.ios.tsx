@@ -44,8 +44,8 @@ export default function AppleSignInButton({
     <AppleAuthentication.AppleAuthenticationButton
       buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
       buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-      cornerRadius={26}
-      style={{ width: '100%', height: 52 }}
+      cornerRadius={999}
+      style={{ width: '100%', height: 56 }}
       onPress={handlePress}
     />
   );

@@ -6,9 +6,20 @@ import { BedtimeWindow, DEFAULT_BEDTIME } from './bedtime';
 import { CheckIn } from './checkin';
 import { ProgressPhoto } from './progressPhotos';
 import { DEFAULT_BLOCKED_PACKAGES } from './blockedApps';
+import { EssentialKey } from './gateQuestions';
 import { ActivitySessionResult } from '../shield/activity/types';
 
 const KEY = 'screentime.v1';
+
+/** A locked focus session, held as an absolute end time so it survives the app
+ *  being backgrounded or killed — a block you can escape by force-quitting is
+ *  not a block. */
+export type FocusSession = {
+  endsAt: number;
+  totalSec: number;
+  label: string;
+  hardMode: boolean;
+};
 
 export type PersistedState = {
   onboardingComplete: boolean;
@@ -23,7 +34,6 @@ export type PersistedState = {
   dayNumber: number;
   firstOpenDate: string;
   guardian: { enabled: boolean; name: string; contact: string } | null;
-  pin: string | null;
   account: Account | null;
   /** Raw onboarding answers, kept after onboarding completes so later
    *  screens (recommendation, personalization) can still read them. */
@@ -34,6 +44,13 @@ export type PersistedState = {
   lastCheckInDate: string | null;
   progressPhotos: ProgressPhoto[];
   blockedPackages: string[];
+  /** Per-app challenge intensity. Apps absent from this map fall back to the
+   *  global intensityKey chosen during onboarding, so an existing install
+   *  keeps behaving exactly as it did before any app was set individually. */
+  blockedAppModes: Record<string, IntensityKey>;
+  session: FocusSession | null;
+  /** Which essential categories stay reachable during a block. */
+  essentials: Record<EssentialKey, boolean>;
   gateReflections: GateReflection[];
   schedules: Schedule[];
   appLimits?: AppLimit[];
@@ -133,7 +150,6 @@ export const DEFAULT_STATE: PersistedState = {
   dayNumber: 1,
   firstOpenDate: new Date().toDateString(),
   guardian: null,
-  pin: null,
   account: null,
   onboardingAnswers: {},
   progress: EMPTY_PROGRESS,
@@ -142,6 +158,9 @@ export const DEFAULT_STATE: PersistedState = {
   lastCheckInDate: null,
   progressPhotos: [],
   blockedPackages: DEFAULT_BLOCKED_PACKAGES,
+  blockedAppModes: {},
+  session: null,
+  essentials: { call: true, payment: true, maps: true, health: true },
   gateReflections: [],
   schedules: DEFAULT_SCHEDULES,
   appLimits: [],

@@ -5,11 +5,11 @@
   and no accessibilityFlags since we don't need view-hierarchy metadata.
   notificationTimeout starts at a battery-friendly default and is then
   overridden at runtime per MonitoringConfigStore (see
-  WendAccessibilityService.applyMonitoringLevelIfChanged).
+  ByreAccessibilityService.applyMonitoringLevelIfChanged).
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
   android:accessibilityEventTypes="typeWindowStateChanged"
   android:accessibilityFeedbackType="feedbackGeneric"
   android:canRetrieveWindowContent="false"
-  android:description="@string/wend_accessibility_description"
+  android:description="@string/byre_accessibility_description"
   android:notificationTimeout="500" />

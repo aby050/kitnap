@@ -4,13 +4,13 @@ import android.content.Context
 
 /**
  * Shared between the JS-facing module (which writes the list whenever it
- * changes in the app) and WendAccessibilityService (which reads it on every
+ * changes in the app) and ByreAccessibilityService (which reads it on every
  * foreground-app event). Backed by SharedPreferences so the list survives
  * the service outliving the JS process, with an in-memory cache so the hot
  * path (checking every window-state-changed event) never touches disk.
  */
 object BlockedPackagesStore {
-  private const val PREFS = "wend_blocked_packages"
+  private const val PREFS = "byre_blocked_packages"
   private const val KEY = "packages"
 
   @Volatile

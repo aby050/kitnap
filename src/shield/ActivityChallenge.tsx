@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { useCameraPermissions } from 'expo-camera';
 import { GateQuestion } from '../data/gateQuestions';
 import { Button, Meter, Ring, Stat } from '../design/primitives';
@@ -128,6 +128,18 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
   /* ── unified reading, whichever tier is live ─────────────────────── */
   const reps = tier === 'pose' ? pose.reps : tier === 'motion' ? motion.reps : tapView.reps;
   const hint = tier === 'pose' ? pose.hint : tier === 'motion' ? motion.hint : tapView.hint;
+
+  // The framing coach fades once you're actually moving — by then you can see
+  // yourself in frame and the words are just in the way.
+  const [coachVisible, setCoachVisible] = useState(true);
+  useEffect(() => {
+    if (reps > 0) {
+      setCoachVisible(false);
+      return;
+    }
+    const t = setTimeout(() => setCoachVisible(false), 6000);
+    return () => clearTimeout(t);
+  }, [reps]);
   const level = tier === 'pose' ? pose.progress : tier === 'motion' ? motion.level : 0;
 
   // The manual tier has a whole-set time floor on top of its per-tap floor, so
@@ -209,7 +221,7 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
         <View style={styles.ctaWrap}>
           <Button label="Allow camera" variant="primary" onPress={requestPermission} />
         </View>
-        <Pressable onPress={goBreathing} hitSlop={10}>
+        <Pressable onPress={goBreathing} hitSlop={10} style={{ alignSelf: 'center' }}>
           <Text style={styles.skip}>Prefer not to — do a breathing round instead</Text>
         </Pressable>
       </View>
@@ -220,13 +232,25 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
     <View style={styles.qBody}>
       <Text style={styles.prompt}>{q.prompt}</Text>
 
+      {/* The camera is the challenge: at thumbnail size you couldn't tell
+          whether it had you in frame, which is the one thing you need to see.
+          It now fills the stage, with the rep counter floating over it. */}
       <View style={styles.stage}>
         <View style={styles.cameraWrap}>
           <PosePreview frameHandler={pose.frameHandler} deciding={pose.loading} />
+          {coachVisible && (
+            <View style={styles.coach} pointerEvents="none">
+              <Text style={styles.coachHint}>{hint}</Text>
+              <Text style={styles.coachPrivacy}>Nothing is recorded or leaves your phone.</Text>
+            </View>
+          )}
+
+          <View style={styles.repOverlay} pointerEvents="none">
+            <Ring progress={target > 0 ? reps / target : 0} size={96} thickness={5} color={palette.accent}>
+              <Stat value={`${reps}`} unit={`/${target}`} align="center" compact />
+            </Ring>
+          </View>
         </View>
-        <Ring progress={target > 0 ? reps / target : 0} size={118} thickness={6} color={palette.accent}>
-          <Stat value={`${reps}`} unit={`/${target}`} align="center" compact />
-        </Ring>
       </View>
 
       {tier !== 'manual' && (
@@ -236,8 +260,6 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
         </View>
       )}
       {tier === 'manual' && <Text style={styles.tierNote}>{TIER_NOTE.manual}</Text>}
-
-      <Text style={styles.hint}>{hint}</Text>
 
       {tier === 'manual' && (
         <View style={styles.ctaWrap}>
@@ -249,7 +271,6 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
         </View>
       )}
 
-      <Text style={styles.privacy}>Nothing is recorded or leaves your phone.</Text>
     </View>
   );
 }
@@ -268,22 +289,38 @@ const SINGULAR: Record<ActivityKind, string> = {
 };
 
 const styles = StyleSheet.create({
-  qBody: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, gap: 16 },
-  prompt: { color: palette.text, fontSize: 23, fontWeight: '700', textAlign: 'center', lineHeight: 31, maxWidth: 320 },
-  hint: { color: palette.textTertiary, fontSize: 13, textAlign: 'center', maxWidth: 300, minHeight: 18 },
-  stage: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  qBody: { flex: 1, alignItems: 'stretch', justifyContent: 'center', paddingHorizontal: 18, gap: 14 },
+  prompt: { color: palette.text, fontSize: 23, fontWeight: '700', textAlign: 'center', lineHeight: 31, maxWidth: 320, alignSelf: 'center' },
+  hint: { color: palette.textTertiary, fontSize: 13, textAlign: 'center', maxWidth: 300, minHeight: 18, alignSelf: 'center' },
+  stage: { alignItems: 'stretch', justifyContent: 'center' },
   cameraWrap: {
-    width: 108,
-    height: 144,
-    borderRadius: 18,
+    width: '100%',
+    // Tall enough to show head-to-knee at arm's length, capped so the prompt
+    // and rep count still fit on a small phone.
+    height: Math.min(Dimensions.get('window').height * 0.7, 620),
+    borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#000',
     borderWidth: 1,
     borderColor: palette.border,
   },
-  meterWrap: { width: '100%', maxWidth: 300, gap: 8 },
-  tierNote: { color: palette.accentBorder, fontSize: 12, textAlign: 'center', maxWidth: 300 },
-  ctaWrap: { width: '100%', maxWidth: 300 },
-  privacy: { color: palette.textTertiary, fontSize: 12, textAlign: 'center' },
-  skip: { color: palette.textTertiary, fontSize: 13, textDecorationLine: 'underline' },
+  repOverlay: { position: 'absolute', right: 14, top: 14 },
+  coach: {
+    position: 'absolute',
+    left: 14,
+    right: 14,
+    bottom: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    gap: 4,
+  },
+  coachHint: { color: palette.text, fontSize: 14.5, fontWeight: '600', lineHeight: 20 },
+  coachPrivacy: { color: palette.textTertiary, fontSize: 11.5 },
+  meterWrap: { width: '100%', gap: 8 },
+  tierNote: { color: palette.accentBorder, fontSize: 12, textAlign: 'center', maxWidth: 300, alignSelf: 'center' },
+  ctaWrap: { width: '100%' },
+  privacy: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', alignSelf: 'center' },
+  skip: { color: palette.textTertiary, fontSize: 13, textDecorationLine: 'underline', textAlign: 'center' },
 });

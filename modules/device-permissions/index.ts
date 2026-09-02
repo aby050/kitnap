@@ -11,6 +11,9 @@ type Native = {
   setMonitoringLevel(level: string): void;
   isIgnoringBatteryOptimizations(): boolean;
   openBatteryOptimizationSettings(): void;
+  startSessionNotification?(endsAt: number, label: string, blockedCount: number): boolean;
+  stopSessionNotification?(): boolean;
+  isPowerSaveMode?(): boolean;
 };
 
 export type MonitoringLevel = 'gentle' | 'balanced' | 'strict';
@@ -48,7 +51,27 @@ export const setBlockedPackages = (packages: string[]) => native?.setBlockedPack
  *  detection). See MonitoringConfigStore.kt for the exact numbers. */
 export const setMonitoringLevel = (level: MonitoringLevel) => native?.setMonitoringLevel(level);
 
-export const getInstalledApps = async (): Promise<{ packageName: string; label: string; category: string }[]> => {
+/** `icon` is a PNG data URI on Android and always empty on iOS, which never
+ *  exposes installed-app icons to third-party apps. */
+export const getInstalledApps = async (): Promise<
+  { packageName: string; label: string; category: string; icon?: string }[]
+> => {
   if (!native || !(native as any).getInstalledApps) return [];
   return await (native as any).getInstalledApps();
 };
+
+/**
+ * The running session as an ongoing, system-counted notification.
+ *
+ * Android's answer to a Live Activity. `setUsesChronometer` means the OS ticks
+ * the countdown itself — nothing in the app wakes on a timer, so a long
+ * session costs no more battery than a short one — and the foreground service
+ * stops Android killing the process mid-block.
+ */
+export const startSessionNotification = (endsAt: number, label: string, blockedCount = 0) =>
+  native?.startSessionNotification?.(endsAt, label, blockedCount) ?? false;
+
+export const stopSessionNotification = () => native?.stopSessionNotification?.() ?? false;
+
+/** True while the OS is in battery saver. */
+export const isPowerSaveMode = (): boolean => native?.isPowerSaveMode?.() ?? false;

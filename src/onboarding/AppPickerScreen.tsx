@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Svg, { Circle, Path, Rect, Line } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { getInstalledApps } from 'device-permissions';
 import { GradientButton } from '../components/ui';
 import { palette, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
+import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
+import { DEFAULT_BLOCKED_PACKAGES } from '../data/blockedApps';
 
 type Entry = { id: string; name: string; tint: string; group?: string; expandable?: boolean };
 
@@ -199,7 +202,13 @@ function AppIconSvg({ id, label }: { id: string; label: string }) {
   }
 }
 
-export default function AppPickerScreen({ onContinue }: { onContinue: (selected: string[]) => void }) {
+export default function AppPickerScreen({
+  onContinue,
+  suggestedPackages = [],
+}: {
+  onContinue: (selected: string[]) => void;
+  suggestedPackages?: string[];
+}) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['social']); // start with social expanded
@@ -258,6 +267,26 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
             });
             
             setEntries(newList);
+            const installedIds = new Set(newList.map((e) => e.id));
+            let preselect = suggestedPackages.filter((p) => installedIds.has(p));
+            try {
+              const hasUsage = await checkUsageAccessPermission();
+              if (hasUsage) {
+                const end = Date.now();
+                const daily = await queryDailyUsage(end - 7 * 86400000, end);
+                const ranked = [...daily]
+                  .sort((a, b) => b.totalTimeInForeground - a.totalTimeInForeground)
+                  .map((d) => d.packageName)
+                  .filter((p) => installedIds.has(p) && (DEFAULT_BLOCKED_PACKAGES.includes(p) || newList.find((e) => e.id === p)?.group === 'social' || newList.find((e) => e.id === p)?.group === 'entertainment'));
+                if (ranked.length > 0) preselect = ranked.slice(0, 6);
+              }
+            } catch {
+              /* keep suggested */
+            }
+            if (preselect.length === 0) {
+              preselect = DEFAULT_BLOCKED_PACKAGES.filter((p) => installedIds.has(p)).slice(0, 4);
+            }
+            setSelected(preselect);
             return;
           }
         } catch (e) {
@@ -266,9 +295,11 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
       }
       
       setEntries(defaults);
+      const fallback = suggestedPackages.length > 0 ? suggestedPackages : [];
+      setSelected(fallback.filter((id) => defaults.some((e) => e.id === id)));
     };
     load();
-  }, []);
+  }, [suggestedPackages]);
 
   const toggle = (id: string) => {
     setSelected((prev) => {
@@ -341,85 +372,97 @@ export default function AppPickerScreen({ onContinue }: { onContinue: (selected:
   };
 
   const visible = entries.filter(isRowVisible);
+  const selectedAppCount = selected.filter((id) => {
+    const e = entries.find((x) => x.id === id);
+    return e && !e.expandable && e.id !== 'all';
+  }).length;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Title Header */}
-      <View style={styles.hintRow}>
-        <Text style={styles.hint}>Use </Text>
-        <Text style={[styles.hint, styles.hintIconHighlight]}>Search</Text>
-        <Text style={styles.hint}> or tap </Text>
-        <Icon name="chevronRight" size={16} color="#ffffff" strokeWidth={2.2} />
-        <Text style={styles.hint}> to select apps/websites</Text>
-      </View>
-
-      {/* Main card list */}
-      <Animated.View entering={FadeIn.duration(400)} style={styles.listCard}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {visible.map((e, i) => {
-            const isSelected = selected.includes(e.id);
-            const expanded = expandedCategories.includes(e.id);
-            return (
-              <View
-                key={e.id}
-                style={[styles.row, i > 0 && styles.rowBorder, e.group && styles.rowNested]}
-              >
-                {/* Left touchable checkbox */}
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => toggle(e.id)}
-                  style={styles.radioContainer}
-                >
-                  <View style={[styles.radio, isSelected && styles.radioOn]}>
-                    {isSelected ? <Icon name="check" size={12} color="#0a1a10" /> : null}
-                  </View>
-                </TouchableOpacity>
-                
-                {/* Right touchable row content */}
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => handleRowPress(e)}
-                  style={styles.rowRightContent}
-                >
-                  <View style={[styles.appIcon, { backgroundColor: e.tint }]}>
-                    <AppIconSvg id={e.id} label={e.name} />
-                  </View>
-                  
-                  <Text style={styles.appName}>{e.name}</Text>
-                  
-                  {e.expandable ? (
-                    <Icon
-                      name={expanded ? 'chevronDown' : 'chevronRight'}
-                      size={18}
-                      color="rgba(255,255,255,0.4)"
-                      strokeWidth={2}
-                    />
-                  ) : null}
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        {/* Search input field inside the card container at bottom */}
-        <View style={styles.searchWrap}>
-          <Icon name="search" size={14} color="rgba(255,255,255,0.4)" />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search"
-            placeholderTextColor="rgba(255,255,255,0.3)"
-            style={styles.searchInput}
-          />
-          <Icon name="mic" size={14} color="rgba(255,255,255,0.4)" />
+      <KeyboardAvoider>
+        <View style={styles.centerStack}>
+        <View style={styles.hintRow}>
+          <Text style={styles.hint}>Use </Text>
+          <Text style={[styles.hint, styles.hintIconHighlight]}>Search</Text>
+          <Text style={styles.hint}> or tap </Text>
+          <Icon name="chevronRight" size={16} color="#ffffff" strokeWidth={2.2} />
+          <Text style={styles.hint}> to select apps to block</Text>
         </View>
-      </Animated.View>
+        <Text style={styles.recommendHint}>
+          {selectedAppCount > 0
+            ? 'Pre-selected from what you actually use — tap to change.'
+            : 'Pick the apps that steal the most of your day.'}
+        </Text>
 
-      <Text style={styles.countLabel}>{selected.length} Apps Selected</Text>
+        {/* Main card list */}
+        <Animated.View entering={FadeIn.duration(400)} style={styles.listCard}>
+          <ScrollView showsVerticalScrollIndicator={false} {...keyboardScrollProps}>
+            {visible.map((e, i) => {
+              const isSelected = selected.includes(e.id);
+              const expanded = expandedCategories.includes(e.id);
+              return (
+                <View
+                  key={e.id}
+                  style={[styles.row, i > 0 && styles.rowBorder, e.group && styles.rowNested]}
+                >
+                  {/* Left touchable checkbox */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => toggle(e.id)}
+                    style={styles.radioContainer}
+                  >
+                    <View style={[styles.radio, isSelected && styles.radioOn]}>
+                      {isSelected ? <Icon name="check" size={12} color="#0a1a10" /> : null}
+                    </View>
+                  </TouchableOpacity>
+                
+                  {/* Right touchable row content */}
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => handleRowPress(e)}
+                    style={styles.rowRightContent}
+                  >
+                    <View style={[styles.appIcon, { backgroundColor: e.tint }]}>
+                      <AppIconSvg id={e.id} label={e.name} />
+                    </View>
+                  
+                    <Text style={styles.appName}>{e.name}</Text>
+                  
+                    {e.expandable ? (
+                      <Icon
+                        name={expanded ? 'chevronDown' : 'chevronRight'}
+                        size={18}
+                        color="rgba(255,255,255,0.4)"
+                        strokeWidth={2}
+                      />
+                    ) : null}
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
 
-      <View style={styles.ctaWrap}>
-        <GradientButton label="Continue" onPress={() => onContinue(selected)} />
-      </View>
+          {/* Search input field inside the card container at bottom */}
+          <View style={styles.searchWrap}>
+            <Icon name="search" size={14} color="rgba(255,255,255,0.4)" />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              style={styles.searchInput}
+            />
+            <Icon name="mic" size={14} color="rgba(255,255,255,0.4)" />
+          </View>
+        </Animated.View>
+
+        <Text style={styles.countLabel}>{selectedAppCount} {selectedAppCount === 1 ? 'app' : 'apps'} selected</Text>
+
+        <View style={styles.ctaWrap}>
+          <GradientButton label="Continue" onPress={() => onContinue(selected)} />
+        </View>
+        </View>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }
@@ -430,14 +473,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingHorizontal: 18,
   },
+  centerStack: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   hintRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 26,
-    marginBottom: 26,
+    marginBottom: 8,
     paddingHorizontal: 12,
+  },
+  recommendHint: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
   },
   hint: {
     color: 'rgba(255,255,255,0.5)',
@@ -450,11 +503,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listCard: {
-    flex: 1,
+    height: 340,
     backgroundColor: palette.surfaceRaised,
     borderRadius: radius.xl,
     overflow: 'hidden',
-    maxHeight: '62%',
     borderWidth: 1,
     borderColor: palette.hairline,
   },

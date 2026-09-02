@@ -3,35 +3,43 @@ export type Question =
   | { id: string; kind: 'text'; prompt: string; placeholder: string; optional?: boolean }
   | { id: string; kind: 'choice'; prompt: string; options: string[]; optional?: boolean }
   | { id: string; kind: 'multi'; prompt: string; options: string[]; optional?: boolean }
-  | { id: string; kind: 'slider'; prompt: string; min: number; max: number; default: number }
+  | {
+      id: string;
+      kind: 'slider';
+      prompt: string;
+      min: number;
+      max: number;
+      default: number;
+      /** One name per step, indexed from `min`. Shown while sliding instead of a bare number. */
+      labels?: string[];
+    }
   | { id: string; kind: 'review'; prompt: string };
+
+/** 1–10 labels for the "how much control over your phone" slider. */
+export const CONTROL_LEVEL_NAMES = [
+  'The phone is driving',
+  'Scroll hostage',
+  'Autopilot thumbs',
+  '"Just one more reel"',
+  'Coin-flip with the feed',
+  'Bargaining with the algorithm',
+  'Mostly in the driver\'s seat',
+  'Firm handshake',
+  'Phone sits when told',
+  'Absolute monarch',
+];
 
 /** All onboarding questions — permissions are asked upfront now
  *  (PermissionBoardingPassScreen, before this screen ever mounts), not
  *  interleaved with questions. */
 export const QUESTIONS: Question[] = [
   { id: 'intro', kind: 'static', prompt: "I'll help protect your focus." },
-  { id: 'name', kind: 'text', prompt: "First, what's your name?", placeholder: 'John' },
-  { id: 'returning', kind: 'choice', prompt: 'Quick check, have we met before?', options: ['Yes, sign in', "I'm new here"] },
-  {
-    id: 'setup_intro',
-    kind: 'static',
-    prompt: "I'm going to ask you a few questions, no need to overthink it. Then I'll build your setup.",
-  },
+  { id: 'name', kind: 'text', prompt: "First, what's your **name**?", placeholder: 'John' },
   {
     id: 'matters',
     kind: 'choice',
-    prompt: 'What matters most to you?',
+    prompt: 'What **matters most** to you?',
     options: ['Focus better', 'Sleep better', 'Be more present', 'Improve mental health', 'Other'],
-  },
-  // "Where do you lose the most time" removed — once usage-access
-  // permission is granted (PostOnboardingFlow), the app reads this from
-  // real device usage stats and tells the user directly (by app name)
-  // instead of asking them to self-report it.
-  {
-    id: 'affirm_lose_time',
-    kind: 'static',
-    prompt: 'Love that. Being present starts with putting distractions away.',
   },
   {
     id: 'pickupReason',
@@ -42,86 +50,51 @@ export const QUESTIONS: Question[] = [
   {
     id: 'wakeHabit',
     kind: 'choice',
-    prompt: "What's the first thing you do when you wake up?",
+    prompt: "What's the **first thing** you do when you **wake up**?",
     options: ['Check my phone', 'Check the time', 'Talk to someone', 'Just lie there a bit'],
   },
-  { id: 'age', kind: 'slider', prompt: 'How old are you?', min: 13, max: 90, default: 25 },
-  {
-    id: 'describes',
-    kind: 'choice',
-    prompt: 'What best describes you?',
-    options: ['Technology', 'Entrepreneur', 'Remote', 'Finance', 'Creative', 'Student', 'Caregiver', 'Retired', 'Other', "I'd rather not say"],
-  },
+  { id: 'age', kind: 'slider', prompt: 'How **old** are you?', min: 8, max: 40, default: 25 },
   // Self-reported "average screen time" and "which devices" removed —
   // both are answered for real once usage-access permission is granted
   // (real per-day average, real app names) instead of guessed here.
   {
     id: 'controlScale',
     kind: 'slider',
-    prompt: 'Right now, how much control do you feel you have over your phone?',
+    prompt: 'Right now, how much **control** do you feel you have over your phone?',
     min: 1,
     max: 10,
     default: 5,
-  },
-  {
-    id: 'eyesight',
-    kind: 'choice',
-    prompt: 'How would you describe your eyesight?',
-    options: ['Good eyesight', 'Weak eyesight', 'I wear glasses', 'Other'],
+    labels: CONTROL_LEVEL_NAMES,
   },
   {
     id: 'healthLimit',
     kind: 'text',
-    prompt: 'Any illness, injury, or physical limitation we should know about? Some unlock challenges involve light movement.',
+    prompt: 'Any **illness, injury, or physical limitation** we should know about? Some unlock challenges involve light movement.',
     placeholder: 'e.g. bad knee — or leave blank',
     optional: true,
   },
   {
-    id: 'costText',
-    kind: 'text',
-    prompt: "What's one thing distraction has cost you that you actually miss?",
-    placeholder: 'e.g. reading before bed',
-    optional: true,
-  },
-  {
-    id: 'affirm_cost',
-    kind: 'static',
-    prompt: "That's worth protecting. Let's build toward getting it back.",
-  },
-  {
     id: 'triedBefore',
     kind: 'choice',
-    prompt: 'Have you tried to cut back before?',
+    prompt: 'Have you **tried to cut back** before?',
     options: ['Yes, many times', 'Once or twice', 'Never seriously tried', "I've just decided today"],
   },
   {
     id: 'whatStopped',
     kind: 'choice',
-    prompt: 'What usually gets in the way?',
+    prompt: 'What usually **gets in the way**?',
     options: ['I forget my reasons why', 'Willpower runs out by evening', 'Other apps make it too easy', "I'm doing this alone"],
-  },
-  {
-    id: 'social_proof',
-    kind: 'static',
-    prompt: "You're not the only one — most people who get this far say the exact same thing.",
   },
   {
     id: 'obstacleFear',
     kind: 'choice',
-    prompt: "What worries you most about trying again?",
+    prompt: "What **worries you most** about trying again?",
     options: ["I'll fail again", "It'll feel restrictive", "I'll miss something important", "Nothing — I'm ready"],
-  },
-  {
-    id: 'aspiration',
-    kind: 'text',
-    prompt: 'Last one — if this actually works, what changes first?',
-    placeholder: "e.g. I'm present at dinner again",
-    optional: true,
   },
   {
     id: 'interests',
     kind: 'multi',
-    prompt: 'What would you rather be spending that time on? Pick as many as you like.',
+    prompt: 'What would you **rather be spending** that time on? Pick as many as you like.',
     options: [
       'Drawing / painting',
       'Reading',
@@ -144,25 +117,47 @@ export const QUESTIONS: Question[] = [
     options: ['Yes, recently', 'No', "I'd rather not say"],
     optional: true,
   },
-  {
-    id: 'limitedTime',
-    kind: 'static',
-    prompt: "You get a limited number of days on this earth. Every one spent scrolling somebody else's life is one you don't get back.",
-  },
-  {
-    id: 'reelVsReal',
-    kind: 'choice',
-    prompt: 'So — the reel life, or the real one?',
-    options: ['Real life. I want it back', "I'm not ready to choose yet"],
-  },
   { id: 'review', kind: 'review', prompt: 'Reviewing your responses…' },
 ];
 
 /** Substitutes tokens like {matters} with the label of an earlier answer,
  *  lowercased so it reads naturally mid-sentence. */
+/** Drops the `**` emphasis markers — for anywhere a prompt is shown as plain
+ *  text, like the answered-questions history. */
+export function stripEmphasis(prompt: string): string {
+  return prompt.replace(/\*\*([^*]+)\*\*/g, '$1');
+}
+
 export function resolvePrompt(prompt: string, answers: Record<string, { value: string; label: string }>): string {
   return prompt.replace(/\{(\w+)\}/g, (_, key) => {
     const label = answers[key]?.label;
     return label ? label.toLowerCase() : key;
   });
 }
+
+/**
+ * Onboarding is broken into runs, with a permission ask between each.
+ *
+ * Asking for everything up front reads as an app demanding the whole phone
+ * before it has shown you anything. Split like this, each permission arrives
+ * after the questions that explain why it is needed.
+ */
+export const QUESTION_CHUNKS: { questions: Question[]; permissions: string[] }[] = [
+  {
+    // Who you are, and where the time goes.
+    questions: QUESTIONS.slice(0, 5),
+    // Screen time first: everything the next screens claim about your usage
+    // depends on it, so it is the one ask that pays for itself immediately.
+    permissions: ['usage', 'screenTime'],
+  },
+  {
+    questions: QUESTIONS.slice(5, 9),
+    // The shield itself, once blocking has been described.
+    permissions: ['overlay', 'accessibility'],
+  },
+  {
+    questions: QUESTIONS.slice(9),
+    // Nudges and Strict-mode movement — the optional pair, asked last.
+    permissions: ['notification', 'battery', 'camera'],
+  },
+];

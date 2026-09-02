@@ -22,7 +22,7 @@ enum class MonitoringLevel(val notificationTimeoutMs: Long, val debounceMs: Long
 }
 
 object MonitoringConfigStore {
-  private const val PREFS = "wend_monitoring_config"
+  private const val PREFS = "byre_monitoring_config"
   private const val KEY = "level"
 
   @Volatile

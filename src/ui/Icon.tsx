@@ -2,7 +2,7 @@ import React from 'react';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 /**
- * Wend's icon set — one 24×24 grid, one stroke weight, no fills except where
+ * Byre's icon set — one 24×24 grid, one stroke weight, no fills except where
  * a shape is genuinely solid.
  *
  * This replaces every emoji in the app. Emoji were being used three ways and
@@ -280,14 +280,17 @@ const shapes: Record<IconName, (g: Geo) => React.ReactNode> = {
       <Circle cx="15" cy="16" r="2.6" stroke={c} strokeWidth={w} fill="none" />
     </>
   ),
+  // A real 8-tooth cog (tips at r9.3, valleys at r6.9, generated on a circle)
+  // rather than the old 12-point star, which read as a blobby asterisk at the
+  // 19px this is actually used at.
   settings: ({ c, w }) => (
     <>
-      <Circle cx="12" cy="12" r="3.2" stroke={c} strokeWidth={w} fill="none" />
       <S
-        d="M12 2.8l1.5 2.3 2.7-.5.5 2.7 2.3 1.5-1.3 2.4 1.3 2.4-2.3 1.5-.5 2.7-2.7-.5L12 21.2l-1.5-2.3-2.7.5-.5-2.7-2.3-1.5L6.3 12 5 9.6l2.3-1.5.5-2.7 2.7.5L12 2.8z"
+        d="M10.23 2.87L13.77 2.87L13.32 5.23L15.86 6.28L17.20 4.29L19.71 6.80L17.72 8.14L18.77 10.68L21.13 10.23L21.13 13.77L18.77 13.32L17.72 15.86L19.71 17.20L17.20 19.71L15.86 17.72L13.32 18.77L13.77 21.13L10.23 21.13L10.68 18.77L8.14 17.72L6.80 19.71L4.29 17.20L6.28 15.86L5.23 13.32L2.87 13.77L2.87 10.23L5.23 10.68L6.28 8.14L4.29 6.80L6.80 4.29L8.14 6.28L10.68 5.23Z"
         c={c}
         w={w}
       />
+      <Circle cx="12" cy="12" r="3.1" stroke={c} strokeWidth={w} fill="none" />
     </>
   ),
   bell: ({ c, w }) => <S d="M6.4 10.4a5.6 5.6 0 1 1 11.2 0c0 4 1.6 5.6 1.6 5.6H4.8s1.6-1.6 1.6-5.6zM10 19a2.2 2.2 0 0 0 4 0" c={c} w={w} />,
@@ -326,11 +329,21 @@ const shapes: Record<IconName, (g: Geo) => React.ReactNode> = {
       <Circle cx="12" cy="12" r="1.4" fill={c} />
     </>
   ),
+  // A flame needs a sharp tip and an inward shoulder notch on the left — a
+  // smooth symmetric teardrop just reads as a water droplet at badge size.
+  // The lighter inner tongue is what sells it as fire rather than a leaf.
   flame: ({ c }) => (
-    <F
-      d="M12.6 2.2c.4 2.6-1 3.9-2.4 5.3C8.6 9 7 10.6 7 13.4A6.2 6.2 0 0 0 13.2 21c3.4 0 6-2.7 6-6.1 0-4-2.6-6-4-7.5-.5 1.4-1.3 2.1-2.2 2.4.5-2.6.6-5.3-.4-7.6z"
-      c={c}
-    />
+    <>
+      <F
+        d="M12 2.1C15 5.5 17 8 17.8 10.4C18.3 11.9 18 12 18 13.2A6 6 0 0 1 12 21.6A6 6 0 0 1 6 13.2C6 12 5.9 11.5 6.6 10.2C7 11.4 7.7 12.1 8.6 12.4C8.9 8.6 10 5 12 2.1Z"
+        c={c}
+      />
+      <Path
+        d="M12 11.9c1.6 1.4 2.4 2.6 2.4 3.9A2.4 2.4 0 0 1 12 18.2a2.4 2.4 0 0 1-2.4-2.4c0-1.3.8-2.5 2.4-3.9z"
+        fill={c}
+        fillOpacity={0.32}
+      />
+    </>
   ),
   award: ({ c, w }) => (
     <>

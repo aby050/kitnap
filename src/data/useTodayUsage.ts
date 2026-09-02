@@ -36,15 +36,18 @@ export function useTodayUsage(): TodayUsage {
   const available = usageStatsAvailable();
 
   const refresh = useCallback(async () => {
+    // Stays null, never 0: "we cannot know" and "you used nothing today" are
+    // different facts, and rendering the first as a confident 0m is what made
+    // the home card look broken on iOS.
     if (!usageStatsAvailable()) {
-      setTotalMinutes(0);
+      setTotalMinutes(null);
       setApps([]);
       return;
     }
     const has = await checkUsageAccessPermission();
     setGranted(has);
     if (!has) {
-      setTotalMinutes(0);
+      setTotalMinutes(null);
       setApps([]);
       return;
     }

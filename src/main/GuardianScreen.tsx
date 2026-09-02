@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { palette } from '../design/tokens';
+import { fieldStyle, palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
+import Toggle from '../design/Toggle';
 
 /** Any user can disable this app in Settings in two taps — no third-party app
  *  on iOS can prevent that. Guardian is one of our two real defences (with the
@@ -14,10 +16,13 @@ type Guardian = { enabled: boolean; name: string; contact: string };
 
 export default function GuardianScreen({
   initial,
+  hoursReclaimed = 0,
   onBack,
   onSave,
 }: {
   initial?: Guardian | null;
+  /** Drives the "this is all they'd see" preview. */
+  hoursReclaimed?: number;
   onBack: () => void;
   onSave: (g: Guardian) => void;
 }) {
@@ -38,7 +43,11 @@ export default function GuardianScreen({
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        {...keyboardScrollProps}
+      >
         <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
           <View style={styles.heroGlyph}>
             <Icon name="shield" size={34} color={palette.accent} strokeWidth={1.7} />
@@ -55,14 +64,12 @@ export default function GuardianScreen({
             <Text style={styles.toggleTitle}>Enable Guardian</Text>
             <Text style={styles.toggleSub}>Requires premium</Text>
           </View>
-          <Switch
+          <Toggle
             value={enabled}
             onValueChange={(v) => {
               setEnabled(v);
               onSave({ enabled: v, name, contact });
             }}
-            trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
-            thumbColor="#fff"
           />
         </View>
 
@@ -113,6 +120,14 @@ export default function GuardianScreen({
           </Animated.View>
         )}
 
+        <View style={styles.previewCard}>
+          <Text style={styles.previewLabel}>What they would see</Text>
+          <Text style={styles.previewValue}>{hoursReclaimed.toFixed(1)}h reclaimed</Text>
+          <Text style={styles.previewSub}>
+            That is the whole of it. No app names, no gate answers, nothing you typed.
+          </Text>
+        </View>
+
         <View style={styles.note}>
           <Text style={styles.noteText}>
             This never applies to Emergency access — break-glass stays free, instant and unlimited for you,
@@ -126,7 +141,16 @@ export default function GuardianScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 8 },
+  previewCard: {
+    backgroundColor: 'rgba(255,255,255,0.045)',
+    borderRadius: 20,
+    padding: 18,
+    marginTop: 20,
+  },
+  previewLabel: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  previewValue: { color: palette.text, fontSize: 26, fontWeight: '800', marginTop: 8 },
+  previewSub: { color: palette.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {
     width: 40,
     height: 40,
@@ -164,12 +188,7 @@ const styles = StyleSheet.create({
   sectionLabel: { color: palette.textTertiary, fontSize: 12, letterSpacing: 1, fontWeight: '700', marginBottom: 10 },
   input: {
     width: '100%',
-    paddingVertical: 15,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    backgroundColor: palette.glass,
-    color: palette.text,
-    fontSize: 15.5,
+    ...fieldStyle,
   },
   confirmCard: { marginTop: 16, padding: 16, borderRadius: 18, backgroundColor: 'rgba(111,227,169,0.09)' },
   confirmTitle: { color: palette.accent, fontSize: 15, fontWeight: '700' },

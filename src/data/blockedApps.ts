@@ -1,4 +1,14 @@
-export type BlockedApp = { name: string; packageName: string };
+import { ImageSourcePropType } from 'react-native';
+
+export type BlockedApp = {
+  name: string;
+  packageName: string;
+  /** Bundled brand icon. Android supplies real launcher icons at runtime, but
+   *  iOS never exposes installed-app icons to third-party apps, so the curated
+   *  list needs its own artwork there. Drop PNGs into assets/appicons/ and
+   *  point at them here; rows fall back to a monogram tile until you do. */
+  icon?: ImageSourcePropType;
+};
 
 /** Common distraction apps by real Android package name — this is what
  *  actually gets checked against the foreground-app events from the

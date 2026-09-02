@@ -1,26 +1,42 @@
 import React, { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BlockedSelection from '../components/BlockedSelection';
+import { keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import { INTENSITIES, IntensityKey, getIntensity } from '../data/themes';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 /** Real, editable blocked-apps list — replaces the old mock AppPickerScreen
  *  /MyAppsScreen, which had no actual Android package identifiers wired to
- *  anything. This is what WendAccessibilityService actually checks against
+ *  anything. This is what ByreAccessibilityService actually checks against
  *  on Android. There's no installed-app enumeration here (that needs another
  *  native call this doesn't have yet), so adding beyond the curated default
  *  list means typing the exact package name — labeled honestly below. */
 export default function BlockedAppsScreen({
   blockedPackages,
   onChange,
+  appModes,
+  onChangeModes,
+  defaultMode,
   onBack,
 }: {
   blockedPackages: string[];
   onChange: (packages: string[]) => void;
+  /** Per-app strictness. Anything absent follows `defaultMode`. */
+  appModes?: Record<string, IntensityKey>;
+  onChangeModes?: (next: Record<string, IntensityKey>) => void;
+  defaultMode?: IntensityKey;
   onBack: () => void;
 }) {
+  const modeFor = (pkg: string): IntensityKey => appModes?.[pkg] ?? defaultMode ?? 'steady';
+  const cycleMode = (pkg: string) => {
+    const order: IntensityKey[] = INTENSITIES.map((i) => i.key);
+    const next = order[(order.indexOf(modeFor(pkg)) + 1) % order.length];
+    onChangeModes?.({ ...(appModes ?? {}), [pkg]: next });
+  };
   const [customInput, setCustomInput] = useState('');
   const customPackages = blockedPackages.filter((p) => !DEFAULT_BLOCKED_APPS.some((a) => a.packageName === p));
 
@@ -49,7 +65,19 @@ export default function BlockedAppsScreen({
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      {/* iOS gets a different screen entirely: the package-name list below is
+          Android's mechanism, and on iOS it is neither real nor editable. */}
+      {Platform.OS === 'ios' ? (
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <Text style={styles.sectionLabel}>Blocked right now</Text>
+          <BlockedSelection />
+        </ScrollView>
+      ) : (
+      <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          {...keyboardScrollProps}
+        >
         {Platform.OS !== 'android' && (
           <View style={styles.notice}>
             <Text style={styles.noticeText}>
@@ -63,10 +91,17 @@ export default function BlockedAppsScreen({
         <View style={styles.group}>
           {DEFAULT_BLOCKED_APPS.map((app, i) => (
             <View key={app.packageName} style={[styles.row, i > 0 && styles.rowBorder]}>
-              <View style={{ flex: 1 }}>
+              <Pressable
+                style={{ flex: 1 }}
+                onPress={() => blockedPackages.includes(app.packageName) && cycleMode(app.packageName)}
+              >
                 <Text style={styles.rowTitle}>{app.name}</Text>
-                <Text style={styles.rowSub}>{app.packageName}</Text>
-              </View>
+                <Text style={styles.rowSub}>
+                  {blockedPackages.includes(app.packageName)
+                    ? `${getIntensity(modeFor(app.packageName)).name} · tap to change`
+                    : app.packageName}
+                </Text>
+              </Pressable>
               <Switch
                 value={blockedPackages.includes(app.packageName)}
                 onValueChange={() => toggle(app.packageName)}
@@ -111,7 +146,9 @@ export default function BlockedAppsScreen({
         <Text style={styles.hint}>
           Find an app's package name in its Play Store URL — the part after id= (e.g. play.google.com/store/apps/details?id=com.pinterest).
         </Text>
-      </ScrollView>
+        </ScrollView>
+      )}
+
     </SafeAreaView>
   );
 }
