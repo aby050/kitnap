@@ -115,7 +115,7 @@ export function GemHero({ size = 208, glow = palette.accent }: { size?: number; 
 }
 
 /* ─────────────────────────────────────────────────────────────
- * INTENSITY BARS — two-tone stacked columns (Opal home chart)
+ * INTENSITY BARS — two-tone stacked columns with capsule tracks
  * ───────────────────────────────────────────────────────────── */
 
 export function IntensityBars({
@@ -133,51 +133,100 @@ export function IntensityBars({
 }) {
   const g = useGid('bars');
   const n = Math.max(1, data.length);
-  const gap = n > 24 ? 2 : n > 14 ? 3 : 6;
-  const bw = Math.max(3, (width - gap * (n - 1)) / n);
+  const gap = n > 24 ? 2.5 : n > 14 ? 3.5 : 6;
+  const bw = Math.max(4, (width - gap * (n - 1)) / n);
   const max = Math.max(1, ...data.map((d) => d.value));
-  const minStub = 4; // empty days still show a faint stub, like the reference
-  const notch = 6; // fixed coral marker height for a slip day
+  const minStub = 5; // empty days show a neat stub in the track
+  const notch = 7; // fixed coral marker height for a slip day
+  const cornerR = Math.min(bw / 2, 4);
 
   return (
     <View style={style}>
       <Svg width={width} height={height}>
         <Defs>
+          {/* Main Focus gradient — vibrant lime to mint */}
           <SvgGradient id={`${g}-good`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#B9FF6A" />
-            <Stop offset="0.55" stopColor="#7CF5B0" />
-            <Stop offset="1" stopColor="#4FCB92" />
+            <Stop offset="0%" stopColor="#C9FFA0" />
+            <Stop offset="25%" stopColor="#7CF5B0" />
+            <Stop offset="80%" stopColor="#43C588" />
+            <Stop offset="100%" stopColor="#258E5E" />
           </SvgGradient>
+          {/* Slip / Hard Unlock warning gradient */}
           <SvgGradient id={`${g}-bad`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#F0604A" />
-            <Stop offset="1" stopColor="#C2410C" />
+            <Stop offset="0%" stopColor="#FF7A59" />
+            <Stop offset="100%" stopColor="#DC2626" />
+          </SvgGradient>
+          {/* Frosted track background */}
+          <SvgGradient id={`${g}-track`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
+            <Stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
           </SvgGradient>
         </Defs>
+
+        {/* Baseline guide line */}
+        <Line
+          x1={0}
+          y1={height - 1}
+          x2={width}
+          y2={height - 1}
+          stroke="rgba(255, 255, 255, 0.08)"
+          strokeWidth={1}
+        />
+
         {data.map((d, i) => {
           const x = i * (bw + gap);
-          const r = Math.min(bw / 2, 5);
-          const barH = d.value > 0 ? Math.max(minStub, (d.value / max) * (height - notch - 2)) : minStub;
-          const nodes: React.ReactNode[] = [];
-          // mint focus column
-          nodes.push(
-            <Rect
-              key="v"
-              x={x}
-              y={height - barH - (d.flag ? notch + 2 : 0)}
-              width={bw}
-              height={barH}
-              rx={r}
-              fill={d.value > 0 ? `url(#${g}-good)` : palette.textQuaternary}
-              opacity={d.value > 0 ? 1 : 0.5}
-            />,
+          const barMaxH = height - notch - 4;
+          const barH = d.value > 0 ? Math.max(minStub, (d.value / max) * barMaxH) : minStub;
+          const barY = height - barH - (d.flag ? notch + 3 : 0);
+
+          return (
+            <G key={i}>
+              {/* Capsule background track channel */}
+              <Rect
+                x={x}
+                y={0}
+                width={bw}
+                height={height - 2}
+                rx={cornerR}
+                fill={`url(#${g}-track)`}
+              />
+
+              {/* Focus Bar */}
+              <Rect
+                x={x}
+                y={barY}
+                width={bw}
+                height={barH}
+                rx={cornerR}
+                fill={d.value > 0 ? `url(#${g}-good)` : 'rgba(255,255,255,0.08)'}
+              />
+
+              {/* Specular highlight cap on top of active bars */}
+              {d.value > 0 && barH > 8 && (
+                <Rect
+                  x={x + 1}
+                  y={barY + 1}
+                  width={Math.max(1, bw - 2)}
+                  height={2.5}
+                  rx={1}
+                  fill="#FFFFFF"
+                  opacity={0.4}
+                />
+              )}
+
+              {/* Coral slip marker pinned to baseline */}
+              {d.flag && (
+                <Rect
+                  x={x}
+                  y={height - notch - 1}
+                  width={bw}
+                  height={notch}
+                  rx={Math.min(cornerR, 2.5)}
+                  fill={`url(#${g}-bad)`}
+                />
+              )}
+            </G>
           );
-          // coral slip marker pinned to the baseline
-          if (d.flag) {
-            nodes.push(
-              <Rect key="f" x={x} y={height - notch} width={bw} height={notch} rx={r} fill={`url(#${g}-bad)`} />,
-            );
-          }
-          return <G key={i}>{nodes}</G>;
         })}
       </Svg>
     </View>
@@ -185,27 +234,13 @@ export function IntensityBars({
 }
 
 /* ─────────────────────────────────────────────────────────────
- * DONUT — segmented usage ring
+ * CALENDAR HEATMAP — 10-week squircle focus grid
  * ───────────────────────────────────────────────────────────── */
 
-/**
- * Calendar heatmap — one cell per day, weeks as columns.
- *
- * Exists alongside IntensityBars rather than replacing it because the two
- * answer different questions: bars read a week precisely, and turn to slivers
- * past a month. Ten weeks of cells fit in the space seven bars need, and
- * streaks and gaps become shapes you can see instead of count.
- *
- * The cell size is derived from the width it is given rather than fixed, so
- * the grid always spans its card instead of huddling in one corner.
- *
- * Magnitude is one hue at increasing opacity — never a rainbow. A slip day is
- * coral *and* carries a notch, so it is never identified by colour alone.
- */
 export function CalendarHeatmap({
   data,
   width,
-  gap = 4,
+  gap = 4.5,
   style,
 }: {
   /** Oldest first, aligned so index 0 is the top-left cell. */
@@ -214,13 +249,14 @@ export function CalendarHeatmap({
   gap?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const g = useGid('heat');
   const weeks = Math.max(1, Math.ceil(data.length / 7));
-  const GUTTER = 20; // weekday initials
-  const HEAD = 16; // month markers
-  const cell = Math.max(8, (width - GUTTER - gap * (weeks - 1)) / weeks);
+  const GUTTER = 22; // weekday initials
+  const HEAD = 18; // month markers
+  const cell = Math.max(9, (width - GUTTER - gap * (weeks - 1)) / weeks);
   const h = HEAD + 7 * (cell + gap) - gap;
   const max = Math.max(1, ...data.map((d) => d.value));
-  const r = Math.min(6, cell * 0.28);
+  const r = Math.min(5, cell * 0.3);
 
   // A month label sits above the first column that contains that month.
   const months: { x: number; label: string }[] = [];
@@ -241,14 +277,22 @@ export function CalendarHeatmap({
   return (
     <View style={style}>
       <Svg width={width} height={h}>
+        <Defs>
+          <SvgGradient id={`${g}-glow`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#C9FFA0" />
+            <Stop offset="100%" stopColor="#6FE3A9" />
+          </SvgGradient>
+        </Defs>
+
         {months.map((m, i) => (
           <SvgText
             key={`m${i}`}
             x={m.x}
             y={HEAD - 6}
-            fill={palette.textQuaternary}
-            fontSize={9.5}
-            fontWeight="600"
+            fill="rgba(255,255,255,0.45)"
+            fontSize={10}
+            fontWeight="700"
+            letterSpacing={0.5}
           >
             {m.label}
           </SvgText>
@@ -258,11 +302,11 @@ export function CalendarHeatmap({
           t ? (
             <SvgText
               key={`d${row}`}
-              x={0}
+              x={2}
               y={HEAD + row * (cell + gap) + cell / 2 + 3.5}
-              fill={palette.textQuaternary}
+              fill="rgba(255,255,255,0.35)"
               fontSize={9.5}
-              fontWeight="600"
+              fontWeight="700"
             >
               {t}
             </SvgText>
@@ -274,9 +318,19 @@ export function CalendarHeatmap({
           const row = i % 7;
           const x = GUTTER + w * (cell + gap);
           const y = HEAD + row * (cell + gap);
-          // Empty days keep a faint cell so the grid still reads as a grid.
           const t = d.value / max;
-          const opacity = d.value <= 0 ? 0.06 : 0.2 + t * 0.8;
+
+          // 4-stop emerald intensity
+          let fillColor = 'rgba(255,255,255,0.05)';
+          let opacity = 1;
+          if (d.flag) {
+            fillColor = '#F0604A';
+            opacity = 0.92;
+          } else if (d.value > 0) {
+            fillColor = palette.accent;
+            opacity = t > 0.75 ? 1 : t > 0.4 ? 0.68 : t > 0.15 ? 0.42 : 0.22;
+          }
+
           return (
             <React.Fragment key={i}>
               <Rect
@@ -285,22 +339,37 @@ export function CalendarHeatmap({
                 width={cell}
                 height={cell}
                 rx={r}
-                fill={d.flag ? palette.danger : palette.accent}
-                fillOpacity={d.flag ? 0.9 : opacity}
+                fill={fillColor}
+                fillOpacity={opacity}
               />
-              {/* Slips carry a shape as well as a hue. */}
-              {d.flag && cell >= 14 && (
+
+              {/* Peak focus shimmer cap for 80%+ days */}
+              {d.value > 0 && t > 0.75 && !d.flag && (
+                <Rect
+                  x={x + 1}
+                  y={y + 1}
+                  width={cell - 2}
+                  height={1.5}
+                  rx={0.75}
+                  fill="#FFFFFF"
+                  fillOpacity={0.35}
+                />
+              )}
+
+              {/* Slips carry a warning notch pip */}
+              {d.flag && cell >= 11 && (
                 <Rect
                   x={x + cell / 2 - cell * 0.18}
                   y={y + cell / 2 - 1}
                   width={cell * 0.36}
                   height={2}
                   rx={1}
-                  fill="#0B0B0D"
-                  fillOpacity={0.55}
+                  fill="#000000"
+                  fillOpacity={0.65}
                 />
               )}
-              {/* Today keeps a position of its own even on a blank day. */}
+
+              {/* Today halo outline */}
               {d.today && (
                 <Rect
                   x={x - 1.5}
@@ -309,9 +378,9 @@ export function CalendarHeatmap({
                   height={cell + 3}
                   rx={r + 1.5}
                   fill="none"
-                  stroke={palette.text}
-                  strokeWidth={1.5}
-                  strokeOpacity={0.85}
+                  stroke="#FFFFFF"
+                  strokeWidth={1.6}
+                  strokeOpacity={0.9}
                 />
               )}
             </React.Fragment>
@@ -321,6 +390,10 @@ export function CalendarHeatmap({
     </View>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────
+ * DONUT — modern Apple Activity / Opal segmented usage ring
+ * ───────────────────────────────────────────────────────────── */
 
 export function Donut({
   segments,
@@ -338,16 +411,28 @@ export function Donut({
   const circ = 2 * Math.PI * r;
   const total = Math.max(1, segments.reduce((s, x) => s + x.value, 0));
   let acc = 0;
+
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Circle cx={c} cy={c} r={r} stroke={palette.hairline} strokeWidth={thickness} fill="none" />
+        {/* Background track */}
+        <Circle
+          cx={c}
+          cy={c}
+          r={r}
+          stroke="rgba(255, 255, 255, 0.07)"
+          strokeWidth={thickness}
+          fill="none"
+        />
+
         {segments.map((s, i) => {
           const frac = s.value / total;
-          const dash = Math.max(0, circ * frac - 3);
+          const gapSize = segments.length > 1 ? 4 : 0;
+          const dash = Math.max(0, circ * frac - gapSize);
           const offset = -circ * acc;
           acc += frac;
           if (dash <= 0) return null;
+
           return (
             <Circle
               key={i}
@@ -371,8 +456,33 @@ export function Donut({
 }
 
 /* ─────────────────────────────────────────────────────────────
- * SPARKLINE — inline metric trend
+ * SPARKLINE — smooth cubic Bézier spline with gradient area fill
  * ───────────────────────────────────────────────────────────── */
+
+/** Helper to generate a smooth cubic Bézier path through points */
+function buildSplinePath(pts: { x: number; y: number }[]): string {
+  if (pts.length === 0) return '';
+  if (pts.length === 1) return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  if (pts.length === 2) {
+    return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)} L ${pts[1].x.toFixed(1)} ${pts[1].y.toFixed(1)}`;
+  }
+
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i === 0 ? 0 : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 >= pts.length ? pts.length - 1 : i + 2];
+
+    const cp1x = p1.x + (p2.x - p0.x) / 5.5;
+    const cp1y = p1.y + (p2.y - p0.y) / 5.5;
+    const cp2x = p2.x - (p3.x - p1.x) / 5.5;
+    const cp2y = p2.y - (p3.y - p1.y) / 5.5;
+
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
 
 export function Sparkline({
   values,
@@ -388,30 +498,56 @@ export function Sparkline({
   fill?: boolean;
 }) {
   const g = useGid('spark');
-  const n = Math.max(1, values.length - 1);
-  const max = Math.max(1, ...values);
-  const min = Math.min(...values, 0);
+  const safeVals = values.length >= 2 ? values : values.length === 1 ? [values[0], values[0]] : [0, 0];
+  const n = safeVals.length - 1;
+  const max = Math.max(1, ...safeVals);
+  const min = Math.min(...safeVals, 0);
   const span = Math.max(1, max - min);
-  const pad = 3;
-  const pts = values.map((v, i) => {
+  const pad = 4;
+
+  const pts = safeVals.map((v, i) => {
     const x = (i / n) * width;
     const y = pad + (1 - (v - min) / span) * (height - pad * 2);
     return { x, y };
   });
-  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  const area = `${line} L ${width} ${height} L 0 ${height} Z`;
+
+  const spline = buildSplinePath(pts);
+  const area = `${spline} L ${width.toFixed(1)} ${height} L 0 ${height} Z`;
   const last = pts[pts.length - 1];
+
   return (
     <Svg width={width} height={height}>
       <Defs>
         <SvgGradient id={`${g}-f`} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={color} stopOpacity={0.24} />
-          <Stop offset="1" stopColor={color} stopOpacity={0} />
+          <Stop offset="0%" stopColor={color} stopOpacity={0.32} />
+          <Stop offset="70%" stopColor={color} stopOpacity={0.06} />
+          <Stop offset="100%" stopColor={color} stopOpacity={0.0} />
         </SvgGradient>
       </Defs>
+
+      {/* Gradient area fill */}
       {fill && <Path d={area} fill={`url(#${g}-f)`} />}
-      <Path d={line} stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      {last && <Circle cx={last.x} cy={last.y} r={3} fill={color} />}
+
+      {/* Smooth curve line */}
+      <Path
+        d={spline}
+        stroke={color}
+        strokeWidth={2.4}
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Glowing terminal node */}
+      {last && (
+        <G>
+          {/* Outer glow aura */}
+          <Circle cx={last.x} cy={last.y} r={5} fill={color} fillOpacity={0.3} />
+          {/* Inner bright node */}
+          <Circle cx={last.x} cy={last.y} r={2.5} fill="#FFFFFF" />
+          <Circle cx={last.x} cy={last.y} r={2} fill={color} />
+        </G>
+      )}
     </Svg>
   );
 }
@@ -499,6 +635,121 @@ export function DotProgress({
         />
       ))}
     </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * ACTIVITY RINGS — Concentric Apple Fitness style focus rings
+ * ───────────────────────────────────────────────────────────── */
+
+export function ActivityRings({
+  rings,
+  size = 120,
+  strokeWidth = 10,
+  gap = 4,
+}: {
+  rings: {
+    progress: number; // 0..1+
+    color: string;
+    bg?: string;
+  }[];
+  size?: number;
+  strokeWidth?: number;
+  gap?: number;
+}) {
+  const center = size / 2;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size}>
+        {rings.map((ring, i) => {
+          const r = center - strokeWidth / 2 - i * (strokeWidth + gap);
+          if (r <= 0) return null;
+          const circ = 2 * Math.PI * r;
+          const p = Math.max(0, Math.min(1.5, ring.progress));
+          const dash = Math.min(circ, circ * p);
+          const bgStroke = ring.bg || 'rgba(255, 255, 255, 0.08)';
+
+          return (
+            <G key={i}>
+              {/* Track */}
+              <Circle
+                cx={center}
+                cy={center}
+                r={r}
+                stroke={bgStroke}
+                strokeWidth={strokeWidth}
+                fill="none"
+              />
+              {/* Progress Arc */}
+              {dash > 0 && (
+                <Circle
+                  cx={center}
+                  cy={center}
+                  r={r}
+                  stroke={ring.color}
+                  strokeWidth={strokeWidth}
+                  fill="none"
+                  strokeDasharray={`${dash} ${circ}`}
+                  strokeLinecap="round"
+                  transform={`rotate(-90 ${center} ${center})`}
+                />
+              )}
+            </G>
+          );
+        })}
+      </Svg>
+    </View>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+ * MINI BAR TREND — 7-bar micro sparkbar for cards
+ * ───────────────────────────────────────────────────────────── */
+
+export function MiniBarTrend({
+  values,
+  width = 72,
+  height = 24,
+  color = palette.accent,
+}: {
+  values: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+}) {
+  const g = useGid('minibar');
+  const safeVals = values.length ? values : [0, 0, 0, 0, 0, 0, 0];
+  const max = Math.max(1, ...safeVals);
+  const gap = 2;
+  const n = safeVals.length;
+  const bw = Math.max(2, (width - gap * (n - 1)) / n);
+
+  return (
+    <Svg width={width} height={height}>
+      <Defs>
+        <SvgGradient id={`${g}-c`} x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0%" stopColor="#C9FFA0" />
+          <Stop offset="100%" stopColor={color} />
+        </SvgGradient>
+      </Defs>
+      {safeVals.map((v, i) => {
+        const x = i * (bw + gap);
+        const bh = v > 0 ? Math.max(3, (v / max) * height) : 3;
+        const by = height - bh;
+        return (
+          <Rect
+            key={i}
+            x={x}
+            y={by}
+            width={bw}
+            height={bh}
+            rx={bw / 2}
+            fill={v > 0 ? `url(#${g}-c)` : 'rgba(255,255,255,0.1)'}
+          />
+        );
+      })}
+    </Svg>
   );
 }
 

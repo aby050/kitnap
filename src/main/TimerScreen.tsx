@@ -16,6 +16,7 @@ import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAwar
 import Animated, {
   Easing,
   FadeIn,
+  FadeInDown,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -486,6 +487,7 @@ export default function TimerScreen({
           hardMode={hardMode}
           onClose={() => setUnlockTarget(null)}
           onSpend={() => {
+            if (tokenBalance <= 0) return;
             setUnlockTarget(null);
             onEndSession?.();
             onSpendTokenToCancel?.();
@@ -500,6 +502,7 @@ export default function TimerScreen({
           tokenBalance={tokenBalance}
           onClose={() => setShowCancelConfirm(false)}
           onSpend={() => {
+            if (tokenBalance <= 0) return;
             setShowCancelConfirm(false);
             onEndSession?.();
             onSpendTokenToCancel?.();
@@ -535,11 +538,13 @@ export default function TimerScreen({
         <View style={styles.headerRow}>
           <Text style={styles.sessionLabel}>{label.toUpperCase()}</Text>
         </View>
-        <Editorial
-          lead={motivationLine ? '' : 'Set the length,'}
-          emphasis={motivationLine || 'then commit to it.'}
-          style={styles.voice}
-        />
+        <Animated.View entering={FadeInDown.duration(motion.transition)}>
+          <Editorial
+            lead="Set the length,"
+            emphasis="then commit to it."
+            style={styles.voice}
+          />
+        </Animated.View>
 
         <Animated.View entering={FadeIn.duration(motion.transition)} style={styles.hero}>
           <Ring progress={progress} size={272} thickness={4}>

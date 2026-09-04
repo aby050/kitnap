@@ -192,6 +192,7 @@ export default function GateScreen({
                 variant="primary"
                 disabled={tokenBalance <= 0}
                 onPress={() => {
+                  if (tokenBalance <= 0) return;
                   setShowSkipConfirm(false);
                   success();
                   onSkipWithToken();

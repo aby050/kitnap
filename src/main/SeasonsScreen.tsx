@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { EVENTS } from '../world/worldData';
-import { colors } from '../theme';
+import { palette, space, radius } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 /** Placed deliberately at the known week-4 decay cliff. Rare events are never
  *  purchasable — that's the whole point of them. */
@@ -12,7 +13,7 @@ export default function SeasonsScreen({ onBack }: { onBack: () => void }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Seasons & Events</Text>
         <View style={{ width: 40 }} />
@@ -67,20 +68,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
-  lede: { color: colors.textDim, fontSize: 14.5, lineHeight: 21, marginTop: 8, marginBottom: 20 },
+  lede: { color: palette.textSecondary, fontSize: 14.5, lineHeight: 21, marginTop: 8, marginBottom: 20 },
   card: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 22, padding: 17, marginBottom: 11 },
   cardRare: { backgroundColor: 'rgba(140,120,255,0.11)', borderWidth: 1, borderColor: 'rgba(160,140,255,0.28)' },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   glyph: { fontSize: 26 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { color: colors.text, fontSize: 17, fontWeight: '700' },
+  name: { color: palette.text, fontSize: 17, fontWeight: '700' },
   rarePill: { backgroundColor: 'rgba(180,160,255,0.25)', borderRadius: 9, paddingVertical: 3, paddingHorizontal: 8 },
   rareText: { color: '#c9bcff', fontSize: 10, fontWeight: '900', letterSpacing: 0.8 },
-  window: { color: colors.textDim, fontSize: 13, marginTop: 3 },
+  window: { color: palette.textSecondary, fontSize: 13, marginTop: 3 },
   blurb: { color: 'rgba(255,255,255,0.72)', fontSize: 14, lineHeight: 20.5, marginTop: 12 },
   note: { marginTop: 14, padding: 16, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)' },
-  noteText: { color: colors.textFaint, fontSize: 13, lineHeight: 19 },
+  noteText: { color: palette.textTertiary, fontSize: 13, lineHeight: 19 },
 });

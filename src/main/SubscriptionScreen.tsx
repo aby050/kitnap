@@ -145,7 +145,9 @@ export default function SubscriptionScreen({
               icon="settings"
               title="Manage or cancel"
               subtitle={Platform.OS === 'ios' ? 'Opens the App Store' : 'Opens Google Play'}
-              onPress={() => Linking.openURL(MANAGE_URL)}
+              onPress={() => {
+                if (MANAGE_URL) Linking.openURL(MANAGE_URL);
+              }}
             />
           )}
           <Row

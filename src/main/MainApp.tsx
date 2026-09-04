@@ -78,6 +78,7 @@ import { palette, space } from '../design/tokens';
 import { daysOnLevel, requestIntensityChange, settleIntensity } from '../data/intensityChange';
 import { Screen, ScreenHeader } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';
+import { tapLight } from '../ui/haptics';
 
 type Tab = 'home' | 'apps' | 'timer';
 type Overlay =
@@ -1093,6 +1094,7 @@ export default function MainApp({
               }}
               tokenBalance={emergencyTokens}
               onSpendTokenToCancel={() => {
+                if (emergencyTokens <= 0) return;
                 const next = Math.max(0, emergencyTokens - 1);
                 setEmergencyTokens(next);
                 onPatch({ emergencyTokens: next });
@@ -1114,6 +1116,7 @@ export default function MainApp({
                 <Pressable
                   key={t.key}
                   onPress={() => {
+                    tapLight();
                     if (t.key === 'timer' && tab !== 'timer') {
                       // Opening the tab from elsewhere always lands on slide-to-start,
                       // never the locked in-session screen.
@@ -1165,14 +1168,14 @@ export default function MainApp({
 
 const styles = StyleSheet.create({
   insightScroll: { paddingHorizontal: space.gutter, paddingTop: space.sm, paddingBottom: space.tabClearance },
-  tabBarWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: palette.base },
+  tabBarWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: palette.base,
+    backgroundColor: 'rgba(6, 14, 11, 0.94)',
     borderTopWidth: 1,
-    borderTopColor: palette.hairline,
+    borderTopColor: 'rgba(255,255,255,0.08)',
     paddingBottom: 28,
-    paddingTop: 8,
+    paddingTop: 10,
     width: '100%',
     justifyContent: 'space-around',
     alignItems: 'center',
@@ -1183,7 +1186,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabIconPill: {
-    width: 64,
+    width: 60,
     height: 32,
     borderRadius: 16,
     alignItems: 'center',
@@ -1192,15 +1195,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   tabIconPillActive: {
-    backgroundColor: palette.accentSoft,
+    backgroundColor: 'rgba(111, 227, 169, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(111, 227, 169, 0.28)',
   },
   tabLabel: {
     color: palette.textTertiary,
     fontSize: 11.5,
     fontWeight: '600',
+    letterSpacing: 0.1,
   },
   tabLabelActive: {
     color: palette.accent,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.1,
   },
 });

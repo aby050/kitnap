@@ -199,7 +199,7 @@ export default function MyAppsScreen({
             {schedules.map((rule, i) => {
               const status = scheduleStatus(rule.start, rule.end);
               return (
-                <View key={rule.id}>
+                <Animated.View key={rule.id} entering={FadeInDown.delay(i * 30).duration(240)}>
                   {i > 0 && <Divider inset={56} />}
                   <Row
                     icon={ruleIcon(rule.name, rule.start)}
@@ -210,7 +210,7 @@ export default function MyAppsScreen({
                     onPress={onOpenSchedules}
                     chevron={false}
                   />
-                </View>
+                </Animated.View>
               );
             })}
           </Card>
