@@ -11,10 +11,12 @@ import {
   sumRange,
   weekdayShort,
   weeklyWindows,
+  dailySeries,
 } from '../data/progress';
 import Icon, { IconName } from '../ui/Icon';
 import Medal from './profile/Medal';
 import { palette } from '../design/tokens';
+import { Sparkline, MiniBarTrend, GradientMeter } from './profile/viz';
 
 export type WeeklyInsightData = {
   savedMinutes: number;
@@ -92,8 +94,13 @@ export default function WeeklyInsight({
   }
 
   // Calculate sliding card metrics
-  const windows = weeklyWindows(dateKey());
+  const today = dateKey();
+  const windows = weeklyWindows(today);
   const lastWeek = sumRange(progress, windows.prevStart, windows.prevEnd);
+  const weekSeries = dailySeries(progress, windows.thisStart, today);
+  const focusVals = weekSeries.map((s) => s.focusMinutes);
+  const savedVals = weekSeries.map((s) => s.savedMinutes);
+  const blockedVals = weekSeries.map((s) => s.distractionsBlocked);
 
   // 1. Screen Time Down Pct based on a 4-hour daily baseline (1680 minutes/week)
   const baselineWeekly = 1680;
@@ -115,6 +122,8 @@ export default function WeeklyInsight({
       key: 'screentime',
       title: 'Screen Time',
       icon: 'hourglass',
+      gradientColors: ['#4C1D95', '#0B0816'] as const,
+      accentColor: '#A78BFA',
       value: screenTimePct !== 0 ? `${Math.abs(screenTimePct)}%` : '58%',
       arrow: screenTimePct > 0 ? '↙' : screenTimePct < 0 ? '↗' : '↙',
       descText: 'Your screen time was ',
@@ -124,12 +133,19 @@ export default function WeeklyInsight({
           ? `up by ${Math.abs(screenTimePct)}% this week`
           : 'down by 58% this week',
       descSuffix: ' as compared to last week.',
-      tip: 'Less time on the phone tends to show up as better sleep and steadier attention. Nothing dramatic — it just adds up.',
+      tip: 'Less time on the phone tends to show up as better sleep and steadier attention.',
+      graph: (
+        <View style={styles.cardGraphWrap}>
+          <Sparkline values={savedVals.length ? savedVals : [10, 25, 40, 30, 60, 80, 75]} width={cardWidth - 44} height={46} color="#A78BFA" />
+        </View>
+      ),
     },
     {
       key: 'focus',
       title: 'Focus Time',
       icon: 'target',
+      gradientColors: ['#065F46', '#04180E'] as const,
+      accentColor: '#6FE3A9',
       value: lastWeekFocus > 0 && focusPct !== 0 ? `${focusPct > 0 ? '+' : ''}${focusPct}%` : formatDuration(d.focusMinutes),
       arrow: focusPct >= 0 ? '↗' : '↘',
       descText: 'Your focus time was ',
@@ -138,11 +154,18 @@ export default function WeeklyInsight({
         : `${formatDuration(d.focusMinutes)} in focus sessions`,
       descSuffix: lastWeekFocus > 0 ? ' as compared to last week.' : ' this week.',
       tip: 'Every session you finish makes the next one easier to start.',
+      graph: (
+        <View style={styles.cardGraphWrap}>
+          <Sparkline values={focusVals.length ? focusVals : [15, 30, 45, 50, 65, 80, 95]} width={cardWidth - 44} height={46} color="#6FE3A9" />
+        </View>
+      ),
     },
     {
       key: 'blocked',
       title: 'Shield Wall',
       icon: 'shield',
+      gradientColors: ['#1E3A8A', '#060E20'] as const,
+      accentColor: '#60A5FA',
       value: String(d.distractionsBlocked || 84),
       arrow: blockedDiff >= 0 ? '↗' : '↘',
       descText: 'You blocked ',
@@ -150,18 +173,30 @@ export default function WeeklyInsight({
       descSuffix: lastWeekBlocked > 0 
         ? `, showing a ${blockedDiff >= 0 ? 'gain' : 'reduction'} of ${Math.abs(blockedDiff)} from last week.`
         : ' to protect your focus.',
-      tip: 'Each one of these was a moment you chose something else.',
+      tip: 'Each block protected valuable mental energy.',
+      graph: (
+        <View style={styles.cardGraphWrap}>
+          <Sparkline values={blockedVals.length ? blockedVals : [8, 12, 16, 14, 20, 18, 24]} width={cardWidth - 44} height={46} color="#60A5FA" />
+        </View>
+      ),
     },
     {
       key: 'streak',
       title: 'Focus Streak',
       icon: 'flame',
+      gradientColors: ['#9A3412', '#1A0802'] as const,
+      accentColor: '#FB923C',
       value: `${d.streak || 5}d`,
-      arrow: d.streak > 0 ? '↗' : '↗',
+      arrow: '↗',
       descText: 'You maintained a ',
       descHighlight: `${d.streak || 5}-day focus streak`,
       descSuffix: ' this week.',
-      tip: d.bestDayLabel ? `Best day: ${d.bestDayLabel} · ${formatDuration(d.bestDayMinutes)} saved. Keep it up!` : 'Showing up most days matters more than any single good week.',
+      tip: d.bestDayLabel ? `Best day: ${d.bestDayLabel} · ${formatDuration(d.bestDayMinutes)} saved.` : 'Consistency compounds faster than intensity.',
+      graph: (
+        <View style={styles.cardGraphWrap}>
+          <GradientMeter progress={Math.min(1, (d.streak || 5) / 7)} colors={['#FB923C', '#FCD34D']} height={8} />
+        </View>
+      ),
     },
   ];
 
@@ -187,36 +222,36 @@ export default function WeeklyInsight({
           onScroll={handleScroll}
           scrollEventThrottle={16}
           style={{ width: cardWidth }}
-          contentContainerStyle={{ height: 385 }}
+          contentContainerStyle={{ height: 410 }}
         >
           {slides.map((slide) => (
             <View key={slide.key} style={[styles.carouselCardContainer, { width: cardWidth }]}>
               <LinearGradient
-                colors={['#593ce3', '#0b0816']}
+                colors={slide.gradientColors}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.gradientCard}
               >
-                {/* Ambient orange light leak overlay */}
+                {/* Ambient glow leak overlay */}
                 <LinearGradient
-                  colors={['rgba(232, 142, 37, 0.28)', 'rgba(232, 142, 37, 0.0)']}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 0.65, y: 0.5 }}
+                  colors={[`${slide.accentColor}33`, 'rgba(0,0,0,0)']}
+                  start={{ x: 0, y: 0.3 }}
+                  end={{ x: 0.8, y: 0.7 }}
                   style={styles.lightLeak}
                 />
 
                 {/* Top Row: Icon/Title, Dropdown, Menu */}
                 <View style={styles.cardHeader}>
                   <View style={styles.headerLeft}>
-                    <View style={styles.iconBg}>
-                      <Icon name={slide.icon as IconName} size={19} color="#0b0816" strokeWidth={1.9} />
+                    <View style={[styles.iconBg, { backgroundColor: '#FFFFFF' }]}>
+                      <Icon name={slide.icon as IconName} size={18} color="#0B0816" strokeWidth={2} />
                     </View>
                     <Text style={styles.cardTitle}>{slide.title}</Text>
                   </View>
                   <View style={styles.headerRight}>
                     <View style={styles.dropdownBtn}>
                       <Text style={styles.dropdownBtnText}>This Week</Text>
-                      <Icon name="chevronDown" size={12} color="#ffffff" strokeWidth={2.5} />
+                      <Icon name="chevronDown" size={12} color="#FFFFFF" strokeWidth={2.5} />
                     </View>
                   </View>
                 </View>
@@ -226,10 +261,13 @@ export default function WeeklyInsight({
                   <Text style={styles.metricValue}>{slide.value}</Text>
                   {slide.arrow ? (
                     <View style={styles.metricArrow}>
-                      <Icon name={slide.arrow === '↗' ? 'trendUp' : 'trendDown'} size={26} color="#ffffff" strokeWidth={2} />
+                      <Icon name={slide.arrow === '↗' ? 'trendUp' : 'trendDown'} size={26} color="#FFFFFF" strokeWidth={2.2} />
                     </View>
                   ) : null}
                 </View>
+
+                {/* Inline Graph Visualisation */}
+                {slide.graph}
 
                 {/* Dynamic Copy Text */}
                 <Text style={styles.descText}>
@@ -367,25 +405,30 @@ const styles = StyleSheet.create({
   // Carousel Styles
   carouselCardContainer: {
     paddingRight: 0,
-    height: 380,
+    height: 405,
   },
   gradientCard: {
     flex: 1,
     borderRadius: 24,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     justifyContent: 'space-between',
     overflow: 'hidden', // Contain the light leak overlay
   },
   lightLeak: {
     position: 'absolute',
     left: 0,
-    top: '20%',
-    width: '60%',
-    height: '60%',
+    top: '10%',
+    width: '80%',
+    height: '80%',
     borderTopLeftRadius: 24,
     borderBottomLeftRadius: 24,
+  },
+  cardGraphWrap: {
+    marginVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardHeader: {
     flexDirection: 'row',

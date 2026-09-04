@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LEDGER_UNITS, LANDMARKS } from '../world/worldData';
-import { colors } from '../theme';
+import { palette, space, radius } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 /** Hours reclaimed → what they built. Abstract minutes mean nothing; "four
  *  proper walks" means something. */
@@ -20,7 +21,7 @@ export default function TimeLedgerScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Time Ledger</Text>
         <View style={{ width: 40 }} />
@@ -44,31 +45,25 @@ export default function TimeLedgerScreen({
           );
         })}
 
-        <Text style={styles.sectionTitle}>And it built</Text>
+        <Text style={styles.sectionTitle}>Landmarks Built</Text>
         {built.length === 0 ? (
-          <Text style={styles.empty}>
-            Nothing yet. The first cairn goes up after one hour — that's the only one that's hard.
-          </Text>
+          <Text style={styles.empty}>Keep building focus. Your first landmark unlocks at 2 hours reclaimed.</Text>
         ) : (
-          built
-            .slice()
-            .reverse()
-            .map((l, i) => (
-              <Animated.View key={l.id} entering={FadeInDown.delay(i * 70).duration(380)} style={styles.builtRow}>
-                <Text style={styles.builtGlyph}>{l.glyph}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.builtName}>{l.name}</Text>
-                  <Text style={styles.builtBlurb}>{l.blurb}</Text>
-                </View>
-                <Text style={styles.builtAt}>{l.atHours}h</Text>
-              </Animated.View>
-            ))
+          built.map((l, i) => (
+            <Animated.View key={l.name} entering={FadeInDown.delay(i * 70).duration(380)} style={styles.builtRow}>
+              <Text style={styles.builtGlyph}>{l.glyph}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.builtName}>{l.name}</Text>
+                <Text style={styles.builtBlurb}>{l.blurb}</Text>
+              </View>
+              <Text style={styles.builtAt}>{l.atHours}h</Text>
+            </Animated.View>
+          ))
         )}
 
         <View style={styles.note}>
           <Text style={styles.noteText}>
-            Reclaimed time is counted when you close a block screen without unlocking. Emergency access is never
-            counted against you.
+            Time reclaimed = focus sessions completed + time saved from turned-down distractions.
           </Text>
         </View>
       </ScrollView>
@@ -87,13 +82,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
   hero: { alignItems: 'center', paddingVertical: 26 },
-  heroValue: { color: colors.accent, fontSize: 56, fontWeight: '800' },
-  heroLabel: { color: colors.textDim, fontSize: 15, marginTop: 4 },
-  sectionTitle: { color: colors.text, fontSize: 19, fontWeight: '800', marginTop: 18, marginBottom: 14 },
+  heroValue: { color: palette.accent, fontSize: 56, fontWeight: '800' },
+  heroLabel: { color: palette.textSecondary, fontSize: 15, marginTop: 4 },
+  sectionTitle: { color: palette.text, fontSize: 19, fontWeight: '800', marginTop: 18, marginBottom: 14 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -104,8 +98,8 @@ const styles = StyleSheet.create({
     marginBottom: 9,
   },
   rowGlyph: { fontSize: 19, width: 26 },
-  rowValue: { color: colors.text, fontSize: 19, fontWeight: '800', minWidth: 46 },
-  rowLabel: { flex: 1, color: colors.textDim, fontSize: 14, lineHeight: 20 },
+  rowValue: { color: palette.text, fontSize: 19, fontWeight: '800', minWidth: 46 },
+  rowLabel: { flex: 1, color: palette.textSecondary, fontSize: 14, lineHeight: 20 },
   builtRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -116,10 +110,10 @@ const styles = StyleSheet.create({
     marginBottom: 9,
   },
   builtGlyph: { fontSize: 21, width: 28 },
-  builtName: { color: colors.text, fontSize: 15.5, fontWeight: '700' },
-  builtBlurb: { color: colors.textDim, fontSize: 13, marginTop: 3, lineHeight: 18 },
-  builtAt: { color: colors.accent, fontSize: 14, fontWeight: '700' },
-  empty: { color: colors.textDim, fontSize: 14.5, lineHeight: 21 },
+  builtName: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
+  builtBlurb: { color: palette.textSecondary, fontSize: 13, marginTop: 3, lineHeight: 18 },
+  builtAt: { color: palette.accent, fontSize: 14, fontWeight: '700' },
+  empty: { color: palette.textTertiary, fontSize: 14.5, lineHeight: 21 },
   note: { marginTop: 22, padding: 16, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)' },
-  noteText: { color: colors.textFaint, fontSize: 13, lineHeight: 19 },
+  noteText: { color: palette.textTertiary, fontSize: 13, lineHeight: 19 },
 });

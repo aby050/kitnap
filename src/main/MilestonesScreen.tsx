@@ -18,6 +18,9 @@ import {
 } from '../data/progress';
 import { TierThumb, TierConnector, GradientMeter } from './profile/viz';
 
+import { Button, Card, Pill } from '../design/primitives';
+import { Modal } from 'react-native';
+
 const CATEGORIES: { key: AchievementCategory | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'streak', label: 'Streaks' },
@@ -36,6 +39,7 @@ export default function MilestonesScreen({
   firstOpenDate: string;
 }) {
   const [filter, setFilter] = useState<AchievementCategory | 'all'>('all');
+  const [selectedBadge, setSelectedBadge] = useState<AchievementDef | null>(null);
   const joinedDays = daysSinceJoin(firstOpenDate);
   const earnedMap = new Map(progress.achievements.map((a) => [a.id, a.earnedAt]));
   const earnedCount = progress.achievements.length;
@@ -120,7 +124,7 @@ export default function MilestonesScreen({
                   {i > 0 && <TierConnector />}
                   <Animated.View entering={FadeInDown.delay(Math.min(i, 8) * 45).duration(340)}>
                     <Pressable
-                      onPress={() => share(m)}
+                      onPress={() => setSelectedBadge(m)}
                       style={[styles.tier, earned && styles.tierEarned, isNext && styles.tierNext]}
                     >
                       <TierThumb def={m} earned={earned} size={84} />
@@ -153,6 +157,83 @@ export default function MilestonesScreen({
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Reference-matched 3D Award Showcase Modal */}
+      {selectedBadge && (
+        <Modal
+          visible={!!selectedBadge}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setSelectedBadge(null)}
+        >
+          <View style={styles.modalBackdrop}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => setSelectedBadge(null)} />
+            
+            <View style={styles.modalCard}>
+              <LinearGradient
+                colors={
+                  selectedBadge.category === 'streak'
+                    ? ['#3A1F0C', '#1C0D05', '#0A0503']
+                    : selectedBadge.category === 'focus'
+                    ? ['#0B3A2C', '#061D16', '#020C09']
+                    : selectedBadge.category === 'saved'
+                    ? ['#332408', '#1A1204', '#080501']
+                    : ['#2E1029', '#170814', '#080207']
+                }
+                locations={[0, 0.55, 1]}
+                style={StyleSheet.absoluteFill}
+              />
+              
+              <Pressable style={styles.modalCloseBtn} onPress={() => setSelectedBadge(null)}>
+                <Icon name="close" size={18} color={palette.textSecondary} />
+              </Pressable>
+
+              {/* 3D Front-Facing Badge Hero */}
+              <View style={styles.modalBadgeHero}>
+                <TierThumb def={selectedBadge} earned={earnedMap.has(selectedBadge.id)} size={176} />
+              </View>
+
+              {/* Title & Editorial Description */}
+              <Text style={styles.modalTitle}>{selectedBadge.name}</Text>
+              <Text style={styles.modalDesc}>{selectedBadge.description}</Text>
+
+              {/* Unlocked Badge Status Pill */}
+              <View style={styles.modalStatusRow}>
+                {earnedMap.has(selectedBadge.id) ? (
+                  <View style={styles.unlockedBadgePill}>
+                    <Icon name="checkCircle" size={15} color={palette.accent} strokeWidth={2.2} />
+                    <Text style={styles.unlockedBadgeText}>Badge Unlocked</Text>
+                  </View>
+                ) : (
+                  <View style={styles.progressBadgePill}>
+                    <Text style={styles.progressBadgeText}>
+                      In Progress · {Math.round(achievementProgress(selectedBadge, progress, joinedDays) * 100)}%
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Actions */}
+              <View style={styles.modalActionRow}>
+                {earnedMap.has(selectedBadge.id) ? (
+                  <Button
+                    label="Share Achievement"
+                    variant="primary"
+                    icon="share"
+                    onPress={() => share(selectedBadge)}
+                  />
+                ) : (
+                  <Button
+                    label="Close"
+                    variant="ghost"
+                    onPress={() => setSelectedBadge(null)}
+                  />
+                )}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -213,4 +294,98 @@ const styles = StyleSheet.create({
   tierDesc: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 17 },
   tierMeterRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 4 },
   tierPct: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', width: 34, textAlign: 'right' },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: space.gutter,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: radius.xxl,
+    padding: space.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.5,
+    shadowRadius: 28,
+    elevation: 20,
+  },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: space.base,
+    right: space.base,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  modalBadgeHero: {
+    marginTop: space.sm,
+    marginBottom: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    textAlign: 'center',
+    marginBottom: space.xs,
+  },
+  modalDesc: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 14.5,
+    lineHeight: 20,
+    textAlign: 'center',
+    paddingHorizontal: space.sm,
+    marginBottom: space.lg,
+  },
+  modalStatusRow: {
+    marginBottom: space.xl,
+    alignItems: 'center',
+  },
+  unlockedBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(111,227,169,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(111,227,169,0.3)',
+  },
+  unlockedBadgeText: {
+    color: palette.accent,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  progressBadgePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  progressBadgeText: {
+    color: palette.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  modalActionRow: {
+    width: '100%',
+    marginTop: space.xs,
+  },
 });

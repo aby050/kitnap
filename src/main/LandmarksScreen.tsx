@@ -3,7 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BIOMES, LANDMARKS } from '../world/worldData';
-import { colors } from '../theme';
+import { palette, space, radius } from '../design/tokens';
+import Icon from '../ui/Icon';
 
 export default function LandmarksScreen({
   hoursReclaimed,
@@ -18,7 +19,7 @@ export default function LandmarksScreen({
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
-          <Text style={styles.headerGlyph}>‹</Text>
+          <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Landmarks</Text>
         <View style={{ width: 40 }} />
@@ -83,11 +84,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerGlyph: { color: colors.text, fontSize: 19 },
-  headerTitle: { flex: 1, color: colors.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   scroll: { paddingHorizontal: 18, paddingBottom: 110 },
-  lede: { color: colors.textDim, fontSize: 14.5, lineHeight: 21, marginTop: 8 },
-  sectionTitle: { color: colors.text, fontSize: 19, fontWeight: '800', marginTop: 26, marginBottom: 14 },
+  lede: { color: palette.textSecondary, fontSize: 14.5, lineHeight: 21, marginTop: 8 },
+  sectionTitle: { color: palette.text, fontSize: 19, fontWeight: '800', marginTop: 26, marginBottom: 14 },
   biomeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
   biome: {
     flexGrow: 1,
@@ -99,9 +99,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.07)',
   },
   biomeOpen: { backgroundColor: 'rgba(124,245,176,0.1)', borderColor: 'rgba(124,245,176,0.3)' },
-  biomeName: { color: colors.textDim, fontSize: 15, fontWeight: '700' },
-  biomeNameOpen: { color: colors.accent },
-  biomeMeta: { color: colors.textFaint, fontSize: 12.5, marginTop: 4 },
+  biomeName: { color: palette.textSecondary, fontSize: 15, fontWeight: '700' },
+  biomeNameOpen: { color: palette.accent },
+  biomeMeta: { color: palette.textTertiary, fontSize: 12.5, marginTop: 4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -114,10 +114,10 @@ const styles = StyleSheet.create({
   rowLocked: { backgroundColor: 'rgba(255,255,255,0.025)' },
   glyph: { fontSize: 21, width: 28 },
   glyphLocked: { opacity: 0.28 },
-  name: { color: colors.text, fontSize: 15.5, fontWeight: '700' },
-  nameLocked: { color: colors.textDim },
-  blurb: { color: colors.textFaint, fontSize: 13, marginTop: 3, lineHeight: 18 },
+  name: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
+  nameLocked: { color: palette.textSecondary },
+  blurb: { color: palette.textTertiary, fontSize: 13, marginTop: 3, lineHeight: 18 },
   builtPill: { backgroundColor: 'rgba(124,245,176,0.16)', borderRadius: 13, paddingVertical: 5, paddingHorizontal: 11 },
-  builtText: { color: colors.accent, fontSize: 12, fontWeight: '800' },
-  lockedAt: { color: colors.textFaint, fontSize: 13.5, fontWeight: '600' },
+  builtText: { color: palette.accent, fontSize: 12, fontWeight: '800' },
+  lockedAt: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600' },
 });

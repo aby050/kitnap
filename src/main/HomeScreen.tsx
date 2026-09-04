@@ -21,6 +21,7 @@ import {
 import AppGlyph from '../ui/AppGlyph';
 import BailoutSheet from '../components/BailoutSheet';
 import Icon from '../ui/Icon';
+import { tapLight } from '../ui/haptics';
 import { dataRamp, motion, palette, radius, space, type } from '../design/tokens';
 
 /** A commitment runs from half an hour up to a week. */
@@ -164,8 +165,10 @@ export default function HomeScreen({
   // press (a tap is one 15m nudge), then the hold winds up.
   const startAdjust = (dir: number) => {
     stopAdjust();
+    tapLight();
     const pressedAt = Date.now();
     const tick = () => {
+      tapLight();
       setDurationMinutes((c) => stepTo(c, dir));
       holdTimer.current = setTimeout(tick, holdDelay(Date.now() - pressedAt));
     };
@@ -205,12 +208,19 @@ export default function HomeScreen({
         {/* Brand header */}
         <View style={styles.headerRow}>
           <View style={styles.headerRight}>
-            <IconButton
-              name="key"
-              onPress={() => setShowBailout(true)}
-              accessibilityLabel="Bailouts"
-              bordered
-            />
+            <View style={styles.bailoutIconWrap}>
+              <IconButton
+                name="key"
+                onPress={() => setShowBailout(true)}
+                accessibilityLabel="Bailouts"
+                bordered
+              />
+              {bailoutBalance > 0 && (
+                <View style={styles.bailoutBadge}>
+                  <Text style={styles.bailoutBadgeText}>{bailoutBalance}</Text>
+                </View>
+              )}
+            </View>
             <IconButton name="user" onPress={onOpenProfile} accessibilityLabel="Open profile" bordered />
           </View>
         </View>
@@ -239,30 +249,30 @@ export default function HomeScreen({
         </Animated.View>
 
         {/* Duration stepper */}
-        <View style={styles.stepper}>
-            <Pressable
-              style={styles.stepBtn}
-              onPressIn={() => startAdjust(-1)}
-              onPressOut={stopAdjust}
-              hitSlop={8}
-            >
-              <Icon name="minus" size={20} color={palette.text} />
-            </Pressable>
-            <View style={styles.stepValue}>
-              <Text style={type.bodyStrong}>{formatBlockLength(durationMinutes)}</Text>
-            </View>
-            <Pressable
-              style={styles.stepBtn}
-              onPressIn={() => startAdjust(1)}
-              onPressOut={stopAdjust}
-              hitSlop={8}
-            >
+        <Animated.View entering={FadeInDown.delay(100).duration(motion.transition)} style={styles.stepper}>
+          <Pressable
+            style={styles.stepBtn}
+            onPressIn={() => startAdjust(-1)}
+            onPressOut={stopAdjust}
+            hitSlop={8}
+          >
+            <Icon name="minus" size={20} color={palette.text} />
+          </Pressable>
+          <View style={styles.stepValue}>
+            <Text style={type.bodyStrong}>{formatBlockLength(durationMinutes)}</Text>
+          </View>
+          <Pressable
+            style={styles.stepBtn}
+            onPressIn={() => startAdjust(1)}
+            onPressOut={stopAdjust}
+            hitSlop={8}
+          >
             <Icon name="plus" size={20} color={palette.text} />
           </Pressable>
-        </View>
+        </Animated.View>
 
         {/* Primary action */}
-        <View style={styles.cta}>
+        <Animated.View entering={FadeInDown.delay(140).duration(motion.transition)} style={styles.cta}>
           {Platform.OS === 'ios' && (
             <View style={styles.baselineBanner}>
               <Text style={styles.baselineText}>
@@ -288,7 +298,7 @@ export default function HomeScreen({
             <Text style={[type.caption, styles.manageText]}>Manage blocked apps</Text>
             <Icon name="chevronRight" size={13} color={palette.textQuaternary} />
           </Pressable>
-        </View>
+        </Animated.View>
 
         {/* Open a blocked app (shield demo) */}
         <Card tone="accent" onPress={onTriggerShield} style={styles.section}>
@@ -404,6 +414,24 @@ const styles = StyleSheet.create({
 
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', minHeight: 44 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  bailoutIconWrap: { position: 'relative' },
+  bailoutBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: radius.pill,
+    backgroundColor: palette.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  bailoutBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#020C09',
+  },
 
   voice: { marginTop: space.base },
 

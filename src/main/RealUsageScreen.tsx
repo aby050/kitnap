@@ -121,12 +121,18 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
             <>
               {/* Screen time today — donut + legend */}
               <Animated.View entering={FadeInDown.duration(380)} style={styles.card}>
-                <Text style={styles.eyebrow}>SCREEN TIME TODAY</Text>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.eyebrow}>SCREEN TIME TODAY</Text>
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <Text style={styles.liveText}>Live</Text>
+                  </View>
+                </View>
                 <View style={styles.donutWrap}>
-                  <Donut segments={segments} size={168} thickness={20}>
+                  <Donut segments={segments} size={176} thickness={20}>
                     <View style={styles.donutCenter}>
                       <Text style={styles.donutTotal}>{formatMs(totalMs)}</Text>
-                      <Text style={styles.donutCaption}>{usage.length} apps</Text>
+                      <Text style={styles.donutCaption}>{usage.length} apps tracked</Text>
                     </View>
                   </Donut>
                 </View>
@@ -138,7 +144,9 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
                       <View key={u.packageName} style={styles.legendRow}>
                         <View style={[styles.legendDot, { backgroundColor: u.color }]} />
                         <Text style={styles.legendName} numberOfLines={1}>{u.label}</Text>
-                        <Text style={styles.legendPct}>{pct}%</Text>
+                        <View style={styles.legendPctBadge}>
+                          <Text style={styles.legendPct}>{pct}%</Text>
+                        </View>
                         <Text style={styles.legendVal}>{formatMs(u.totalTimeInForeground)}</Text>
                       </View>
                     );
@@ -150,10 +158,13 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
               {/* Most used */}
               {top.length > 0 && (
                 <>
-                  <Text style={styles.sectionTitle}>Most used</Text>
+                  <Text style={styles.sectionTitle}>Top Offenders</Text>
                   <View style={styles.tileRow}>
-                    {top.slice(0, 3).map((u) => (
+                    {top.slice(0, 3).map((u, i) => (
                       <View key={u.packageName} style={styles.tile}>
+                        <View style={styles.rankPill}>
+                          <Text style={styles.rankText}>#{i + 1}</Text>
+                        </View>
                         <AppGlyphTile label={u.label} color={u.color} size={46} />
                         <Text style={styles.tileName} numberOfLines={1}>{u.label}</Text>
                         <Text style={styles.tileVal}>{formatMs(u.totalTimeInForeground)}</Text>
@@ -164,20 +175,26 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
               )}
 
               {/* Full breakdown */}
-              <Text style={styles.sectionTitle}>All apps</Text>
+              <Text style={styles.sectionTitle}>All apps breakdown</Text>
               <View style={styles.list}>
-                {ranked.map((u, i) => (
-                  <Animated.View key={u.packageName} entering={FadeInDown.delay(Math.min(i, 10) * 30).duration(300)} style={styles.row}>
-                    <AppGlyphTile label={u.label} color={u.color} size={38} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.rowName} numberOfLines={1}>{u.label}</Text>
-                      <View style={styles.rowTrack}>
-                        <View style={[styles.rowBar, { width: `${Math.max(4, (u.totalTimeInForeground / maxMs) * 100)}%`, backgroundColor: u.color }]} />
+                {ranked.map((u, i) => {
+                  const pct = Math.round((u.totalTimeInForeground / Math.max(1, totalMs)) * 100);
+                  return (
+                    <Animated.View key={u.packageName} entering={FadeInDown.delay(Math.min(i, 10) * 30).duration(300)} style={styles.row}>
+                      <AppGlyphTile label={u.label} color={u.color} size={38} />
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.rowTopLine}>
+                          <Text style={styles.rowName} numberOfLines={1}>{u.label}</Text>
+                          <Text style={styles.rowPctText}>{pct}%</Text>
+                        </View>
+                        <View style={styles.rowTrack}>
+                          <View style={[styles.rowBar, { width: `${Math.max(4, (u.totalTimeInForeground / maxMs) * 100)}%`, backgroundColor: u.color }]} />
+                        </View>
                       </View>
-                    </View>
-                    <Text style={styles.rowValue}>{formatMs(u.totalTimeInForeground)}</Text>
-                  </Animated.View>
-                ))}
+                      <Text style={styles.rowValue}>{formatMs(u.totalTimeInForeground)}</Text>
+                    </Animated.View>
+                  );
+                })}
               </View>
             </>
           )}
@@ -246,6 +263,35 @@ const styles = StyleSheet.create({
     padding: space.lg,
     marginTop: space.base,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(111, 227, 169, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(111, 227, 169, 0.25)',
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: palette.accent,
+  },
+  liveText: {
+    color: palette.accent,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
   eyebrow: { color: palette.textTertiary, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   donutWrap: { alignItems: 'center', marginTop: space.lg, marginBottom: space.lg },
   donutCenter: { alignItems: 'center' },
@@ -256,7 +302,13 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendName: { flex: 1, color: palette.text, fontSize: 14, fontWeight: '600' },
-  legendPct: { color: palette.textTertiary, fontSize: 12.5, fontWeight: '700', width: 40, textAlign: 'right' },
+  legendPctBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  legendPct: { color: palette.textSecondary, fontSize: 11.5, fontWeight: '700', textAlign: 'center' },
   legendVal: { color: palette.textSecondary, fontSize: 13, fontWeight: '700', width: 62, textAlign: 'right' },
   loadingHint: { color: palette.textTertiary, fontSize: 12, marginTop: space.md, textAlign: 'center' },
 
@@ -269,6 +321,21 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: palette.border,
     paddingVertical: space.base, paddingHorizontal: space.sm,
     gap: 8,
+    position: 'relative',
+  },
+  rankPill: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  rankText: {
+    color: palette.textTertiary,
+    fontSize: 9.5,
+    fontWeight: '800',
   },
   tileName: { color: palette.text, fontSize: 12.5, fontWeight: '700', maxWidth: '100%' },
   tileVal: { color: palette.textSecondary, fontSize: 12, fontWeight: '700' },
@@ -280,6 +347,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.base,
     borderWidth: 1, borderColor: palette.hairline,
     paddingVertical: space.md, paddingHorizontal: space.md,
+  },
+  rowTopLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rowPctText: {
+    color: palette.textTertiary,
+    fontSize: 11,
+    fontWeight: '700',
   },
   rowName: { color: palette.text, fontSize: 14, fontWeight: '700' },
   rowTrack: { height: 5, borderRadius: 3, backgroundColor: palette.surfaceHigh, marginTop: 6, overflow: 'hidden' },
