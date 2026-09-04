@@ -14,9 +14,17 @@ type Props = {
   theme: AppTheme;
   goal: GoalData;
   unlockNumber: number;
+  /** Earned unlocks still available today. At zero the challenge is no
+   *  longer offered — the only way through is spending a Bailout, which is
+   *  finite and costs real money, so the day still has a ceiling. */
+  unlocksLeftToday?: number;
+  bailoutBalance?: number;
   isBedtime?: boolean;
   onNotNow: () => void;
   onNeedIt: () => void;
+  /** Spends one Bailout and unlocks without a challenge. Only offered once
+   *  the day's four earned unlocks are gone. */
+  onUseBailout?: () => void;
   onEmergency: () => void;
 };
 
@@ -34,9 +42,12 @@ export default function ShieldScreen({
   theme,
   goal,
   unlockNumber,
+  unlocksLeftToday = Infinity,
+  bailoutBalance = 0,
   isBedtime = false,
   onNotNow,
   onNeedIt,
+  onUseBailout,
   onEmergency,
 }: Props) {
   const remaining = daysUntil(goal.deadlineDate);
@@ -108,7 +119,11 @@ export default function ShieldScreen({
           </Animated.View>
 
           <Animated.View entering={FadeIn.delay(460).duration(400)}>
-            <Text style={styles.ladder}>Unlock {unlockNumber} today</Text>
+            <Text style={styles.ladder}>
+              {unlocksLeftToday <= 0
+                ? "That's all three unlocks for today"
+                : `Unlock ${unlockNumber} today · ${unlocksLeftToday} left`}
+            </Text>
           </Animated.View>
         </View>
 
@@ -122,15 +137,35 @@ export default function ShieldScreen({
             }}
             haptic={false}
           />
-          <Button
-            label="I need it"
-            variant="ghost"
-            onPress={() => {
-              tapLight();
-              onNeedIt();
-            }}
-            haptic={false}
-          />
+          {unlocksLeftToday > 0 ? (
+            <Button
+              label="I need it"
+              variant="ghost"
+              onPress={() => {
+                tapLight();
+                onNeedIt();
+              }}
+              haptic={false}
+            />
+          ) : bailoutBalance > 0 ? (
+            // Past the daily four the challenge is off the table — a Bailout
+            // is the only way through, and it is spent rather than earned.
+            <Button
+              label={`Use 1 Bailout · ${bailoutBalance} left`}
+              variant="ghost"
+              onPress={() => {
+                tapLight();
+                onUseBailout?.();
+              }}
+              haptic={false}
+            />
+          ) : (
+            // No unlocks left and no Bailouts left. This is the ceiling
+            // working, so it reads as an ending rather than a locked door
+            // with a shop behind it — especially while Bailout purchases
+            // aren't live and "get more" would lead nowhere.
+            <Text style={styles.spent}>That's the day. Emergency access is still there if you need it.</Text>
+          )}
         </Animated.View>
       </SafeAreaView>
     </View>
@@ -138,6 +173,14 @@ export default function ShieldScreen({
 }
 
 const styles = StyleSheet.create({
+  spent: {
+    color: palette.textTertiary,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
   root: { ...StyleSheet.absoluteFill, zIndex: 100, backgroundColor: palette.base },
   bloom: { position: 'absolute', alignSelf: 'center', top: '12%' },
   safe: { flex: 1 },

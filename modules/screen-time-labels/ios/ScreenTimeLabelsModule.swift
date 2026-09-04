@@ -61,24 +61,19 @@ struct SelectedAppIcons: View {
     let overflow = (selection?.applicationTokens.count ?? 0) - tokens.count
 
     if layout == "list" {
+      // Label(token)'s opaque .titleAndIcon draws the icon at a size it
+      // derives from the font, which came out smaller than intended and
+      // ignored this view's `iconSize` prop entirely. Splitting into a
+      // boxed .iconOnly Label plus a free .titleOnly Label — same technique
+      // as iconRow below — makes the icon size explicit and controllable.
       VStack(alignment: .leading, spacing: 0) {
         ForEach(Array(tokens.enumerated()), id: \.offset) { index, token in
           if index > 0 { Divider().background(Color.white.opacity(0.08)) }
-          Label(token)
-            .labelStyle(.titleAndIcon)
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 12)
+          listRow(token: token)
         }
         ForEach(Array(categories.enumerated()), id: \.offset) { index, token in
           if index > 0 || !tokens.isEmpty { Divider().background(Color.white.opacity(0.08)) }
-          Label(token)
-            .labelStyle(.titleAndIcon)
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 12)
+          listRow(token: token)
         }
       }
       .id(revision)
@@ -87,13 +82,65 @@ struct SelectedAppIcons: View {
     }
   }
 
+  /// Label(token)'s .iconOnly image renders at a fixed intrinsic size —
+  /// wrapping it in a bigger .frame() just centers the same small image in
+  /// extra empty space rather than scaling it up. scaleEffect actually
+  /// enlarges the rendered content; the .clipShape keeps it from bleeding
+  /// past the box once scaled.
+  ///
+  /// App icons and category icons don't share the same intrinsic render
+  /// size (categories draw as a slightly larger colored glyph), so scaling
+  /// both from one assumed size made them come out visibly different sizes
+  /// on screen even with an identical target `iconSize`. Two separate
+  /// baselines, calibrated per token kind, is what actually equalizes them.
+  private static let nativeAppIconSize: CGFloat = 32
+  private static let nativeCategoryIconSize: CGFloat = 40
+
+  private func scaledIcon<V: View>(_ label: V, nativeSize: CGFloat) -> some View {
+    label
+      .labelStyle(.iconOnly)
+      .frame(width: nativeSize, height: nativeSize)
+      .scaleEffect(iconSize / nativeSize)
+      .frame(width: iconSize, height: iconSize)
+      .clipShape(RoundedRectangle(cornerRadius: iconSize * 0.24, style: .continuous))
+  }
+
+  private func scaledAppIcon<V: View>(_ label: V) -> some View {
+    scaledIcon(label, nativeSize: Self.nativeAppIconSize)
+  }
+
+  private func scaledCategoryIcon<V: View>(_ label: V) -> some View {
+    scaledIcon(label, nativeSize: Self.nativeCategoryIconSize)
+  }
+
+  private func listRow(token: ApplicationToken) -> some View {
+    HStack(spacing: 12) {
+      scaledAppIcon(Label(token))
+      Label(token)
+        .labelStyle(.titleOnly)
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundColor(.white)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, 10)
+  }
+
+  private func listRow(token: ActivityCategoryToken) -> some View {
+    HStack(spacing: 12) {
+      scaledCategoryIcon(Label(token))
+      Label(token)
+        .labelStyle(.titleOnly)
+        .font(.system(size: 17, weight: .semibold))
+        .foregroundColor(.white)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, 10)
+  }
+
   private func iconRow(tokens: [ApplicationToken], overflow: Int) -> some View {
     HStack(spacing: iconSize * 0.18) {
       ForEach(Array(tokens.enumerated()), id: \.offset) { _, token in
-        Label(token)
-          .labelStyle(.iconOnly)
-          .frame(width: iconSize, height: iconSize)
-          .clipShape(RoundedRectangle(cornerRadius: iconSize * 0.24, style: .continuous))
+        scaledAppIcon(Label(token))
       }
       if overflow > 0 {
         Text("+\(overflow)")
@@ -145,6 +192,12 @@ class ScreenTimeLabelsView: ExpoView {
     let controller = UIHostingController(rootView: root)
     controller.view.backgroundColor = .clear
     controller.view.frame = bounds
+    // Label(token) is Apple's own opaque, privacy-preserving view — it
+    // decides its own text color from the environment's colorScheme rather
+    // than from .foregroundColor on the Text this file writes around it.
+    // Without this, it read the system's light-mode default and rendered
+    // the app name in black, invisible against this app's dark rows.
+    controller.overrideUserInterfaceStyle = .dark
     addSubview(controller.view)
     hosting = controller
   }

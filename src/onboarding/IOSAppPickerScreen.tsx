@@ -11,19 +11,26 @@ import {
   screenTimeAvailable,
 } from '../data/iosScreenTime';
 import ScreenTimeLabels, { screenTimeLabelsAvailable } from 'screen-time-labels';
+import BrandGlyph from '../ui/BrandGlyph';
 import { SELECTION_ID } from '../data/iosScreenTime';
 import { palette } from '../design/tokens';
+import { CommonApp, installedCommonApps } from '../data/commonBlocked';
 
 let DeviceActivitySelectionViewPersisted: any = null;
 if (Platform.OS === 'ios') {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     DeviceActivitySelectionViewPersisted =
-      require('react-native-device-activity').DeviceActivitySelectionViewPersisted;
+      require('react-native-device-activity').DeviceActivitySelectionSheetViewPersisted;
   } catch {
     DeviceActivitySelectionViewPersisted = null;
   }
 }
+
+/** How many picked apps get a row of their own before it collapses to "+N". */
+const SELECTED_ROWS = 5;
+/** icon (34) + 10pt padding top and bottom, matching listRow in the Swift view. */
+const SELECTED_ROW_H = 54;
 
 type SelectionEvent = NativeSyntheticEvent<{ familyActivitySelection: string | null; applicationCount: number }>;
 
@@ -46,9 +53,28 @@ export default function IOSAppPickerScreen({
   // Seeded from the saved selection so returning to this screen shows what is
   // already picked instead of "0 apps selected".
   const [counts, setCounts] = useState(() => getSelectionCounts());
+  // Suggestions, not preselection: Apple's picker returns opaque tokens and
+  // can't be seeded from bundle ids, so the most we can honestly do is name
+  // the usual suspects that are actually on this phone.
+  const [suggestions, setSuggestions] = useState<CommonApp[]>([]);
+  useEffect(() => {
+    let alive = true;
+    void installedCommonApps().then((apps) => {
+      if (alive) setSuggestions(apps);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
   // The icons are drawn natively from the app group; SwiftUI can't see that
   // another process wrote to it, so bumping this re-reads after the picker.
   const [revision, setRevision] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // The native list is a fixed-size host view — RN can't measure SwiftUI, so
+  // the height is derived from the row count it will draw.
+  const shownRows = Math.min(counts?.apps ?? 0, SELECTED_ROWS);
+  const listHeight = shownRows * SELECTED_ROW_H;
 
   const requestAccess = async () => {
     setAuthStatus('requesting');
@@ -85,29 +111,74 @@ export default function IOSAppPickerScreen({
           onPress={requestAccess}
         />
       ) : (
-        // Inline, not a sheet: Apple's picker carries its own search field and
-        // category list, and hiding it behind a button meant there was no way
-        // to search for an app to block.
-        DeviceActivitySelectionViewPersisted && (
-          <View style={styles.pickerFrame}>
+        // Apple's picker as its own sheet, not embedded. The embedded form
+        // renders but cannot be tapped — the library disables interaction on
+        // the hosting view — so choosing apps here silently did nothing.
+        // The sheet carries the same search field, category list and Done bar.
+        <>
+          <Button
+            label={(counts?.apps ?? 0) > 0 ? 'Change apps' : 'Choose apps to block'}
+            variant="outline"
+            onPress={() => setPickerOpen(true)}
+          />
+          {pickerOpen && DeviceActivitySelectionViewPersisted && (
             <DeviceActivitySelectionViewPersisted
-              style={styles.picker}
+              style={styles.hiddenPicker}
               familyActivitySelectionId={SELECTION_ID}
               includeEntireCategory
+              onDismissRequest={() => {
+                setPickerOpen(false);
+                handleSelectionChange();
+              }}
               onSelectionChange={handleSelectionChange}
             />
-          </View>
-        )
+          )}
+        </>
       )}
 
+      {(counts?.apps ?? 0) === 0 && suggestions.length > 0 && (
+        <View style={styles.suggestBox}>
+          <Text style={styles.suggestLabel}>Most people start with</Text>
+          {/* Icons, not just names: these are what you'll be hunting for in
+              Apple's list a second from now, so show them the way they look
+              on the home screen rather than as words to translate. */}
+          <View style={styles.suggestRow}>
+            {suggestions.map((a) => (
+              <View key={a.scheme} style={styles.suggestTile}>
+                <BrandGlyph packageName={a.glyphId} size={46} />
+                <Text style={styles.suggestTileText} numberOfLines={1}>
+                  {a.name}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.suggestNote}>
+            Apple's picker won't let us tick these for you — find them in the list above.
+          </Text>
+        </View>
+      )}
+
+      {/* "2 apps selected" tells you a number, not whether you picked the
+          right things. The native view is the only thing allowed to see
+          inside Apple's tokens, so it draws the real icon and real name per
+          row — still without any of it crossing into JS. */}
       {ScreenTimeLabels && screenTimeLabelsAvailable() && (counts?.apps ?? 0) > 0 && (
-        <ScreenTimeLabels
-          selectionId={SELECTION_ID}
-          iconSize={40}
-          maxCount={6}
-          revision={revision}
-          style={styles.icons}
-        />
+        <View style={styles.selectedCard}>
+          <Text style={styles.selectedLabel}>Blocking</Text>
+          <ScreenTimeLabels
+            selectionId={SELECTION_ID}
+            iconSize={34}
+            maxCount={SELECTED_ROWS}
+            layout="list"
+            revision={revision}
+            style={[styles.selectedList, { height: listHeight }]}
+          />
+          {(counts?.apps ?? 0) > SELECTED_ROWS && (
+            <Text style={styles.selectedMore}>
+              + {(counts?.apps ?? 0) - SELECTED_ROWS} more
+            </Text>
+          )}
+        </View>
       )}
       <SelectionSummary counts={counts} />
       <GradientButton label="Continue" onPress={onContinue} />
@@ -157,7 +228,63 @@ function SelectionSummary({ counts }: { counts: ReturnType<typeof getSelectionCo
 }
 
 const styles = StyleSheet.create({
+  suggestBox: { marginTop: 18, marginBottom: 4, alignItems: 'center' },
+  suggestLabel: {
+    color: palette.textTertiary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  suggestRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 14,
+    marginTop: 12,
+  },
+  suggestTile: { width: 62, alignItems: 'center', gap: 6 },
+  suggestTileText: {
+    color: palette.textSecondary,
+    fontSize: 11.5,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  selectedCard: {
+    borderRadius: 20,
+    backgroundColor: palette.surfaceRaised,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 6,
+  },
+  selectedLabel: {
+    color: palette.textTertiary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  selectedList: { alignSelf: 'stretch' },
+  selectedMore: {
+    color: palette.textTertiary,
+    fontSize: 12.5,
+    fontWeight: '600',
+    paddingBottom: 8,
+  },
+  suggestNote: {
+    color: palette.textQuaternary,
+    fontSize: 11.5,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
   icons: { height: 44, alignSelf: 'center' },
+  // The sheet is presented by SwiftUI from this view; the view itself is
+  // never meant to be seen.
+  hiddenPicker: { width: 1, height: 1, position: 'absolute', opacity: 0 },
   pickerFrame: {
     height: 380,
     borderRadius: 20,

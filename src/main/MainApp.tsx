@@ -38,8 +38,17 @@ import { computeRepTarget, parseAge, parseLifeChange } from '../data/activityDif
 import { ActivityKind, ActivitySessionResult } from '../shield/activity/types';
 import { EMPTY_GOAL, GoalData } from '../data/goal';
 import { Account, DEFAULT_STATE, PersistedState, AppLimit, FocusSession, startingEmergencyTokens } from '../data/store';
+import { CustomerInfo, PurchasesStoreProduct } from 'react-native-purchases';
+import SubscriptionScreen from './SubscriptionScreen';
 import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, globalPercentile, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
-import { startSessionNotification, stopSessionNotification } from 'device-permissions';
+import {
+  endGrantNow as endAndroidGrantNow,
+  grantTemporaryAccess as grantAndroidAccess,
+  grantedUntil as androidGrantedUntil,
+  startSessionNotification,
+  stopSessionNotification,
+} from 'device-permissions';
+import { momentLine } from '../data/moments';
 import { useTodayUsage } from '../data/useTodayUsage';
 import ScreenTimeDiagnostics from './ScreenTimeDiagnostics';
 import { EssentialKey } from '../data/gateQuestions';
@@ -57,13 +66,16 @@ import { endLiveTimer, startLiveTimer } from 'live-timer';
 import {
   blockSelectedApps,
   configureShield,
+  endGrantNow,
+  enforcePersistentBlock,
+  getBlockState,
+  grantRemainingMs,
   getSelectionCounts,
   grantTemporaryAccess,
   hasBlockedSelection,
-  isCurrentlyShielded,
-  unblockSelectedApps,
 } from '../data/iosScreenTime';
 import { palette, space } from '../design/tokens';
+import { daysOnLevel, requestIntensityChange, settleIntensity } from '../data/intensityChange';
 import { Screen, ScreenHeader } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';
 
@@ -91,9 +103,25 @@ type Overlay =
   | 'weeklyInsight'
   | 'blocks'
   | 'emergencyTokens'
+  | 'subscription'
   | 'deleteAccount'
   | 'screenTimeDiagnostics';
 type Block = null | 'shield' | 'gate' | 'grant' | 'emergency';
+
+/** Break-glass length. Short on purpose — see openEmergencyAccess. Also the
+ *  only number GrantScreen may show for an emergency; it used to hardcode 15
+ *  while the grant itself was 3. */
+const EMERGENCY_MINUTES = 5;
+
+/** Earned unlocks allowed per day. Without a ceiling the challenge is only a
+ *  toll, not a limit — you could pay it all day. Emergency access is separate
+ *  and does not count against this. */
+const DAILY_UNLOCK_LIMIT = 3;
+
+/** TESTING ONLY — shows a "set to 99" button on the Bailouts screen so the
+ *  post-cap and out-of-Bailouts flows are reachable while in-app purchases
+ *  aren't live. FLIP THIS TO false BEFORE SHIPPING. */
+const TEST_TOP_UP = true;
 
 /** The only overlays reachable while a session is locked — each is a door the
  *  locked timer screen itself puts on screen (essentials/emergency access, the
@@ -116,7 +144,12 @@ export default function MainApp({
   onPatch = () => {},
   pendingShieldPackage = null,
   onShieldConsumed = () => {},
+  pendingIOSUnlock = false,
+  onIOSUnlockConsumed = () => {},
   onDeleteAccount = async () => {},
+  bailoutProducts = [],
+  isPro = false,
+  customerInfo = null,
 }: {
   themeKey?: ThemeKey;
   intensityKey?: IntensityKey;
@@ -129,6 +162,18 @@ export default function MainApp({
    *  tab/overlay was showing. */
   pendingShieldPackage?: string | null;
   onShieldConsumed?: () => void;
+  /** Set by App.tsx when Apple's shield "Let me in" button reopens Byre via
+   *  the device-activity:// scheme. There's no per-app payload — Family
+   *  Controls tokens are opaque — so unlike pendingShieldPackage this jumps
+   *  straight to the Gate, skipping the RN ShieldScreen entirely (Apple's
+   *  own shield already showed the "I need it" moment). */
+  pendingIOSUnlock?: boolean;
+  onIOSUnlockConsumed?: () => void;
+  /** Live bailout consumables, forwarded to the Bailouts store screen. */
+  bailoutProducts?: PurchasesStoreProduct[];
+  /** Active `pro` entitlement, from RevenueCat. */
+  isPro?: boolean;
+  customerInfo?: CustomerInfo | null;
   /** Wipes all local data and returns the app to onboarding — owned by
    *  App.tsx since it has to reset top-level state this component doesn't. */
   onDeleteAccount?: () => Promise<void>;
@@ -139,17 +184,191 @@ export default function MainApp({
     persisted.session && persisted.session.endsAt > Date.now() ? 'timer' : 'home',
   );
   const [overlay, setOverlay] = useState<Overlay>(null);
+  // Where to land after the Difficulty screen — it's reachable from both
+  // Settings and Home now, and hardcoding "back to Settings" sent people
+  // who opened it from Home somewhere they never came from.
+  const [difficultyOrigin, setDifficultyOrigin] = useState<Overlay>('settings');
+  const openDifficulty = (from: Overlay) => {
+    setDifficultyOrigin(from);
+    setOverlay('difficulty');
+  };
   const [block, setBlock] = useState<Block>(null);
   const [grantMinutes, setGrantMinutes] = useState(5);
   const [grantExpiresAt, setGrantExpiresAt] = useState<number | null>(null);
   const [grantIsEmergency, setGrantIsEmergency] = useState(false);
+  // Break-glass, not a second unlock button: short, and once a day. Fifteen
+  // minutes was long enough to be worth reaching for on purpose; five is
+  // enough to deal with something and not enough to become the way in.
+  const [emergencyUsedOn, setEmergencyUsedOn] = useState<string | null>(
+    persisted.emergencyUsedOn ?? null,
+  );
+  const [emergencyExhausted, setEmergencyExhausted] = useState(false);
+  // Rolls over on a real calendar day, same as emergencyUsedOn.
+  const [unlocksUsedToday, setUnlocksUsedToday] = useState(
+    persisted.unlocksUsedOn === new Date().toDateString() ? (persisted.unlocksUsedToday ?? 0) : 0,
+  );
+  const unlocksLeftToday = Math.max(0, DAILY_UNLOCK_LIMIT - unlocksUsedToday);
+
+  /** Spends a Bailout and opens the door with no challenge. Used by the
+   *  Gate's skip and by the Shield past the daily cap — past four, this is
+   *  the only way through. */
+  const unlockWithBailout = () => {
+    if (emergencyTokens <= 0) return;
+    const nextTokens = Math.max(0, emergencyTokens - 1);
+    setEmergencyTokens(nextTokens);
+    onPatch({ emergencyTokens: nextTokens });
+    spendDailyUnlock();
+    startGrant(intensity.grantMinutes);
+    setGrantMinutes(intensity.grantMinutes);
+    setGrantIsEmergency(false);
+    setGrantExpiresAt(Date.now() + intensity.grantMinutes * 60000);
+    setUnlockNumber((n) => n + 1);
+    applyProgress([{ type: 'hardUnlock' }]);
+    setBlock('grant');
+  };
+
+  /** Books one of the day's unlocks. Returns false when they're all spent. */
+  const spendDailyUnlock = (): boolean => {
+    const today = new Date().toDateString();
+    const used = persisted.unlocksUsedOn === today ? (persisted.unlocksUsedToday ?? 0) : 0;
+    if (used >= DAILY_UNLOCK_LIMIT) return false;
+    setUnlocksUsedToday(used + 1);
+    onPatch({ unlocksUsedOn: today, unlocksUsedToday: used + 1 });
+    return true;
+  };
   const [activeThemeKey, setActiveThemeKey] = useState<ThemeKey>(themeKey);
   const [activeIntensityKey, setActiveIntensityKey] = useState<IntensityKey>(intensityKey);
+  const [intensitySince, setIntensitySince] = useState<string | null>(
+    persisted.intensitySince ?? null,
+  );
+  const [pendingIntensity, setPendingIntensity] = useState<{
+    key: IntensityKey;
+    at: number;
+  } | null>(
+    persisted.pendingIntensityKey && persisted.pendingIntensityAt
+      ? { key: persisted.pendingIntensityKey, at: persisted.pendingIntensityAt }
+      : null,
+  );
+
+  /** The only way the level changes. Tightening lands now; loosening waits a
+   *  day unless the weekly check-in earned it — see intensityChange.ts. */
+  const changeIntensity = (next: IntensityKey, earned = false) => {
+    const result = requestIntensityChange(
+      {
+        intensityKey: activeIntensityKey,
+        intensitySince,
+        pendingIntensityKey: pendingIntensity?.key ?? null,
+        pendingIntensityAt: pendingIntensity?.at ?? null,
+      },
+      next,
+      { earned },
+    );
+    if (result.kind === 'noop') return result;
+    if (result.kind === 'applied') {
+      setActiveIntensityKey(result.patch.intensityKey);
+      setIntensitySince(result.patch.intensitySince ?? null);
+      setPendingIntensity(null);
+    } else {
+      setPendingIntensity({ key: result.patch.pendingIntensityKey!, at: result.at });
+    }
+    onPatch(result.patch);
+    return result;
+  };
+
+  // A scheduled loosening has to survive the app being closed, so it's a
+  // stored deadline landed on foreground rather than a timer.
+  useEffect(() => {
+    const settle = () => {
+      const landed = settleIntensity({
+        intensityKey: activeIntensityKey,
+        intensitySince,
+        pendingIntensityKey: pendingIntensity?.key ?? null,
+        pendingIntensityAt: pendingIntensity?.at ?? null,
+      });
+      if (!landed) return;
+      setActiveIntensityKey(landed.intensityKey);
+      setIntensitySince(landed.intensitySince ?? null);
+      setPendingIntensity(null);
+      onPatch(landed);
+    };
+    settle();
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') settle();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingIntensity, activeIntensityKey]);
   // The live session lives here, not in TimerScreen: it has to survive opening
   // an overlay (checking which apps are blocked used to unmount the timer and
   // silently end the lock) and survive the app being killed.
   const [session, setSession] = useState<FocusSession | null>(persisted.session ?? null);
   const timerRunning = !!session && session.endsAt > Date.now();
+
+
+  /** The one place that knows how a grant is expressed on each platform:
+   *  Family Controls on iOS, the Accessibility Service's stand-down window on
+   *  Android. Both sides have to be told, or the half that isn't told keeps
+   *  enforcing — which on Android meant the shield came straight back after a
+   *  passed challenge. */
+  const startGrant = (minutes: number) => {
+    if (Platform.OS === 'ios') {
+      if (hasBlockedSelection()) grantTemporaryAccess(minutes);
+    } else {
+      grantAndroidAccess(minutes);
+    }
+  };
+
+  const endGrantEverywhere = () => {
+    if (Platform.OS === 'ios') endGrantNow();
+    else endAndroidGrantNow();
+  };
+
+  /** Epoch millis of a grant that is still running, or null. Read from the
+   *  native side rather than from state so it survives a cold start. */
+  const runningGrantUntil = (): number | null => {
+    if (Platform.OS === 'ios') {
+      const state = getBlockState();
+      return state.kind === 'granted' ? state.until : null;
+    }
+    const until = androidGrantedUntil();
+    return until > Date.now() ? until : null;
+  };
+
+  /** Entry point for every "unlock this" trigger (Home's Focus lock CTA,
+   *  the Blocked Apps pill, "Let me in" reopening from Apple's shield).
+   *  Without this check, coming back to any of those while a grant was
+   *  still running re-ran the whole challenge from scratch — the countdown
+   *  screen you "Continue in app"'d out of a minute ago never came back,
+   *  so it looked like the challenge had to be redone every time. */
+  const openUnlockFlow = () => {
+    const until = runningGrantUntil();
+    if (until !== null) {
+      setGrantExpiresAt(until);
+      setGrantIsEmergency(false);
+      setBlock('grant');
+      return;
+    }
+    setBlock('shield');
+  };
+
+  /** Emergency access: five minutes, once a day. Long enough to deal with
+   *  whatever it is, short enough that it can't quietly become the way in. */
+  const openEmergencyAccess = () => {
+    const today = new Date().toDateString();
+    if (emergencyUsedOn === today) {
+      setEmergencyExhausted(true);
+      return;
+    }
+    setEmergencyUsedOn(today);
+    onPatch({ emergencyUsedOn: today });
+    // Emergency is still a grant. It used to show the countdown without ever
+    // telling the OS side to stand down, so break-glass put a timer on screen
+    // and left the apps every bit as blocked as before.
+    startGrant(EMERGENCY_MINUTES);
+    setGrantIsEmergency(true);
+    setGrantExpiresAt(Date.now() + EMERGENCY_MINUTES * 60000);
+    setBlock('emergency');
+  };
 
   const startSession = (minutes: number, label: string, hardMode: boolean) => {
     const next: FocusSession = {
@@ -160,7 +379,14 @@ export default function MainApp({
     };
     setSession(next);
     onPatch({ session: next });
-    setTimerPreset((p) => ({ ...p, minutes, label, hardMode, autoStart: false }));
+    // nonce always bumps, even when minutes/label match the previous
+    // session — TimerScreen's `key` is built from these three fields
+    // specifically so a new session always remounts it. Without a change
+    // here, starting back-to-back sessions at the same length produced an
+    // identical key, skipped the remount, and left `remaining` frozen at
+    // its first-mount value (a plain useState, not derived from `session`)
+    // — the slide-to-start looked like it did nothing.
+    setTimerPreset((p) => ({ ...p, minutes, label, hardMode, autoStart: false, nonce: (p.nonce ?? 0) + 1 }));
     setTab('timer');
     // Actually apply the block. Without this the session was only ever a
     // countdown in JS — the OS was never told to shield anything, which is
@@ -176,7 +402,9 @@ export default function MainApp({
   const endSession = () => {
     setSession(null);
     onPatch({ session: null });
-    if (Platform.OS === 'ios' && hasBlockedSelection()) unblockSelectedApps();
+    // Ending a session does NOT open the apps back up — the block is the
+    // resting state, and a session is only a stricter stretch on top of it.
+    if (Platform.OS === 'ios') enforcePersistentBlock();
     endLiveTimer();
     stopSessionNotification();
   };
@@ -224,6 +452,12 @@ export default function MainApp({
   const [activitySessions, setActivitySessions] = useState(persisted.activitySessions ?? []);
   const [appLimits, setAppLimits] = useState<AppLimit[]>(persisted.appLimits ?? []);
   const [emergencyTokens, setEmergencyTokens] = useState(persisted.emergencyTokens ?? startingEmergencyTokens());
+  // Cheapest pack, by the store's own numeric price — comparing priceString
+  // would sort by currency symbol and give the wrong answer outside INR.
+  const cheapestBailoutPrice =
+    bailoutProducts.length === 0
+      ? null
+      : bailoutProducts.reduce((a, b) => (a.price <= b.price ? a : b)).priceString;
   // Held until the gate resolves, so we can record whether they actually
   // went through with the unlock alongside what they wrote.
   const [pendingReflection, setPendingReflection] = useState<{ prompt: string; text: string } | null>(null);
@@ -320,12 +554,42 @@ export default function MainApp({
   // category is modeled on.
   useEffect(() => {
     if (pendingShieldPackage) {
-      setBlock('shield');
+      // The service should already be standing down during a grant, but a
+      // deep link can still be in flight from just before it started. Landing
+      // on the countdown beats re-running a challenge the user just passed.
+      const until = runningGrantUntil();
+      if (until !== null) {
+        setGrantExpiresAt(until);
+        setGrantIsEmergency(false);
+        setBlock('grant');
+      } else {
+        setBlock('shield');
+      }
       setOverlay(null);
       onShieldConsumed();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingShieldPackage]);
+
+  // "Let me in" reopening Byre used to land on whatever tab was showing —
+  // the button did nothing visible because there was no challenge screen to
+  // route to. This is that route: straight to the Gate, same as the moment
+  // right after Apple's shield.
+  useEffect(() => {
+    if (pendingIOSUnlock) {
+      const state = getBlockState();
+      if (state.kind === 'granted') {
+        setGrantExpiresAt(state.until);
+        setGrantIsEmergency(false);
+        setBlock('grant');
+      } else {
+        setBlock('gate');
+      }
+      setOverlay(null);
+      onIOSUnlockConsumed();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingIOSUnlock]);
 
   // iOS equivalent: Apple's own Shield UI is what the user actually sees
   // over a blocked app (not our RN ShieldScreen — Apple doesn't allow custom
@@ -336,20 +600,71 @@ export default function MainApp({
     if (Platform.OS !== 'ios') return;
     configureShield(
       theme.lines[0] ?? 'Take a moment.',
-      goal.line ? `You said you wanted ${goal.line}.` : theme.forWho,
+      goal.line ? `You said you wanted ${goal.line}.` : undefined,
     );
-    const checkShield = () => {
-      if (isCurrentlyShielded() && block === null) {
-        setBlock('gate');
-        setOverlay(null);
+    // Blocking is always on now, so "is a shield active?" is true for the
+    // whole life of the app and can no longer mean "the user just hit one" —
+    // routing straight to the Gate on that would trap every launch. What
+    // foregrounding is actually good for is repairing state: put the shield
+    // back if a grant ran out while Byre was closed.
+    // Repair on every foreground: the window may have run out while Byre
+    // was closed, in which case the door has to shut before anything else
+    // draws.
+    const onForeground = () => {
+      configureShield(undefined, goal.line ? `You said you wanted ${goal.line}.` : undefined);
+      const left = grantRemainingMs();
+      if (left <= 0) {
+        endGrantNow();
+        setGrantExpiresAt(null);
+        return;
       }
+      setGrantExpiresAt(Date.now() + left);
     };
-    checkShield();
+    onForeground();
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') checkShield();
+      if (state === 'active') onForeground();
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Android's half of the same repair: adopt a grant that outlived the JS
+  // process so the countdown bar and the Gate agree with what the
+  // Accessibility Service is actually doing.
+  useEffect(() => {
+    if (Platform.OS === 'ios') return;
+    const adopt = () => setGrantExpiresAt(runningGrantUntil());
+    adopt();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') adopt();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Shuts the door the moment a grant runs out with Byre in the foreground.
+  // The native usage threshold in startGrantWindow covers the app-is-closed
+  // case; this covers the case where the user is watching the countdown.
+  useEffect(() => {
+    if (grantExpiresAt === null) return;
+    const remaining = grantExpiresAt - Date.now();
+    if (remaining <= 0) {
+      endGrantEverywhere();
+      setGrantExpiresAt(null);
+      return;
+    }
+    const id = setTimeout(() => {
+      endGrantEverywhere();
+      setGrantExpiresAt(null);
+      setBlock(null);
+    }, remaining);
+    return () => clearTimeout(id);
+  }, [grantExpiresAt]);
+
+  // The block is the resting state: apply it as soon as there is a selection,
+  // not only when a session starts.
+  useEffect(() => {
+    if (Platform.OS === 'ios') enforcePersistentBlock();
   }, []);
 
   if (checkInDue && block === null) {
@@ -359,7 +674,7 @@ export default function MainApp({
         previousCheckIns={checkIns}
         progress={progress}
         currentIntensityKey={activeIntensityKey}
-        onAdoptIntensity={setActiveIntensityKey}
+        onAdoptIntensity={(k) => changeIntensity(k, true)}
         onComplete={(checkIn) => {
           const nextCheckIns = [...checkIns, checkIn];
           setCheckIns(nextCheckIns);
@@ -383,7 +698,10 @@ export default function MainApp({
       <ShieldScreen
         theme={theme}
         goal={goal}
-        unlockNumber={unlockNumber}
+        unlockNumber={unlocksUsedToday + 1}
+        unlocksLeftToday={unlocksLeftToday}
+        bailoutBalance={emergencyTokens}
+        onUseBailout={unlockWithBailout}
         isBedtime={isBedtime}
         onNotNow={() => {
           // Closing without unlocking is what actually credits the world.
@@ -395,11 +713,7 @@ export default function MainApp({
           setBlock(null);
         }}
         onNeedIt={() => setBlock('gate')}
-        onEmergency={() => {
-          setGrantIsEmergency(true);
-          setGrantExpiresAt(Date.now() + 15 * 60000);
-          setBlock('emergency');
-        }}
+        onEmergency={openEmergencyAccess}
       />
     );
   }
@@ -413,20 +727,10 @@ export default function MainApp({
         repsFor={repsFor}
         onActivityComplete={commitActivitySession}
         tokenBalance={emergencyTokens}
-        onSkipWithToken={() => {
-          const nextTokens = Math.max(0, emergencyTokens - 1);
-          setEmergencyTokens(nextTokens);
-          onPatch({ emergencyTokens: nextTokens });
-          if (Platform.OS === 'ios' && hasBlockedSelection()) grantTemporaryAccess(intensity.grantMinutes);
-          setGrantMinutes(intensity.grantMinutes);
-          setGrantIsEmergency(false);
-          setGrantExpiresAt(Date.now() + intensity.grantMinutes * 60000);
-          setUnlockNumber((n) => n + 1);
-          applyProgress([{ type: 'hardUnlock' }]);
-          setBlock('grant');
-        }}
+        onSkipWithToken={unlockWithBailout}
         onGranted={(m) => {
-          if (Platform.OS === 'ios' && hasBlockedSelection()) grantTemporaryAccess(m);
+          spendDailyUnlock();
+          startGrant(m);
           setGrantMinutes(m);
           setGrantIsEmergency(false);
           setGrantExpiresAt(Date.now() + m * 60000);
@@ -440,9 +744,7 @@ export default function MainApp({
           setBlock(null);
         }}
         onEmergency={() => {
-          setGrantIsEmergency(true);
-          setGrantExpiresAt(Date.now() + 15 * 60000);
-          setBlock('emergency');
+          openEmergencyAccess();
         }}
       />
     );
@@ -451,17 +753,14 @@ export default function MainApp({
   if (block === 'grant' || block === 'emergency') {
     return (
       <GrantScreen
-        minutes={block === 'emergency' ? 15 : grantMinutes}
+        minutes={block === 'emergency' ? EMERGENCY_MINUTES : grantMinutes}
         emergency={block === 'emergency'}
         expiresAt={grantExpiresAt ?? Date.now()}
-        bailoutBalance={emergencyTokens}
         onDone={() => {
           void cancelGrantEndedNotification();
-          if (!grantIsEmergency) {
-            const next = Math.max(0, emergencyTokens - 1);
-            setEmergencyTokens(next);
-            onPatch({ emergencyTokens: next });
-          }
+          // "Done early" means the door shuts now, not that it stays open
+          // until the countdown would have run out.
+          endGrantEverywhere();
           setBlock(null);
           setGrantExpiresAt(null);
         }}
@@ -498,7 +797,8 @@ export default function MainApp({
           accountLabel={account ? account.identifier : undefined}
           onOpenFutureSelf={() => setOverlay('futureSelf')}
           onOpenBlockedApps={() => setOverlay('blockedApps')}
-          onOpenDifficulty={() => setOverlay('difficulty')}
+          onOpenSubscription={() => setOverlay('subscription')}
+          onOpenDifficulty={() => openDifficulty('settings')}
           onOpenDeleteAccount={() => setOverlay('deleteAccount')}
           onOpenScreenTimeDiagnostics={
             Platform.OS === 'ios' ? () => setOverlay('screenTimeDiagnostics') : undefined
@@ -556,15 +856,32 @@ export default function MainApp({
         <EmergencyTokensScreen
           tokenBalance={emergencyTokens}
           onBack={() => setOverlay(null)}
+          products={bailoutProducts}
+          onGrant={(quantity) => {
+            const next = emergencyTokens + quantity;
+            setEmergencyTokens(next);
+            onPatch({ emergencyTokens: next });
+          }}
+          onTestTopUp={
+            TEST_TOP_UP
+              ? () => {
+                  setEmergencyTokens(99);
+                  onPatch({ emergencyTokens: 99 });
+                }
+              : undefined
+          }
         />
       );
     if (ov === 'difficulty')
       return (
         <IntensityScreen
           recommended={activeIntensityKey}
+          current={activeIntensityKey}
+          daysOnLevel={daysOnLevel(intensitySince)}
+          pending={pendingIntensity}
           onContinue={(k) => {
-            setActiveIntensityKey(k);
-            setOverlay('settings');
+            changeIntensity(k);
+            setOverlay(difficultyOrigin);
           }}
         />
       );
@@ -581,6 +898,16 @@ export default function MainApp({
         />
       );
     if (ov === 'waitingRoom') return <WaitingRoomScreen onBack={() => setOverlay('settings')} />;
+    if (ov === 'subscription')
+      return (
+        <SubscriptionScreen
+          info={customerInfo}
+          isPro={isPro}
+          bailouts={emergencyTokens}
+          onBack={() => setOverlay('settings')}
+          onBuyBailouts={() => setOverlay('emergencyTokens')}
+        />
+      );
     if (ov === 'blockScreens')
       return (
         <BlockScreensScreen
@@ -701,7 +1028,8 @@ export default function MainApp({
             <HomeScreen
               onOpenProfile={() => setOverlay('profile')}
               onOpenApps={() => setTab('apps')}
-              onTriggerShield={() => setBlock('shield')}
+              onTriggerShield={openUnlockFlow}
+              sessionRunning={timerRunning}
               onStartBlock={(minutes) => startSession(minutes, 'Focus Timer', false)}
               onStartRest={() => {
                 setTimerPreset({ minutes: 10, label: 'Rest Timer', autoStart: false });
@@ -710,8 +1038,13 @@ export default function MainApp({
               onStartPreset={(minutes, label, hardMode) => startSession(minutes, label, !!hardMode)}
               onOpenSleepSchedule={() => setOverlay('schedules')}
               onOpenBlockedApps={() => setOverlay('blockedApps')}
-              onBuyBailouts={() => setOverlay('emergencyTokens')}
               bailoutBalance={emergencyTokens}
+              bailoutFromPrice={cheapestBailoutPrice}
+              onOpenDifficulty={() => openDifficulty(null)}
+              onBuyBailouts={() => setOverlay('emergencyTokens')}
+              intensityKey={activeIntensityKey}
+              progress={progress}
+              goalLine={goal.line}
               blockedPackages={blockedPackages}
               unlockNumber={unlockNumber}
               score={rank.percent}
@@ -736,6 +1069,7 @@ export default function MainApp({
               onOpenSchedules={() => setOverlay('schedules')}
               onOpenEssentials={() => setOverlay('essentials')}
               onOpenBlocks={() => setOverlay('blocks')}
+              onOpenDifficulty={() => openDifficulty(null)}
             />
           )}
           {tab === 'timer' && (
@@ -743,7 +1077,7 @@ export default function MainApp({
               key={`${timerPreset.minutes}-${timerPreset.label}-${timerPreset.nonce ?? 0}`}
               initialMinutes={timerPreset.minutes}
               label={timerPreset.label}
-              motivationLine={goal.line ? `Protecting: ${goal.line}` : theme.forWho}
+              motivationLine={goal.line ? `Protecting: ${goal.line}` : momentLine()}
               essentials={essentials}
               session={session}
               onStartSession={startSession}
@@ -763,7 +1097,7 @@ export default function MainApp({
                 setEmergencyTokens(next);
                 onPatch({ emergencyTokens: next });
               }}
-              onOpenShield={() => setOverlay('blockedApps')}
+              onOpenShield={openUnlockFlow}
               onOpenTokenInfo={() => setOverlay('emergencyTokens')}
             />
           )}

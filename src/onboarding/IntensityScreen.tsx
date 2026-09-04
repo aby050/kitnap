@@ -3,8 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View, Dimensions } from 'react
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Defs, RadialGradient, Stop } from 'react-native-svg';
 import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
-import { GradientButton } from '../components/ui';
+import HoldButton from '../components/HoldButton';
 import { INTENSITIES, IntensityKey } from '../data/themes';
+import { isLoosening } from '../data/intensityChange';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
@@ -38,13 +39,29 @@ export default function IntensityScreen({
   onContinue,
   recommended,
   recommendedReasons,
+  current: currentKey,
+  daysOnLevel,
+  pending,
 }: {
   onContinue: (key: IntensityKey) => void;
   recommended?: IntensityKey;
   recommendedReasons?: string[];
+  /** The level actually in force. Absent during onboarding, when there
+   *  isn't one yet and nothing below applies. */
+  current?: IntensityKey;
+  daysOnLevel?: number | null;
+  /** A step down already requested and waiting out its day. */
+  pending?: { key: IntensityKey; at: number } | null;
 }) {
   const [selected, setSelected] = useState<IntensityKey>(recommended ?? 'steady');
   const current = INTENSITIES.find((i) => i.key === selected)!;
+  // Loosening waits a day. Say so before the tap, not after — a delay you
+  // discover only once it's running feels like the app misfired.
+  const willWait =
+    !!currentKey && isLoosening(currentKey, selected) && selected !== currentKey;
+  const currentName = INTENSITIES.find((i) => i.key === currentKey)?.name ?? '';
+  const pendingName = INTENSITIES.find((i) => i.key === pending?.key)?.name ?? '';
+  const hoursLeft = pending ? Math.max(1, Math.ceil((pending.at - Date.now()) / 3600000)) : 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -56,8 +73,8 @@ export default function IntensityScreen({
           How hard should this push back?
         </Animated.Text>
         <Text style={styles.sub}>
-          Every unlock takes the same real challenge — no free early opens. If you'd rather not, a Bailout
-          skips it instantly.
+          Both levels give you the same thing: three unlocks a day, three minutes each. What changes is
+          what it takes to earn one — answer something, or do something. Easing off later takes a day.
         </Text>
 
         {/* Segmented Row Selector */}
@@ -138,13 +155,45 @@ export default function IntensityScreen({
 
       {/* Continue CTA Button */}
       <View style={styles.ctaWrap}>
-        <GradientButton label="Continue" onPress={() => onContinue(selected)} />
+        {pending && (
+          <Text style={styles.notice}>
+            {pendingName} is already scheduled — it takes over in about {hoursLeft}h.
+          </Text>
+        )}
+        {!pending && willWait && (
+          <Text style={styles.notice}>
+            Easing off takes a day. You'll stay on {currentName} until this time tomorrow — that
+            wait is the point of having picked it.
+          </Text>
+        )}
+        {!pending && !willWait && currentKey && daysOnLevel !== null && daysOnLevel !== undefined && (
+          <Text style={styles.notice}>
+            {currentName} for {daysOnLevel === 0 ? 'less than a day' : `${daysOnLevel} day${daysOnLevel === 1 ? '' : 's'}`}.
+          </Text>
+        )}
+        {/* Held, not tapped. Picking how hard the app should push back is the
+            one choice the whole product hangs off — the charge under the
+            thumb is the screen asking whether you mean it. */}
+        <HoldButton
+          label={willWait ? 'Hold to schedule for tomorrow' : 'Hold to continue'}
+          holdLabel={willWait ? 'Scheduling…' : 'Locking it in…'}
+          onComplete={() => onContinue(selected)}
+        />
+        <Text style={styles.holdHint}>Press and hold</Text>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  notice: {
+    color: palette.textTertiary,
+    fontSize: 12.5,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 8,
+  },
   container: { 
     flex: 1, 
     backgroundColor: '#000000',
@@ -286,6 +335,14 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     lineHeight: 21,
     fontWeight: '500',
+  },
+  holdHint: {
+    color: palette.textQuaternary,
+    fontSize: 11.5,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    textAlign: 'center',
+    marginTop: 10,
   },
   ctaWrap: { 
     paddingHorizontal: 22, 

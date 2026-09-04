@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,7 +6,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { THEMES, ThemeKey } from '../data/themes';
 import Icon from '../ui/Icon';
 import { palette, space } from '../design/tokens';
-import Toggle from '../design/Toggle';
 
 /** What the shield actually shows. Themes stay swappable independent of
  *  onboarding — changing your mind later shouldn't mean redoing setup. */
@@ -19,9 +18,6 @@ export default function BlockScreensScreen({
   onSelectTheme: (k: ThemeKey) => void;
   onBack: () => void;
 }) {
-  const [showDeadline, setShowDeadline] = useState(true);
-  const [showPhoto, setShowPhoto] = useState(true);
-  const [showUnlockCount, setShowUnlockCount] = useState(true);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -52,27 +48,13 @@ export default function BlockScreensScreen({
           })}
         </View>
 
-        <Text style={styles.sectionTitle}>What appears on it</Text>
+        <Text style={styles.sectionTitle}>Where you'll see it</Text>
         <View style={styles.card}>
-          <ToggleRow
-            title="Your deadline countdown"
-            desc="“Exam in 12 days.” Only shows if you've set one."
-            value={showDeadline}
-            onChange={setShowDeadline}
-          />
-          <ToggleRow
-            title="Your photo"
-            desc="Replaces the theme icon with the one you chose."
-            value={showPhoto}
-            onChange={setShowPhoto}
-          />
-          <ToggleRow
-            title="Today's unlock count"
-            desc="“Unlock #3 today.” Some people find the number itself the deterrent."
-            value={showUnlockCount}
-            onChange={setShowUnlockCount}
-            last
-          />
+          <Text style={styles.explain}>
+            This is the screen iOS puts over a blocked app the moment you open it — before the app
+            loads, not inside it. The voice you pick above sets its wording, and the message changes
+            each time you reach for the same app on the same day.
+          </Text>
         </View>
 
         <View style={styles.note}>
@@ -86,34 +68,8 @@ export default function BlockScreensScreen({
   );
 }
 
-function ToggleRow({
-  title,
-  desc,
-  value,
-  onChange,
-  last,
-}: {
-  title: string;
-  desc: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-  last?: boolean;
-}) {
-  return (
-    <View style={[styles.toggleRow, !last && styles.toggleRowBorder]}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.toggleTitle}>{title}</Text>
-        <Text style={styles.toggleDesc}>{desc}</Text>
-      </View>
-      <Toggle
-        value={value}
-        onValueChange={onChange}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  explain: { color: palette.textSecondary, fontSize: 14, lineHeight: 21, padding: 16 },
   container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: space.md },
   circleBtn: {

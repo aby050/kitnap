@@ -11,7 +11,6 @@ export default function GrantScreen({
   minutes,
   emergency,
   expiresAt,
-  bailoutBalance = 0,
   onDone,
   onMinimize,
 }: {
@@ -19,27 +18,25 @@ export default function GrantScreen({
   emergency?: boolean;
   /** Shared with the Dynamic-Island-style pill so the countdown survives leaving this screen. */
   expiresAt: number;
-  bailoutBalance?: number;
   onDone: () => void;
   onMinimize?: () => void;
 }) {
-  const [remaining, setRemaining] = useState(Math.max(0, Math.round((expiresAt - Date.now()) / 1000)));
+  const secondsLeft = () => Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+  const [remaining, setRemaining] = useState(secondsLeft);
   const [confirmEarly, setConfirmEarly] = useState(false);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setRemaining(Math.max(0, Math.round((expiresAt - Date.now()) / 1000)));
-    }, 1000);
+    setRemaining(secondsLeft());
+    const id = setInterval(() => setRemaining(secondsLeft()), 1000);
     return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expiresAt]);
 
   const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
   const ss = String(remaining % 60).padStart(2, '0');
 
-  const total = emergency ? 15 * 60 : Math.max(1, minutes * 60);
+  const total = Math.max(1, minutes * 60);
   const progress = Math.max(0, Math.min(1, remaining / total));
-  const canBailout = emergency || bailoutBalance > 0;
-  const noun = bailoutBalance === 1 ? 'Bailout' : 'Bailouts';
 
   return (
     <Screen edges={['top', 'bottom']} bloom>
@@ -49,13 +46,13 @@ export default function GrantScreen({
         </Animated.View>
 
         <Animated.Text entering={FadeInDown.delay(120).duration(400)} style={styles.headline}>
-          {emergency ? 'Everything is open for 15 minutes.' : `${minutes} minutes.`}
+          {emergency ? `Everything is open for ${minutes} minutes.` : `${minutes} minutes.`}
         </Animated.Text>
 
         <Animated.Text entering={FadeInDown.delay(220).duration(400)} style={styles.sub}>
           {emergency
             ? 'No questions. Nothing logged against you. Go handle it.'
-            : 'The world will remember, and it recovers.'}
+            : 'Already counting down. Go — apps lock again when it hits zero.'}
         </Animated.Text>
 
         <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.ringWrap}>
@@ -73,16 +70,16 @@ export default function GrantScreen({
       <View style={styles.ctaWrap}>
         {onMinimize && (
           <>
-            <Button label="Continue in app" iconRight="chevronDown" variant="primary" onPress={onMinimize} />
+            <Button label="Got it" iconRight="chevronDown" variant="primary" onPress={onMinimize} />
             <Text style={styles.hint}>
-              Keep using Byre. We'll notify you when this unlock ends and apps lock again.
+              Your {minutes} minutes are running now, here as much as anywhere. We'll
+              notify you when they're up.
             </Text>
           </>
         )}
         <Button
-          label={emergency ? 'Done early' : canBailout ? 'Done early · uses 1 Bailout' : 'No Bailouts left'}
+          label="I'm done — lock now"
           variant="ghost"
-          disabled={!canBailout}
           onPress={() => (emergency ? onDone() : setConfirmEarly(true))}
         />
       </View>
@@ -93,11 +90,10 @@ export default function GrantScreen({
           <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
             <Text style={styles.confirmTitle}>End this unlock early?</Text>
             <Text style={styles.confirmBody}>
-              Apps lock again now. That uses <Text style={styles.confirmAccent}>1 Bailout</Text>.
-              {'\n'}You have {bailoutBalance} {noun}.
+              Apps lock again straight away, and you keep the rest of your time.
             </Text>
             <Button
-              label="Use 1 Bailout and lock now"
+              label="Lock now"
               variant="danger"
               onPress={() => {
                 setConfirmEarly(false);

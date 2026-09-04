@@ -4,13 +4,20 @@ import { useCameraPermissions } from 'expo-camera';
 import { GateQuestion } from '../data/gateQuestions';
 import { Button, Meter, Ring, Stat } from '../design/primitives';
 import { palette } from '../design/tokens';
-import { tapMedium } from '../ui/haptics';
+import Icon from '../ui/Icon';
+import { tapLight, tapMedium } from '../ui/haptics';
 import BreathingExercise from './BreathingExercise';
 import PosePreview from './activity/PosePreview';
 import { usePoseDetector } from './activity/usePoseDetector';
 import { useCameraMotion } from './activity/useCameraMotion';
 import { TapState, createTapState, feedTap, tapHint, tapSetSatisfied } from './activity/tapGuard';
-import { ActivityKind, ActivitySessionResult, DetectorTier, isActivityKind } from './activity/types';
+import {
+  ACTIVITY_KINDS,
+  ActivityKind,
+  ActivitySessionResult,
+  DetectorTier,
+  isActivityKind,
+} from './activity/types';
 
 /**
  * Hard unlock — Strict mode's physical challenge.
@@ -51,8 +58,21 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [fellBackToBreathing, setFellBackToBreathing] = useState(false);
 
-  const activity: ActivityKind = isActivityKind(q.activity) ? q.activity : 'squats';
+  // Swappable: a push-up is impossible in a lift, on a bad shoulder, or in a
+  // shirt you can't get on the floor in. Refusing to bend just means the
+  // Bailout gets spent instead, which teaches nothing.
+  const [activity, setActivity] = useState<ActivityKind>(
+    isActivityKind(q.activity) ? q.activity : 'squats',
+  );
   const target = Math.max(1, q.reps);
+
+  const swapActivity = () => {
+    tapLight();
+    setActivity((current) => {
+      const i = ACTIVITY_KINDS.indexOf(current);
+      return ACTIVITY_KINDS[(i + 1) % ACTIVITY_KINDS.length];
+    });
+  };
 
   const startedAt = useRef(Date.now());
   /** onDone is a grant — it must happen exactly once no matter how many times
@@ -230,7 +250,12 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
 
   return (
     <View style={styles.qBody}>
-      <Text style={styles.prompt}>{q.prompt}</Text>
+      <View style={styles.promptRow}>
+        <Text style={styles.prompt}>Do {target} {activity} to unlock.</Text>
+        <Pressable onPress={swapActivity} hitSlop={12} style={styles.swap} accessibilityLabel="Change exercise">
+          <Icon name="refresh" size={18} color={palette.accent} strokeWidth={2} />
+        </Pressable>
+      </View>
 
       {/* The camera is the challenge: at thumbnail size you couldn't tell
           whether it had you in frame, which is the one thing you need to see.
@@ -253,13 +278,20 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
         </View>
       </View>
 
-      {tier !== 'manual' && (
+      {tier !== 'manual' ? (
         <View style={styles.meterWrap}>
           <Meter progress={level} color={palette.accent} />
-          <Text style={styles.tierNote}>{TIER_NOTE[tier]}</Text>
+          <Text style={styles.tierNote} numberOfLines={2}>{TIER_NOTE[tier]}</Text>
+          {/* Pose counting needs your whole body in frame, which is hard with a
+              phone propped on the floor for push-ups. Rather than leave someone
+              stuck at 0/8 doing real reps, the way out is always on screen. */}
+          <Pressable onPress={() => setManualLatched(true)} hitSlop={10}>
+            <Text style={styles.manualLink}>Not counting? Tap them in yourself</Text>
+          </Pressable>
         </View>
+      ) : (
+        <Text style={styles.tierNote} numberOfLines={2}>{TIER_NOTE.manual}</Text>
       )}
-      {tier === 'manual' && <Text style={styles.tierNote}>{TIER_NOTE.manual}</Text>}
 
       {tier === 'manual' && (
         <View style={styles.ctaWrap}>
@@ -289,15 +321,26 @@ const SINGULAR: Record<ActivityKind, string> = {
 };
 
 const styles = StyleSheet.create({
-  qBody: { flex: 1, alignItems: 'stretch', justifyContent: 'center', paddingHorizontal: 18, gap: 14 },
-  prompt: { color: palette.text, fontSize: 23, fontWeight: '700', textAlign: 'center', lineHeight: 31, maxWidth: 320, alignSelf: 'center' },
+  qBody: { flex: 1, alignItems: 'stretch', justifyContent: 'center', paddingHorizontal: 18, gap: 12, paddingBottom: 8 },
+  promptRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  swap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.accentSoft,
+  },
+  prompt: { color: palette.text, fontSize: 21, fontWeight: '700', textAlign: 'center', lineHeight: 31, maxWidth: 320, alignSelf: 'center' },
   hint: { color: palette.textTertiary, fontSize: 13, textAlign: 'center', maxWidth: 300, minHeight: 18, alignSelf: 'center' },
   stage: { alignItems: 'stretch', justifyContent: 'center' },
   cameraWrap: {
     width: '100%',
     // Tall enough to show head-to-knee at arm's length, capped so the prompt
     // and rep count still fit on a small phone.
-    height: Math.min(Dimensions.get('window').height * 0.7, 620),
+    // 62%, not 70%: the rest of the screen has to hold the prompt, the tier
+    // note and the Bailout link without them colliding.
+    height: Math.min(Dimensions.get('window').height * 0.62, 560),
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#000',
@@ -319,6 +362,13 @@ const styles = StyleSheet.create({
   coachHint: { color: palette.text, fontSize: 14.5, fontWeight: '600', lineHeight: 20 },
   coachPrivacy: { color: palette.textTertiary, fontSize: 11.5 },
   meterWrap: { width: '100%', gap: 8 },
+  manualLink: {
+    color: palette.textSecondary,
+    fontSize: 12.5,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    marginTop: 2,
+  },
   tierNote: { color: palette.accentBorder, fontSize: 12, textAlign: 'center', maxWidth: 300, alignSelf: 'center' },
   ctaWrap: { width: '100%' },
   privacy: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', alignSelf: 'center' },

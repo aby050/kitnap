@@ -13,6 +13,7 @@ import {
   weeklyWindows,
 } from '../data/progress';
 import Icon, { IconName } from '../ui/Icon';
+import Medal from './profile/Medal';
 import { palette } from '../design/tokens';
 
 export type WeeklyInsightData = {
@@ -217,9 +218,6 @@ export default function WeeklyInsight({
                       <Text style={styles.dropdownBtnText}>This Week</Text>
                       <Icon name="chevronDown" size={12} color="#ffffff" strokeWidth={2.5} />
                     </View>
-                    <View style={styles.moreBtn}>
-                      <Icon name="more" size={14} color="#ffffff" strokeWidth={2.5} />
-                    </View>
                   </View>
                 </View>
 
@@ -320,7 +318,16 @@ export default function WeeklyInsight({
       {milestones.length > 0 && (
         <Animated.View entering={FadeIn.delay(420).duration(400)} style={styles.milestoneCard}>
           <Text style={styles.milestoneLabel}>Earned recently</Text>
-          <Text style={styles.milestoneValue}>{milestones.map((m) => m.name).join(' · ')}</Text>
+          <View style={styles.milestoneRow}>
+            {milestones.slice(0, 4).map((m) => (
+              <View key={m.id} style={styles.milestoneItem}>
+                <Medal def={m} size={44} />
+                <Text style={styles.milestoneName} numberOfLines={2}>
+                  {m.name}
+                </Text>
+              </View>
+            ))}
+          </View>
         </Animated.View>
       )}
     </View>
@@ -337,6 +344,15 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { color: palette.text, fontSize: 16, fontWeight: '700' },
   emptyBody: { color: palette.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 8 },
+  milestoneRow: { flexDirection: 'row', gap: 14, marginTop: 12 },
+  milestoneItem: { alignItems: 'center', width: 62, gap: 6 },
+  milestoneName: {
+    color: palette.textSecondary,
+    fontSize: 10.5,
+    lineHeight: 13,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
   milestoneCard: {
     backgroundColor: 'rgba(111,227,169,0.07)',
     borderRadius: 20,
@@ -347,7 +363,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   milestoneLabel: { color: palette.accent, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-  milestoneValue: { color: palette.text, fontSize: 15, fontWeight: '700', marginTop: 6, lineHeight: 21 },
 
   // Carousel Styles
   carouselCardContainer: {
@@ -417,15 +432,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12.5,
     fontWeight: '600',
-  },
-  moreBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   metricContainer: {
     flexDirection: 'row',

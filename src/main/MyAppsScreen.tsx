@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import BlockedSelection from '../components/BlockedSelection';
@@ -16,6 +16,7 @@ import {
   SectionHeader,
 } from '../design/primitives';
 import AppGlyph from '../ui/AppGlyph';
+import Icon, { IconName } from '../ui/Icon';
 import { palette, radius, space, type } from '../design/tokens';
 
 /** Package name → friendly label, falling back to the last path segment so a
@@ -36,6 +37,27 @@ function toMinutes(hhmm: string): number | null {
 
 /** Live "5h 25m left" / "Starts in 10h". Handles windows that wrap past
  *  midnight (e.g. 22:00 → 07:00). */
+/** Rule name → glyph. Matched on the words people actually use when naming a
+ *  window, with the time of day as a second pass, so a custom "Gym 6am" still
+ *  gets something better than a generic calendar. */
+function ruleIcon(name: string, start: string): IconName {
+  const n = name.toLowerCase();
+  if (/sleep|bed|night/.test(n)) return 'moon';
+  if (/wind ?down|evening|relax|calm/.test(n)) return 'leaf';
+  if (/morning|wake|sunrise/.test(n)) return 'sunrise';
+  if (/work|office|deep|focus|study|school/.test(n)) return 'target';
+  if (/dinner|lunch|meal|family|kids|home/.test(n)) return 'heart';
+  if (/gym|run|walk|workout|train/.test(n)) return 'activity';
+  if (/read|book/.test(n)) return 'book';
+  const hour = Number(start.split(':')[0]);
+  if (Number.isFinite(hour)) {
+    if (hour >= 21 || hour < 5) return 'moon';
+    if (hour < 10) return 'sunrise';
+    if (hour < 17) return 'sun';
+  }
+  return 'clock';
+}
+
 function scheduleStatus(start: string, end: string, now = new Date()): { active: boolean; label: string } {
   const s = toMinutes(start);
   const e = toMinutes(end);
@@ -68,6 +90,7 @@ export default function MyAppsScreen({
   onOpenSchedules,
   onOpenEssentials,
   onOpenBlocks,
+  onOpenDifficulty,
   schedules = [],
 }: {
   blockedPackages?: string[];
@@ -80,6 +103,7 @@ export default function MyAppsScreen({
   onOpenSchedules?: () => void;
   onOpenEssentials?: () => void;
   onOpenBlocks?: () => void;
+  onOpenDifficulty?: () => void;
   schedules?: { id: string; name: string; start: string; end: string; days: string }[];
 }) {
   const blockedApps = blockedPackages.map((pkg) => ({
@@ -95,16 +119,25 @@ export default function MyAppsScreen({
         <View style={styles.headerRow} />
         <Editorial lead="Decide once," emphasis="stay out of reach." style={styles.voice} />
 
-        {/* Primary entry */}
-        <Card tone="accent" onPress={onOpenBlocks} style={styles.blockCard}>
-          <Row
-            icon="sliders"
-            iconColor={palette.accent}
-            title="Block apps & limits"
-            subtitle="Set daily limits, block Shorts, restrict websites."
-            chevron
-          />
-        </Card>
+        {/* Primary entry — Android only. Its destination (BlocksScreen) is
+            per-app minute limits plus a "Block Shorts" / "Block Websites"
+            section that's permanently stuck on "Soon": Screen Time has no
+            way to block one feature inside an app (Shorts rides the same
+            surface as YouTube itself), and per-app minute limits aren't
+            something Family Controls exposes either — only whole-app
+            blocking, which the real picker below already does. Showing this
+            card on iOS was promising two things that don't exist. */}
+        {Platform.OS !== 'ios' && (
+          <Card tone="accent" onPress={onOpenBlocks} style={styles.blockCard}>
+            <Row
+              icon="sliders"
+              iconColor={palette.accent}
+              title="Block apps & limits"
+              subtitle="Set daily limits, block Shorts, restrict websites."
+              chevron
+            />
+          </Card>
+        )}
 
         {/* Blocked apps */}
         <SectionHeader
@@ -113,6 +146,15 @@ export default function MyAppsScreen({
           onAction={Platform.OS !== 'ios' && blockedApps.length > 0 ? onOpenBlockedApps : undefined}
           style={styles.section}
         />
+        {/* The unlock level is global — one setting for every blocked app —
+            so it belongs here rather than repeated on each row. On iOS the
+            row list is drawn natively and can't carry it at all, which is why
+            the level was invisible on that platform entirely. */}
+        <Pressable style={styles.levelRow} onPress={onOpenDifficulty} hitSlop={6}>
+          <Text style={[type.sub, styles.levelLabel]}>Unlock difficulty</Text>
+          <Pill label={strictnessLabel} tone="accent" />
+          <Icon name="chevronRight" size={13} color={palette.textQuaternary} />
+        </Pressable>
 
         {/* iOS never tells the app which apps were picked, so the row list is
             Android-only: there the package names are real. */}
@@ -160,7 +202,7 @@ export default function MyAppsScreen({
                 <View key={rule.id}>
                   {i > 0 && <Divider inset={56} />}
                   <Row
-                    icon="calendar"
+                    icon={ruleIcon(rule.name, rule.start)}
                     iconColor={status.active ? palette.accent : palette.textSecondary}
                     title={rule.name}
                     subtitle={`${rule.days} · ${rule.start}–${rule.end}`}
@@ -183,7 +225,7 @@ export default function MyAppsScreen({
         )}
 
         {/* Manage */}
-        {(onOpenEssentials || onOpenBlockedApps) && (
+        {(onOpenEssentials || (Platform.OS !== 'ios' && onOpenBlockedApps)) && (
           <>
             <SectionHeader title="Manage" style={styles.section} />
             <Card padded={false} style={styles.list}>
@@ -196,8 +238,10 @@ export default function MyAppsScreen({
                   chevron
                 />
               )}
-              {onOpenEssentials && onOpenBlockedApps && <Divider inset={56} />}
-              {onOpenBlockedApps && (
+              {onOpenEssentials && Platform.OS !== 'ios' && onOpenBlockedApps && (
+                <Divider inset={56} />
+              )}
+              {Platform.OS !== 'ios' && onOpenBlockedApps && (
                 <Row
                   icon="lock"
                   title="All blocked apps"
@@ -221,6 +265,13 @@ const styles = StyleSheet.create({
   voice: { marginTop: space.base },
 
   blockCard: { marginTop: space.xl },
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingVertical: space.sm,
+  },
+  levelLabel: { flex: 1, color: palette.textSecondary },
   section: { marginTop: space.xl },
   list: { paddingHorizontal: space.base },
 

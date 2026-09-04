@@ -16,7 +16,16 @@ const MAX = 3;
  * should be able to see what you're committing to without leaving the screen.
  * The icons are the real ones, drawn by iOS from the saved selection.
  */
-export default function BlockedAppsPill({ style }: { style?: any }) {
+export default function BlockedAppsPill({
+  style,
+  running = false,
+  onUnlock,
+}: {
+  style?: any;
+  /** True while a committed block is counting down — the list freezes then. */
+  running?: boolean;
+  onUnlock?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const counts = getSelectionCounts();
   const apps = counts?.apps ?? 0;
@@ -39,7 +48,7 @@ export default function BlockedAppsPill({ style }: { style?: any }) {
         style={({ pressed }) => [styles.pill, pressed && styles.pillOn, style]}
         accessibilityLabel="Blocked apps"
       >
-        <Icon name="shield" size={15} color={palette.accent} />
+        <Icon name="grid" size={15} color={palette.accent} />
         <Text style={styles.label}>Blocked Apps</Text>
 
         {shown > 0 && ScreenTimeLabels && screenTimeLabelsAvailable() && (
@@ -55,7 +64,12 @@ export default function BlockedAppsPill({ style }: { style?: any }) {
         <Icon name="chevronRight" size={15} color={palette.textTertiary} />
       </Pressable>
 
-      <BlockedListSheet visible={open} running={false} onClose={() => setOpen(false)} />
+      <BlockedListSheet
+        visible={open}
+        running={running}
+        onUnlock={onUnlock}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 }
