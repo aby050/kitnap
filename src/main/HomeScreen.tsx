@@ -2,7 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import BlockedAppsPill from '../components/BlockedAppsPill';
+import ScreenTimeCard from '../components/ScreenTimeCard';
+import { getIntensity, IntensityKey } from '../data/themes';
 import { PresetSections } from '../components/PresetCard';
+import WeeklyInsight from '../main/WeeklyInsight';
+import { ProgressState } from '../data/progress';
 import {
   Button,
   Card,
@@ -76,13 +80,19 @@ export default function HomeScreen({
   onOpenProfile,
   onOpenApps,
   onTriggerShield,
+  sessionRunning = false,
   onStartBlock,
   onStartRest,
   onStartPreset,
   onOpenSleepSchedule,
   onOpenBlockedApps,
   onBuyBailouts,
+  progress,
+  goalLine,
   bailoutBalance = 0,
+  bailoutFromPrice = null,
+  onOpenDifficulty,
+  intensityKey,
   blockedPackages = [],
   unlockNumber,
   score = 0,
@@ -95,6 +105,8 @@ export default function HomeScreen({
   onOpenProfile: () => void;
   onOpenApps: () => void;
   onTriggerShield: () => void;
+  /** A committed block is counting down — the blocked list freezes. */
+  sessionRunning?: boolean;
   /** Starts the real timer at the chosen length and hands the screen over to
    *  it. Home deliberately keeps no clock of its own — it used to run a second,
    *  independent countdown that had nothing to do with the Timer tab. */
@@ -106,8 +118,17 @@ export default function HomeScreen({
   onOpenBlockedApps?: () => void;
   /** Opens the Bailout store (real screen) from inside the header sheet. */
   onBuyBailouts?: () => void;
+  /** Drives the "This week" card. Absent on first run, when there is no
+   *  week to report yet and the card simply doesn't render. */
+  progress?: ProgressState;
+  goalLine?: string;
   /** Emergency tokens in hand — shown in the header sheet. */
   bailoutBalance?: number;
+  /** Cheapest bailout pack's price, passed straight to the sheet. */
+  bailoutFromPrice?: string | null;
+  /** Opens the Steady/Strict picker (real screen, already exists). */
+  onOpenDifficulty?: () => void;
+  intensityKey?: IntensityKey;
   blockedPackages?: string[];
   unlockNumber: number;
   score?: number;
@@ -207,7 +228,11 @@ export default function HomeScreen({
         <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={styles.hero}>
           <Ring progress={ringProgress} size={248} thickness={4}>
             <Text style={[type.overline, styles.heroLabel]}>
-              Commit a block
+              {/* Blocking is already on by default (see BlockedAppsPill above)
+                  — this timer is a stricter lockdown on top of that, not what
+                  starts the block. "Commit a block" read as if nothing was
+                  blocked until this ran. */}
+              {Platform.OS === 'ios' ? 'Focus lock' : 'Commit a block'}
             </Text>
             {timePairs(heroPairs)}
           </Ring>
@@ -238,8 +263,26 @@ export default function HomeScreen({
 
         {/* Primary action */}
         <View style={styles.cta}>
-          <Button label="Start block" icon="shield" variant="accent" onPress={handleStart} />
-          {Platform.OS === 'ios' && <BlockedAppsPill />}
+          {Platform.OS === 'ios' && (
+            <View style={styles.baselineBanner}>
+              <Text style={styles.baselineText}>
+                {sessionRunning
+                  ? 'Focus lock running — nothing unlocks until it ends'
+                  : 'Blocking is always on. Focus lock below makes it stricter.'}
+              </Text>
+            </View>
+          )}
+          <Button
+            label={Platform.OS === 'ios' ? 'Start focus lock' : 'Start block'}
+            icon="lock"
+            variant="accent"
+            onPress={handleStart}
+          />
+          {Platform.OS === 'ios' && (
+            <>
+              <BlockedAppsPill running={sessionRunning} onUnlock={onTriggerShield} />
+            </>
+          )}
           <Pressable style={styles.manageRow} onPress={onOpenApps} hitSlop={6}>
             <Icon name="lock" size={13} color={palette.textTertiary} />
             <Text style={[type.caption, styles.manageText]}>Manage blocked apps</Text>
@@ -247,44 +290,24 @@ export default function HomeScreen({
           </Pressable>
         </View>
 
-        {/* Screen time */}
-        <Card onPress={onOpenApps} style={styles.section}>
-          <View style={styles.stCardHead}>
-            <Stat
-              value={screenTimeLabel}
-              label={usage?.available ? 'Screen time · today' : 'Screen time · not available'}
-            />
-            <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
-          </View>
-
-          {topApps.length > 0 ? (
-            <View style={styles.appList}>
-              {topApps.map((app, i) => (
-                <View key={app.packageName} style={styles.appRow}>
-                  <AppGlyph name={app.label} packageName={app.packageName} size={38} />
-                  <View style={styles.appMeter}>
-                    <View style={styles.appMeterHead}>
-                      <Text style={type.body} numberOfLines={1}>{app.label}</Text>
-                      <Text style={[type.sub, styles.appValue]}>{fmtMin(app.minutes)}</Text>
-                    </View>
-                    <Meter
-                      progress={app.minutes / peakMinutes}
-                      color={dataRamp[Math.min(dataRamp.length - 1, 1 + i)]}
-                    />
-                  </View>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text style={[type.sub, styles.usageEmpty]}>
-              {!usage?.available
-                ? "Apple doesn't let any app read your screen time — not even with permission granted. Your numbers live in Settings › Screen Time."
-                : !usage?.granted
-                  ? 'Turn on Usage Access to see real per-app screen time here.'
-                  : 'No app usage recorded yet today.'}
-            </Text>
-          )}
+        {/* Open a blocked app (shield demo) */}
+        <Card tone="accent" onPress={onTriggerShield} style={styles.section}>
+          <Row
+            icon="target"
+            iconColor={palette.accent}
+            title="Open a blocked app"
+            subtitle={`Next request is unlock #${unlockNumber} today`}
+            chevron
+          />
         </Card>
+
+        {/* Your week — replaces the "For you" / "Digital detox" preset
+            shelves, which offered timers rather than telling you anything. */}
+        {progress && (
+          <View style={styles.section}>
+            <WeeklyInsight progress={progress} goalLine={goalLine} heading="This week" />
+          </View>
+        )}
 
         {/* Session shortcuts */}
         <PresetSections
@@ -293,21 +316,78 @@ export default function HomeScreen({
           onOpenBlockedApps={onOpenBlockedApps}
         />
 
-        {/* Open a blocked app (shield demo) */}
-        <Card tone="accent" onPress={onTriggerShield} style={styles.section}>
-          <Row
-            icon="shield"
-            iconColor={palette.accent}
-            title="Open a blocked app"
-            subtitle={`Next request is unlock #${unlockNumber} today`}
-            chevron
-          />
+        {/* Screen time */}
+        <Card onPress={Platform.OS === 'ios' ? undefined : onOpenApps} style={styles.section}>
+          {Platform.OS === 'ios' ? (
+            // Real numbers, drawn by iOS itself via the UsageReport
+            // extension — the old "Apple doesn't let any app read your
+            // screen time" line belongs to the Android usage-stats path,
+            // and was stale here since this is the one channel Apple does
+            // allow.
+            <ScreenTimeCard />
+          ) : (
+            <>
+              <View style={styles.stCardHead}>
+                <Stat
+                  value={screenTimeLabel}
+                  label={usage?.available ? 'Screen time · today' : 'Screen time · not available'}
+                />
+                <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
+              </View>
+
+              {topApps.length > 0 ? (
+                <View style={styles.appList}>
+                  {topApps.map((app, i) => (
+                    <View key={app.packageName} style={styles.appRow}>
+                      <AppGlyph name={app.label} packageName={app.packageName} size={38} />
+                      <View style={styles.appMeter}>
+                        <View style={styles.appMeterHead}>
+                          <Text style={type.body} numberOfLines={1}>{app.label}</Text>
+                          <Text style={[type.sub, styles.appValue]}>{fmtMin(app.minutes)}</Text>
+                        </View>
+                        <Meter
+                          progress={app.minutes / peakMinutes}
+                          color={dataRamp[Math.min(dataRamp.length - 1, 1 + i)]}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={[type.sub, styles.usageEmpty]}>
+                  {!usage?.available
+                    ? "Apple doesn't let any app read your screen time — not even with permission granted. Your numbers live in Settings › Screen Time."
+                    : !usage?.granted
+                      ? 'Turn on Usage Access to see real per-app screen time here.'
+                      : 'No app usage recorded yet today.'}
+                </Text>
+              )}
+            </>
+          )}
         </Card>
+
+        {/* Unlock difficulty + Bailouts — both real screens already, just
+            without an entry point on Home before this. */}
+        <View style={styles.twinRow}>
+          <Pressable style={styles.twinCard} onPress={onOpenDifficulty}>
+            <Icon name="pulse" size={20} color={palette.accent} />
+            <Text style={styles.twinValue}>{intensityKey ? getIntensity(intensityKey).name : 'Steady'}</Text>
+            <Text style={styles.twinLabel}>Unlock difficulty</Text>
+          </Pressable>
+          <Pressable style={styles.twinCard} onPress={onBuyBailouts}>
+            <Icon name="key" size={20} color={palette.accent} />
+            <Text style={styles.twinValue}>{bailoutBalance}</Text>
+            <Text style={styles.twinLabel}>{bailoutBalance === 1 ? 'Bailout' : 'Bailouts'}</Text>
+          </Pressable>
+        </View>
+
+
       </ScrollView>
 
       {showBailout && (
         <BailoutSheet
           balance={bailoutBalance}
+          fromPrice={bailoutFromPrice}
           onBuy={() => {
             setShowBailout(false);
             onBuyBailouts?.();
@@ -357,6 +437,36 @@ const styles = StyleSheet.create({
   cta: { marginTop: space.xl, gap: space.md, alignItems: 'stretch' },
   manageRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   manageText: { color: palette.textTertiary },
+  screenTime: { marginBottom: 4 },
+  twinRow: { flexDirection: 'row', gap: 12, marginTop: space.lg },
+  twinCard: {
+    flex: 1,
+    backgroundColor: palette.surfaceRaised,
+    borderRadius: radius.xl,
+    paddingVertical: 16,
+    alignItems: 'center',
+    gap: 4,
+  },
+  twinValue: { color: palette.text, fontSize: 17, fontWeight: '800', marginTop: 4 },
+  twinLabel: { color: palette.textTertiary, fontSize: 12.5, fontWeight: '600' },
+  baselineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: palette.accentSoft,
+    alignSelf: 'center',
+    marginBottom: 4,
+  },
+  baselineText: {
+    color: palette.text,
+    fontSize: 12.5,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 
   section: { marginTop: space.xl },
   stCardHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },

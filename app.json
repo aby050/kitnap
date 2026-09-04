@@ -2,7 +2,10 @@
   "expo": {
     "name": "Byre",
     "slug": "byre",
-    "scheme": ["byre", "device-activity"],
+    "scheme": [
+      "byre",
+      "device-activity"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,10 +14,20 @@
       "bundleIdentifier": "com.abhay.byre",
       "appleTeamId": "RG96N3U9GH",
       "supportsTablet": true,
-      "buildNumber": "1",
+      "buildNumber": "3",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
-        "NSCameraUsageDescription": "Used only during Hard unlock challenges to confirm you're actually up and moving. Nothing is recorded or leaves your phone."
+        "NSCameraUsageDescription": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone.",
+        "LSApplicationQueriesSchemes": [
+          "instagram",
+          "youtube",
+          "snssdk1128",
+          "fb",
+          "snapchat",
+          "twitter",
+          "reddit",
+          "whatsapp"
+        ]
       }
     },
     "android": {
@@ -27,16 +40,13 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.QUERY_ALL_PACKAGES",
         "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "versionCode": 1,
+      "versionCode": 3,
       "package": "com.abhay.byre"
     },
     "web": {
@@ -47,7 +57,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Used only during Hard unlock challenges to confirm you're actually up and moving. Nothing is recorded or leaves your phone."
+          "cameraPermission": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone."
         }
       ],
       "expo-audio",
@@ -71,7 +81,8 @@
           "appleTeamId": "RG96N3U9GH",
           "appGroup": "group.com.abhay.byre"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {

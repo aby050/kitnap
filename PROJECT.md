@@ -172,7 +172,6 @@ Four tabs (`MainApp`): **Home**, **My apps**, **Reflect**, **Timer**.
 - **Blocking**: Blocked Apps, Unlock difficulty (Steady/Strict), Block
   Screens, Waiting Room, Schedules, Autofocus.
 - **Personal**: Message to future you.
-- **Protection**: Guardian, PIN code access, Together.
 - **Account**: My Account, **Delete Account** (new — see §3).
 
 Every row above uses a real Ionicons glyph (`@expo/vector-icons`, MIT-

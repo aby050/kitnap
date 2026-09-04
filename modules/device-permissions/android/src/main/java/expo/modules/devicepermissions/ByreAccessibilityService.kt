@@ -53,6 +53,17 @@ class ByreAccessibilityService : AccessibilityService() {
     val blocked = BlockedPackagesStore.get(applicationContext)
     if (!blocked.contains(pkg)) return
 
+    // A grant the user has already earned. Re-showing the shield here is what
+    // made a passed challenge feel like it never took: the user finished the
+    // reps, tapped Continue, went back to the app, and was handed the camera
+    // again. The window is checked, not trusted forever — once it lapses the
+    // next foreground event shields as usual.
+    if (GrantStore.isGranted(applicationContext)) {
+      lastPackage = pkg
+      lastTriggerAt = System.currentTimeMillis()
+      return
+    }
+
     val debounceMs = (appliedLevel ?: MonitoringLevel.BALANCED).debounceMs
     val now = System.currentTimeMillis()
     // Same app re-triggering its own window changes (e.g. switching tabs

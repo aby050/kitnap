@@ -16,11 +16,16 @@ export default function BailoutSheet({
   balance,
   onBuy,
   onClose,
+  fromPrice,
 }: {
   balance: number;
   /** Opens the real store screen. */
   onBuy: () => void;
   onClose: () => void;
+  /** Cheapest pack's localised price, from the store. Naming the number here
+   *  means the buy button isn't a blind tap — absent until the store answers,
+   *  and the label falls back to the plain wording. */
+  fromPrice?: string | null;
 }) {
   const empty = balance <= 0;
 
@@ -50,7 +55,9 @@ export default function BailoutSheet({
 
           {empty ? (
             <Pressable style={styles.primaryBtn} onPress={onBuy}>
-              <Text style={styles.primaryLabel}>Get more Bailouts</Text>
+              <Text style={styles.primaryLabel}>
+                {fromPrice ? `Get more — from ${fromPrice}` : 'Get more Bailouts'}
+              </Text>
             </Pressable>
           ) : (
             <>

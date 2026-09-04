@@ -623,6 +623,20 @@ export default function TimerScreen({
             </View>
           </Card>
         )}
+
+        {/* Same door as on Home. A locked timer is exactly when someone
+            reaches for a blocked app, so the way through belongs here too. */}
+        {onOpenShield && (
+          <Card tone="accent" onPress={onOpenShield} style={styles.accessCardTight}>
+            <View style={styles.accessRow}>
+              <View style={styles.shrink}>
+                <Text style={type.bodyStrong}>Open a blocked app</Text>
+                <Text style={[type.sub, styles.accessSub]}>Earn your way in, or spend a Bailout.</Text>
+              </View>
+              <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
+            </View>
+          </Card>
+        )}
       </ScrollView>
 
       {pickPrompt}

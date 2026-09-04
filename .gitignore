@@ -47,3 +47,6 @@ yarn-error.*
 /ios
 /android
 expo*.log
+
+# Local secrets
+.env

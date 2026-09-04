@@ -8,6 +8,9 @@ type Native = {
   isNotificationListenerEnabled(): boolean;
   openNotificationListenerSettings(): void;
   setBlockedPackages(packages: string[]): void;
+  grantTemporaryAccess?(grantMinutes: number): void;
+  endGrantNow?(): void;
+  getGrantedUntil?(): number;
   setMonitoringLevel(level: string): void;
   isIgnoringBatteryOptimizations(): boolean;
   openBatteryOptimizationSettings(): void;
@@ -44,6 +47,21 @@ export const isIgnoringBatteryOptimizations = () => native?.isIgnoringBatteryOpt
 export const openBatteryOptimizationSettings = () => native?.openBatteryOptimizationSettings();
 
 export const setBlockedPackages = (packages: string[]) => native?.setBlockedPackages(packages);
+
+/** Tells the Accessibility Service to stand down for `grantMinutes` — the
+ *  Android counterpart to iOS's Family Controls grant window. The service
+ *  is the only thing that re-shows the shield, so a grant that isn't written
+ *  here is a grant the OS side never hears about, and the user gets handed
+ *  the challenge again the second they reopen the app they just unlocked. */
+export const grantTemporaryAccess = (grantMinutes: number) =>
+  native?.grantTemporaryAccess?.(grantMinutes);
+
+/** Ends a running grant immediately ("Done early"). */
+export const endGrantNow = () => native?.endGrantNow?.();
+
+/** Epoch millis a running grant ends at, or 0 when none is running. Survives
+ *  the JS process, so a cold start can re-adopt a grant instead of re-gating. */
+export const grantedUntil = (): number => native?.getGrantedUntil?.() ?? 0;
 
 /** Battery vs. responsiveness tradeoff for the Accessibility Service —
  *  'gentle' checks less often (better battery, shield takes a beat longer

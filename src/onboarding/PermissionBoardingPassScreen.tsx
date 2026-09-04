@@ -23,6 +23,7 @@ import { Button } from '../design/primitives';
 import { palette } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 import { OnboardingMarkSlot } from './OnboardingMark';
+import AccessibilityDisclosure from './AccessibilityDisclosure';
 import PermissionArt from './PermissionArt';
 
 type Card = {
@@ -54,6 +55,7 @@ export default function PermissionBoardingPassScreen({
   only?: string[];
 }) {
   const [index, setIndex] = useState(0);
+  const [showAccessibilityDisclosure, setShowAccessibilityDisclosure] = useState(false);
   const [overlay, setOverlay] = useState(false);
   const [usage, setUsage] = useState(false);
   const [accessibility, setAccessibility] = useState(false);
@@ -127,7 +129,9 @@ export default function PermissionBoardingPassScreen({
       title: 'Accessibility',
       desc: "Lets the app notice when a distracting app opens and bring you back. It never reads what's on your screen.",
       granted: accessibility,
-      onRequest: openAccessibilitySettings,
+      // Google requires a prominent disclosure with an affirmative action
+      // before an app that isn't an accessibility tool enables one.
+      onRequest: () => setShowAccessibilityDisclosure(true),
     },
     {
       key: 'notification',
@@ -247,6 +251,14 @@ export default function PermissionBoardingPassScreen({
           </>
         )}
       </View>
+      <AccessibilityDisclosure
+        visible={showAccessibilityDisclosure}
+        onAccept={() => {
+          setShowAccessibilityDisclosure(false);
+          openAccessibilitySettings();
+        }}
+        onCancel={() => setShowAccessibilityDisclosure(false)}
+      />
     </SafeAreaView>
   );
 }

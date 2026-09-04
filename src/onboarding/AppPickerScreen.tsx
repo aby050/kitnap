@@ -372,10 +372,13 @@ export default function AppPickerScreen({
   };
 
   const visible = entries.filter(isRowVisible);
-  const selectedAppCount = selected.filter((id) => {
-    const e = entries.find((x) => x.id === id);
-    return e && !e.expandable && e.id !== 'all';
-  }).length;
+  // The real rows behind the selection, not just how many — the strip above
+  // the CTA is drawn from these so what's ticked is visible without scrolling
+  // the list back up to look for checkmarks.
+  const selectedEntries = selected
+    .map((id) => entries.find((x) => x.id === id))
+    .filter((e): e is NonNullable<typeof e> => !!e && !e.expandable && e.id !== 'all');
+  const selectedAppCount = selectedEntries.length;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -456,6 +459,25 @@ export default function AppPickerScreen({
           </View>
         </Animated.View>
 
+        {/* "3 apps selected" is a receipt, not an answer — these are the apps
+            themselves, so a wrong tick is caught here rather than later. */}
+        {selectedAppCount > 0 ? (
+          <View style={styles.selectedStrip}>
+            {selectedEntries.slice(0, SELECTED_STRIP_MAX).map((e) => (
+              <View key={e.id} style={[styles.selectedChip, { backgroundColor: e.tint }]}>
+                <AppIconSvg id={e.id} label={e.name} />
+              </View>
+            ))}
+            {selectedAppCount > SELECTED_STRIP_MAX ? (
+              <View style={[styles.selectedChip, styles.selectedChipMore]}>
+                <Text style={styles.selectedChipMoreText}>
+                  +{selectedAppCount - SELECTED_STRIP_MAX}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         <Text style={styles.countLabel}>{selectedAppCount} {selectedAppCount === 1 ? 'app' : 'apps'} selected</Text>
 
         <View style={styles.ctaWrap}>
@@ -467,7 +489,28 @@ export default function AppPickerScreen({
   );
 }
 
+/** Icons in the strip before it collapses to a "+N" tile. */
+const SELECTED_STRIP_MAX = 7;
+
 const styles = StyleSheet.create({
+  selectedStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingHorizontal: 12,
+  },
+  selectedChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  selectedChipMore: { backgroundColor: 'rgba(255,255,255,0.10)' },
+  selectedChipMoreText: { color: 'rgba(255,255,255,0.72)', fontSize: 12.5, fontWeight: '700' },
   container: {
     flex: 1,
     backgroundColor: 'transparent',

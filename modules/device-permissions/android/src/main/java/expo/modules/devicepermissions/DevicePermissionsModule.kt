@@ -32,13 +32,13 @@ class DevicePermissionsModule : Module() {
     // switching away, which is exactly when a block matters.
     Function("startSessionNotification") { endsAt: Double, label: String, blockedCount: Int ->
       val context = appContext.reactContext ?: return@Function false
-      SessionTimerService.start(context, endsAt.toLong(), label, blockedCount)
+      SessionNotification.show(context, endsAt.toLong(), label, blockedCount)
       true
     }
 
     Function("stopSessionNotification") {
       val context = appContext.reactContext ?: return@Function false
-      SessionTimerService.stop(context)
+      SessionNotification.hide(context)
       true
     }
 
@@ -105,6 +105,27 @@ class DevicePermissionsModule : Module() {
     Function("setBlockedPackages") { packages: List<String> ->
       val ctx = appContext.reactContext ?: return@Function null
       BlockedPackagesStore.set(ctx, packages)
+    }
+
+    // The counterpart to setBlockedPackages: how the Accessibility Service
+    // learns that a challenge was passed. Without it the service re-shields
+    // the moment the user returns to the app they just unlocked.
+    Function("grantTemporaryAccess") { grantMinutes: Double ->
+      val ctx = appContext.reactContext ?: return@Function null
+      GrantStore.set(ctx, System.currentTimeMillis() + (grantMinutes * 60_000).toLong())
+    }
+
+    // "Done early" — shut the door now rather than when the countdown says so.
+    Function("endGrantNow") {
+      val ctx = appContext.reactContext ?: return@Function null
+      GrantStore.clear(ctx)
+    }
+
+    // Epoch millis, or 0 when no grant is running. Lets JS re-adopt a grant
+    // that outlived the JS process (cold start, or Android reclaiming it).
+    Function("getGrantedUntil") {
+      val ctx = appContext.reactContext ?: return@Function 0.0
+      GrantStore.grantedUntil(ctx).toDouble()
     }
 
     // Battery/responsiveness tradeoff — "gentle" | "balanced" | "strict".

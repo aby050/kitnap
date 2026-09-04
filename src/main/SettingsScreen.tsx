@@ -29,6 +29,7 @@ export default function SettingsScreen({
   onOpenGuardian,
   onOpenWaitingRoom,
   onOpenBlockScreens,
+  onOpenSubscription,
   onOpenSchedules,
   onOpenAccount,
   accountLabel,
@@ -45,6 +46,7 @@ export default function SettingsScreen({
   onOpenGuardian?: () => void;
   onOpenWaitingRoom?: () => void;
   onOpenBlockScreens?: () => void;
+  onOpenSubscription?: () => void;
   onOpenSchedules?: () => void;
   onOpenAccount?: () => void;
   accountLabel?: string;
@@ -86,9 +88,15 @@ export default function SettingsScreen({
             onPress={onOpenDifficulty}
           />
           <SettingRow
+            icon={<RowIcon name="card" />}
+            title="Subscription"
+            subtitle="Plan, bailouts, restore purchases"
+            onPress={onOpenSubscription}
+          />
+          <SettingRow
             icon={<RowIcon name="eye" />}
             title="Block Screens"
-            subtitle="Customize overlays when apps are blocked"
+            subtitle="The screen you see when you open a blocked app"
             onPress={onOpenBlockScreens}
           />
           <SettingRow
@@ -117,15 +125,10 @@ export default function SettingsScreen({
           />
         </Group>
 
-        <GroupLabel>Protection</GroupLabel>
-        <Group>
-          <SettingRow
-            icon={<RowIcon name="key" />}
-            title="Guardian"
-            subtitle="A friend holds the code to loosen your own rules"
-            onPress={onOpenGuardian}
-          />
-        </Group>
+        {/* Guardian is hidden until there's a way to actually reach the
+            friend holding the code — it needs an email/SMS service Byre
+            doesn't have, so shipping the row would promise a handoff that
+            never happens. The screen itself is left intact behind it. */}
 
         <GroupLabel>Account</GroupLabel>
         <Group>

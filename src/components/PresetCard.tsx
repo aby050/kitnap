@@ -4,6 +4,7 @@ import SessionStartSheet from './SessionStartSheet';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import Icon, { IconName } from '../ui/Icon';
 import { tapLight } from '../ui/haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { motion, palette, radius, space, type } from '../design/tokens';
 
 export type Preset = {
@@ -66,27 +67,35 @@ export function PresetCard({
         onPressOut={() => {
           scale.value = withSpring(1, motion.spring);
         }}
-        style={styles.card}
+        style={styles.cardPress}
       >
-        <View style={styles.iconTile}>
-          <Icon name={mark} size={20} color={palette.accent} strokeWidth={1.7} />
-        </View>
-
-        <View style={styles.spacer} />
-
-        <Text style={type.bodyStrong} numberOfLines={1}>
-          {title}
-        </Text>
-        <Text style={[type.sub, styles.subtitle]} numberOfLines={1}>
-          {subtitle}
-        </Text>
-
-        {hasButton && (
-          <View style={styles.startRow}>
-            <Icon name="play" size={13} color={palette.accent} />
-            <Text style={styles.startText}>Start</Text>
+        <LinearGradient
+          colors={['#0A1512', '#0F2A22', '#1E6B4E', '#3FA86B']}
+          locations={[0, 0.42, 0.78, 1]}
+          start={{ x: 0.05, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.card}
+        >
+          <View style={styles.iconTile}>
+            <Icon name={mark} size={20} color="#EAFFF4" strokeWidth={1.7} />
           </View>
-        )}
+
+          <View style={styles.spacer} />
+
+          <Text style={styles.cardTitle} numberOfLines={2}>
+            {title}
+          </Text>
+          <Text style={styles.cardSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+
+          {hasButton && (
+            <View style={styles.startPill}>
+              <Icon name="play" size={12} color="#0A1512" />
+              <Text style={styles.startPillText}>Start</Text>
+            </View>
+          )}
+        </LinearGradient>
       </Pressable>
     </Animated.View>
   );
@@ -158,21 +167,35 @@ const styles = StyleSheet.create({
   sectionSubtitle: { marginTop: space.xxs },
   carouselScroll: { paddingLeft: space.gutter, paddingRight: space.md, gap: space.md },
   cardContainer: { width: 168, height: 168 },
+  cardPress: { flex: 1 },
   card: {
     flex: 1,
     padding: space.base,
     borderRadius: radius.xl,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
+    overflow: 'hidden',
   },
+  cardTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', lineHeight: 21 },
+  cardSubtitle: { color: 'rgba(255,255,255,0.72)', fontSize: 12.5, marginTop: 3 },
+  // The light button from the reference: full-width, near-white, dark label —
+  // the one bright element, so it reads as the action without a border.
+  startPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: '#F7FAF8',
+  },
+  startPillText: { color: '#0A1512', fontSize: 13, fontWeight: '700' },
   iconTile: {
     width: 40,
     height: 40,
-    borderRadius: radius.md,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: palette.accentBorder,
-    backgroundColor: palette.accentSoft,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },

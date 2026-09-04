@@ -1,11 +1,28 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
+import { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import { purchaseSubscription, restorePurchases } from '../data/purchases';
+import { PurchaseResult } from './PurchaseSuccessScreen';
+
+const TERMS_URL = 'https://byre.app/terms';
+const PRIVACY_URL = 'https://byre.app/privacy';
+
+/** The annual package out of the discount offering. */
+function annualOf(offering?: PurchasesOffering | null): PurchasesPackage | null {
+  if (!offering) return null;
+  return (
+    offering.annual ??
+    offering.availablePackages.find((p) => p.identifier === '$rc_annual') ??
+    offering.availablePackages[0] ??
+    null
+  );
+}
 
 function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
@@ -19,7 +36,71 @@ function Feature({ icon, title, desc }: { icon: React.ReactNode; title: string; 
   );
 }
 
-export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: () => void; onClose: () => void }) {
+export default function DiscountPaywallScreen({
+  onStart,
+  onClose,
+  offering,
+  fullPriceOffering,
+  onPurchased,
+}: {
+  /** Called after a successful purchase or restore. */
+  onStart: (result?: PurchaseResult) => void;
+  onClose: () => void;
+  /** The `discount` offering. Without it this screen can't sell anything —
+   *  App.tsx skips the stage entirely rather than render a dead offer. */
+  offering?: PurchasesOffering | null;
+  /** The regular offering, used only for the struck-through comparison price
+   *  so the saving is real rather than an invented "was" figure. */
+  fullPriceOffering?: PurchasesOffering | null;
+  onPurchased?: (bailouts: number) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  const pkg = annualOf(offering);
+  const fullPkg = annualOf(fullPriceOffering);
+  const price = pkg?.product.priceString ?? '₹579.00';
+  const wasPrice = fullPkg?.product.priceString ?? null;
+  const intro = pkg?.product.introPrice;
+  const trialDays = intro && intro.price === 0 ? intro.periodNumberOfUnits : null;
+
+  const buy = async () => {
+    if (!pkg) {
+      onStart();
+      return;
+    }
+    setBusy(true);
+    const res = await purchaseSubscription(pkg);
+    setBusy(false);
+    if (res.status === 'success') {
+      onPurchased?.(10);
+      onStart({
+        planName: 'Yearly',
+        bailouts: 10,
+        isTrial: !!trialDays,
+        renewsAt: res.info.latestExpirationDate,
+      });
+    } else if (res.status === 'error') {
+      Alert.alert("That didn't go through", res.message);
+    }
+  };
+
+  const restore = async () => {
+    setBusy(true);
+    const res = await restorePurchases();
+    setBusy(false);
+    if (res.status === 'success') {
+      onStart({
+        planName: 'Yearly',
+        bailouts: 10,
+        isTrial: false,
+        renewsAt: res.info.latestExpirationDate,
+        restored: true,
+      });
+    } else if (res.status === 'error') {
+      Alert.alert('Nothing to restore', res.message);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
@@ -57,25 +138,38 @@ export default function DiscountPaywallScreen({ onStart, onClose }: { onStart: (
           <View style={styles.planCard}>
             <View style={{ flex: 1 }}>
               <Text style={styles.planTitle}>Yearly</Text>
-              <Text style={styles.planSub}>7-day free trial</Text>
+              {trialDays ? <Text style={styles.planSub}>{trialDays}-day free trial</Text> : null}
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.planStrike}>₹1,149.00</Text>
-              <Text style={styles.planPrice}>₹579.00/yr</Text>
+              {wasPrice ? <Text style={styles.planStrike}>{wasPrice}</Text> : null}
+              <Text style={styles.planPrice}>{price}/yr</Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.terms}>7 days free, then ₹579.00/year · Cancel anytime</Text>
+        <Text style={styles.terms}>
+          {trialDays ? `${trialDays} days free, then ` : ''}
+          {price}/year · Cancel anytime
+        </Text>
       </ScrollView>
 
       <View style={styles.ctaWrap}>
-        <GradientButton label="Start My Free Trial" onPress={onStart} />
+        <GradientButton
+          label={busy ? 'One moment…' : trialDays ? 'Start My Free Trial' : `Get ${price}/yr`}
+          onPress={busy ? () => {} : buy}
+        />
+        {busy && <ActivityIndicator color={palette.text} style={{ marginTop: 10 }} />}
         <Text style={styles.expiry}>Offer expires when you leave this screen</Text>
         <View style={styles.legalRow}>
-          <Text style={styles.legalLink}>Terms</Text>
-          <Text style={styles.legalLink}>Privacy</Text>
-          <Text style={styles.legalLink}>Restore</Text>
+          <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>
+            Terms
+          </Text>
+          <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+            Privacy
+          </Text>
+          <Text style={styles.legalLink} onPress={busy ? undefined : restore}>
+            Restore
+          </Text>
         </View>
       </View>
     </SafeAreaView>

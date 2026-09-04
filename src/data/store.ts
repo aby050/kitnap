@@ -25,6 +25,14 @@ export type PersistedState = {
   onboardingComplete: boolean;
   themeKey: ThemeKey;
   intensityKey: IntensityKey;
+  /** ISO date the current level started. Shown as tenure — a level with
+   *  visible history reads as a commitment, a bare label reads as a toggle. */
+  intensitySince?: string | null;
+  /** A requested step *down* in strictness, and when it lands. Loosening is
+   *  deliberately not instant: being able to leave Strict at the moment
+   *  Strict starts to bite is the same as not having chosen it. */
+  pendingIntensityKey?: IntensityKey | null;
+  pendingIntensityAt?: number | null;
   futureSelfMessage: string;
   goal: GoalData;
   hoursReclaimed: number;
@@ -64,6 +72,14 @@ export type PersistedState = {
    *  In __DEV__, loadState tops the balance up to DEV_EMERGENCY_TOKEN_FLOOR
    *  so skip/unlock flows can be exercised without buying packs. */
   emergencyTokens: number;
+  /** Date string of the last emergency unlock — one per day. */
+  emergencyUsedOn?: string | null;
+  /** Day (toDateString) the unlock counter below belongs to. */
+  unlocksUsedOn?: string | null;
+  /** Earned unlocks spent today. Capped at DAILY_UNLOCK_LIMIT — the point of
+   *  the app is a ceiling, and an unlimited "just do the reps again" loop
+   *  quietly removed it. */
+  unlocksUsedToday?: number;
 };
 
 /** Production starting grant. Do not raise this for shipping builds. */
@@ -95,7 +111,10 @@ export type Schedule = {
 };
 
 export const DEFAULT_SCHEDULES: Schedule[] = [
+  { id: 'morning', name: 'Morning Routine', start: '06:30', end: '08:00', days: 'Every day' },
   { id: 'work', name: 'Work Time', start: '09:00', end: '17:00', days: 'Mon–Fri' },
+  { id: 'dinner', name: 'Family Dinner', start: '19:00', end: '20:00', days: 'Every day' },
+  { id: 'winddown', name: 'Wind Down', start: '21:00', end: '22:00', days: 'Every day' },
   { id: 'sleep', name: 'Sleep Mode', start: '22:00', end: '07:00', days: 'Every day' },
 ];
 

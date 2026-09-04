@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { GateQuestion, pickChallenge } from '../data/gateQuestions';
+import { KeyboardAvoider } from '../components/KeyboardAware';
 import { Intensity } from '../data/themes';
 import { Button, Card, Field, IconButton, Screen } from '../design/primitives';
 import { palette, radius, space, type } from '../design/tokens';
@@ -158,6 +159,7 @@ export default function GateScreen({
         </Pressable>
       </View>
 
+      <KeyboardAvoider style={styles.flex}>
       <Animated.View entering={FadeInUp.duration(380)} style={styles.flex}>
         {q.kind === 'breathe' && <BreathingExercise q={q} onDone={grant} />}
         {q.kind === 'math' && <MathQuestion q={q} onDone={grant} />}
@@ -166,6 +168,7 @@ export default function GateScreen({
           <ActivityChallenge q={q} onDone={grant} onComplete={onActivityComplete} />
         )}
       </Animated.View>
+      </KeyboardAvoider>
 
       <View style={styles.skipWrap}>
         <Pressable onPress={() => setShowSkipConfirm(true)} hitSlop={10}>

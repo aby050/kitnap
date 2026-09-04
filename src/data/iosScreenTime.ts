@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { momentLine } from './moments';
 
 /**
  * Real iOS Screen Time / Family Controls integration via
@@ -81,6 +82,28 @@ export function saveBlockedSelection(familyActivitySelectionToken: string) {
 
 export function hasBlockedSelection(): boolean {
   return !!native?.getFamilyActivitySelectionId(SELECTION_ID);
+}
+
+/** Removes the saved selection entirely and lifts the shield — for when the
+ *  4 apps still showing "blocked" are stale ones from an earlier test pick,
+ *  not something the user can otherwise get back to zero from (Apple's
+ *  picker only lets you toggle items off one at a time, and there's no
+ *  library call to delete a persisted-id selection outright). */
+export function clearBlockedSelection() {
+  if (!native) return;
+  // Order matters: unblockSelection resolves SELECTION_ID to the actual
+  // tokens it needs to lift the shield for. Deleting the id mapping first
+  // (the original bug here) leaves that lookup with nothing to resolve —
+  // the OS-level shield stays applied to the old apps even though the app
+  // itself now shows "nothing selected".
+  unblockSelectedApps();
+  native.resetBlocks?.('clearBlockedSelection');
+  const all = (native.userDefaultsGet?.<Record<string, string>>('familyActivitySelectionIds')) ?? {};
+  if (SELECTION_ID in all) {
+    const { [SELECTION_ID]: _removed, ...rest } = all;
+    native.userDefaultsSet?.('familyActivitySelectionIds', rest);
+  }
+  setGrantBudget(null);
 }
 
 export type SelectionCounts = { apps: number; categories: number; sites: number };
@@ -173,6 +196,18 @@ const SHIELD_LINES: { title: string; subtitle: string; icon: string }[] = [
     subtitle: 'Outside is rendering at full resolution today. No loading screen.',
     icon: 'sun.max.fill',
   },
+  // A style pack rather than one-offs — Byre-flavored wisdom, not scripture
+  // recited straight, but the Gita's actual line each time so it stays real.
+  {
+    title: 'You have a right to your work',
+    subtitle: '"...but never to the fruit of your work." — the Gita, on wanting the scroll more than the moment.',
+    icon: 'leaf.fill',
+  },
+  {
+    title: 'The mind is restless',
+    subtitle: '"...but it can be tamed through practice." — Krishna, to Arjuna, roughly 2,000 unlocks ago.',
+    icon: 'wind',
+  },
 ];
 
 /** One line per day, so it's a familiar face rather than a slot machine. */
@@ -181,44 +216,138 @@ function shieldLineForToday() {
   return SHIELD_LINES[day % SHIELD_LINES.length];
 }
 
+/** Same line Apple's shield shows for today, for screens (Home) that want to
+ *  say the same thing before the user even hits a blocked app — the personal
+ *  reason and the hourly moment line beat the stock line, same priority order
+ *  as configureShield. */
+export function homeLineForToday(personalLine?: string): string {
+  return personalLine || momentLine() || shieldLineForToday().subtitle;
+}
+
 const MINT = { red: 111, green: 227, blue: 169, alpha: 1 };
 const NEAR_BLACK = { red: 8, green: 10, blue: 12, alpha: 1 };
 const WHITE = { red: 255, green: 255, blue: 255, alpha: 1 };
 const DIM = { red: 255, green: 255, blue: 255, alpha: 0.62 };
 
+/** What the shield says, escalating with how many times this exact app has
+ *  been reached for today. `{applicationOrDomainDisplayName}` is the real app
+ *  name (Apple hands the extension that much, even though the token stays
+ *  opaque to us) and `{attempts}` is the count.
+ *
+ *  One sentence for every app, every time, was the whole problem: the fifth
+ *  Telegram of the morning read exactly like the first, so the shield never
+ *  sounded like it had noticed anything. The last entry repeats once the list
+ *  runs out, so a very persistent day still lands somewhere sensible.
+ *
+ *  Light, never scolding — shame produces uninstalls, not behaviour change. */
+const SHIELD_TITLES = [
+  '{applicationOrDomainDisplayName} can wait.',
+  '{applicationOrDomainDisplayName} again.',
+  'Third time for {applicationOrDomainDisplayName}.',
+  "{applicationOrDomainDisplayName}, {attempts} times today.",
+  "{applicationOrDomainDisplayName} really wants you back.",
+  "You and {applicationOrDomainDisplayName} need space.",
+];
+
+const SHIELD_SUBTITLES = [
+  'You picked this. Past you was right.',
+  'Same app, same minute, same feeling.',
+  'Your thumb got here before you did.',
+  'Nothing new has happened since the last time.',
+  'This is the loop. You can step out of it.',
+  'It will still be there tonight. So will you.',
+];
+
 export function configureShield(_title?: string, personalLine?: string) {
   if (!native) return;
   const line = shieldLineForToday();
   native.updateShield(
+    // Cast: `titleVariants` / `subtitleVariants` are Byre's own additions,
+    // read by ShieldConfigurationExtension.swift. The library's TS type for
+    // the config predates them and doesn't allow extra keys.
     {
       title: line.title,
+      // Per app and per attempt — the Swift side picks the entry matching
+      // today's count for this app and falls back to `title` if absent.
+      titleVariants: SHIELD_TITLES,
       titleColor: WHITE,
       // The user's own reason, when they gave one, beats anything we wrote.
-      subtitle: personalLine || line.subtitle,
+      // The user's own reason first, then something true for this hour, and
+      // only then the rotating line. Never a theme category label.
+      subtitle: personalLine || momentLine() || line.subtitle,
+      // Only rotate when the user hasn't given us their own reason — their
+      // words outrank ours, however many times they come back.
+      ...(personalLine ? {} : { subtitleVariants: SHIELD_SUBTITLES }),
       subtitleColor: DIM,
       backgroundColor: NEAR_BLACK,
+      // Without a dark blur style iOS composites its own light material over
+      // the background colour, which is what made the buttons unreadable.
+      backgroundBlurStyle: 1,
       iconSystemName: line.icon,
       iconTint: MINT,
       primaryButtonLabel: 'Let me in',
       primaryButtonLabelColor: { red: 4, green: 18, blue: 12, alpha: 1 },
       primaryButtonBackgroundColor: MINT,
       secondaryButtonLabel: 'Fine, later',
-      secondaryButtonLabelColor: DIM,
-    },
+      // The secondary label sits on the blur itself, so it needs real
+      // contrast rather than the dimmed treatment used on the subtitle.
+      secondaryButtonLabelColor: WHITE,
+    } as any,
     {
-      primary: { type: 'openApp', behavior: 'close' },
+      // The library's own "openApp" type is dead code — its handler never
+      // actually implements it, only "openUrl" does. "device-activity://" is
+      // the scheme Byre already registers (app.json's `scheme` array), so
+      // this is what "Let me in" is supposed to have been doing all along.
+      // Cast: the Swift side implements "openUrl" (Shared.swift) but the
+      // library's own ShieldActionType TS union never listed it.
+      // Byre's own registered scheme (app.json's `scheme` array), not the
+      // library default "device-activity://" — one less thing to doubt when
+      // this is the button that wasn't opening the app at all.
+      // "Let me in" cannot open Byre directly. Verified on-device: the
+      // ShieldAction extension builds a bare NSExtensionContext, whose
+      // endpoint is null, so `open()` fires its completion in microseconds
+      // having done nothing ("opening URL / opening URL completion" back to
+      // back in the device log). Apple gives an extension no supported way
+      // to launch its containing app, and this old community workaround is
+      // now inert — the button genuinely did nothing.
+      //
+      // So the shield posts a notification instead, and tapping that opens
+      // Byre on the Gate. One extra tap, but it actually works. The openUrl
+      // stays as the action's `type` in case a future iOS restores it; the
+      // notification is what carries the flow today.
+      primary: {
+        type: 'openUrl',
+        url: 'byre://unlock',
+        behavior: 'close',
+        // The extension cannot launch Byre itself, so it posts this instead;
+        // tapping it opens Byre on the Gate.
+        actions: [
+          {
+            type: 'sendNotification',
+            payload: {
+              title: 'Byre',
+              body: 'Tap to earn your way into {applicationOrDomainDisplayName}.',
+            },
+          },
+        ],
+      } as any,
       // Closes the shield and leaves the app blocked — the honest "not now".
       secondary: { type: 'dismiss', behavior: 'close' },
     },
   );
 }
 
-/** Starts (or restarts) always-on daily monitoring for the selection, with
- *  a fresh usage-time threshold that — once someone actually uses the
- *  granted apps for `grantMinutes` — fires blockSelection again via
- *  configureActions below. Restarting on every grant is what resets the
- *  threshold counter for that grant window; there is no separate "pause"
- *  API for a single event. */
+/** Starts monitoring for exactly this grant window, with a usage threshold
+ *  that fires blockSelection once someone actually uses the granted apps for
+ *  `grantMinutes`.
+ *
+ *  The schedule used to run midnight-to-midnight every day, restarted on
+ *  every grant "to reset the counter". It didn't: DeviceActivity counts
+ *  usage against the whole day's interval regardless of when monitoring was
+ *  (re)started, so a second unlock the same day only needed the *remaining*
+ *  minutes to hit the threshold — it looked like it ended early. The
+ *  schedule below is scoped to just this grant (now → now+grantMinutes,
+ *  non-repeating), so each unlock always gets a genuinely fresh window. */
 export function startGrantWindow(grantMinutes: number) {
   if (!native) return;
   // DeviceActivityEvent needs the actual selection token, not the
@@ -231,9 +360,15 @@ export function startGrantWindow(grantMinutes: number) {
     eventName: GRANT_EVENT_NAME,
     actions: [{ type: 'blockSelection', familyActivitySelectionId: SELECTION_ID }],
   });
+  const start = new Date();
+  const end = new Date(start.getTime() + grantMinutes * 60_000);
   native.startMonitoring(
     DAILY_ACTIVITY_NAME,
-    { intervalStart: { hour: 0, minute: 0 }, intervalEnd: { hour: 23, minute: 59 }, repeats: true },
+    {
+      intervalStart: { hour: start.getHours(), minute: start.getMinutes() },
+      intervalEnd: { hour: end.getHours(), minute: end.getMinutes() },
+      repeats: false,
+    },
     [
       {
         familyActivitySelection: token,
@@ -249,5 +384,131 @@ export function startGrantWindow(grantMinutes: number) {
  *  involved, so it still works if the app gets backgrounded or killed. */
 export function grantTemporaryAccess(grantMinutes: number) {
   unblockSelectedApps();
+  // Recorded before the window is armed so a crash between the two still
+  // leaves the app knowing the door is open and how much is left. The clock
+  // The clock starts here, not when the user leaves — three minutes means
+  // three minutes.
+  startGrantClock(grantMinutes * 60_000);
   startGrantWindow(grantMinutes);
+}
+
+/* ------------------------------------------------------------------ *
+ * Always-on blocking
+ *
+ * The shield used to be applied only inside startSession(), so between
+ * sessions the picked apps opened normally — the app said "Blocked" while
+ * the OS was told nothing. The block is now the resting state: it is applied
+ * as soon as there is a selection and only ever lifted for the length of an
+ * earned grant. Everything below is about keeping that one fact true.
+ * ------------------------------------------------------------------ */
+
+/* ---- The grant clock ----------------------------------------------
+ *
+ * A grant is a plain wall-clock window: it starts the moment the challenge
+ * is passed and ends `grantMinutes` later, whatever the user does in
+ * between. Deliberately chosen over a usage-metered budget — the deal is
+ * simply "three minutes, then it locks."
+ *
+ * The cost of that choice is that time spent inside Byre is time spent, so
+ * GrantScreen must send the user off rather than invite them to watch the
+ * countdown. That screen is where this rule gets honoured.
+ *
+ * DeviceActivity can't enforce a window this short for us — Apple's
+ * schedules and usage thresholds both have a 15-minute floor — so the
+ * deadline is tracked here, in the app group, and survives the JS process
+ * being killed mid-window.
+ */
+/** Milliseconds of the budget still unspent. */
+const GRANT_REMAINING_KEY = 'byre-grant-remaining-ms';
+/** When the budget last started burning, or absent while it is paused. */
+const GRANT_RUNNING_SINCE_KEY = 'byre-grant-running-since';
+
+function readNumber(key: string): number | null {
+  const raw = native?.userDefaultsGet?.<number>(key);
+  return typeof raw === 'number' ? raw : null;
+}
+
+function writeNumber(key: string, value: number | null) {
+  if (!native) return;
+  if (value === null) native.userDefaultsRemove?.(key);
+  else native.userDefaultsSet?.(key, value);
+}
+
+/** Budget left right now, counting whatever has burned since it started. */
+export function grantRemainingMs(): number {
+  const stored = readNumber(GRANT_REMAINING_KEY);
+  if (stored === null || stored <= 0) return 0;
+  const since = readNumber(GRANT_RUNNING_SINCE_KEY);
+  if (since === null) return stored; // paused
+  return Math.max(0, stored - (Date.now() - since));
+}
+
+/** The deadline the rest of the app reasons about. While the clock is
+ *  paused this is always in the future, which is the point: sitting in Byre
+ *  must never be what ends a grant. */
+function grantUntil(): number | null {
+  const remaining = grantRemainingMs();
+  if (remaining <= 0) return null;
+  const since = readNumber(GRANT_RUNNING_SINCE_KEY);
+  return since === null ? Date.now() + remaining : since + (readNumber(GRANT_REMAINING_KEY) ?? 0);
+}
+
+function setGrantBudget(ms: number | null) {
+  writeNumber(GRANT_REMAINING_KEY, ms);
+  writeNumber(GRANT_RUNNING_SINCE_KEY, null);
+}
+
+/** Starts the window running from now. */
+function startGrantClock(ms: number) {
+  writeNumber(GRANT_REMAINING_KEY, ms);
+  writeNumber(GRANT_RUNNING_SINCE_KEY, Date.now());
+}
+
+export type BlockState =
+  /** Screen Time unavailable, or nothing picked yet — nothing is held back. */
+  | { kind: 'none' }
+  /** The resting state: everything in the selection is shielded right now. */
+  | { kind: 'blocked' }
+  /** Earned access, ending at `until`. */
+  | { kind: 'granted'; until: number };
+
+/** The single answer to "is Byre holding the door right now?" — every screen
+ *  that talks about blocking reads this instead of guessing from a timer. */
+export function getBlockState(): BlockState {
+  if (!native || !hasBlockedSelection()) return { kind: 'none' };
+  const until = grantUntil();
+  if (until) return { kind: 'granted', until };
+  return { kind: 'blocked' };
+}
+
+/** Puts the block back to its resting state. Safe to call repeatedly — this
+ *  runs on every foreground, so it is what repairs the block after a grant
+ *  runs out while the app was closed. */
+export function enforcePersistentBlock() {
+  if (!native || !hasBlockedSelection()) return;
+  if (grantUntil()) return; // a grant is still running; leave it open
+  blockSelectedApps();
+}
+
+/** Ends a grant early or on expiry and re-shields immediately. */
+export function endGrantNow() {
+  setGrantBudget(null);
+  enforcePersistentBlock();
+}
+
+/** Releases every Screen Time restriction this app has ever applied,
+ *  regardless of whether the local selection record still exists.
+ *
+ * Recovery path for exactly one scenario: uninstalling Byre wipes its App
+ * Group container (the selection record lives there), but Apple's shield
+ * is enforced by the OS independently of that container — by design, so a
+ * kid can't escape a block by deleting the controlling app. Reinstalling
+ * gets Byre back but not the record of what it had blocked, so the normal
+ * "unblock these specific tokens" call has nothing to point at. resetBlocks
+ * doesn't need to know which tokens — it clears the OS-level state directly.
+ */
+export function resetAllBlocks() {
+  native?.resetBlocks?.('recoverOrphanedShield');
+  native?.disableBlockAllMode?.('recoverOrphanedShield');
+  setGrantBudget(null);
 }

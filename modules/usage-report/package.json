@@ -1,0 +1,10 @@
+{
+  "name": "usage-report",
+  "version": "1.0.0",
+  "description": "Local Expo module: hosts Apple's DeviceActivityReport view, the only sanctioned way to show real per-app Screen Time numbers in-app.",
+  "main": "index.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react-native": "*"
+  }
+}

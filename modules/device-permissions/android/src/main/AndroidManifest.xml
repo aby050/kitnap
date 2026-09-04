@@ -3,13 +3,6 @@
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
   <application>
-    <!-- Keeps the countdown on the lock screen and the process alive for the
-         length of a session. dataSync: it is neither media nor location, and
-         Android 14+ refuses a foreground service without a declared type. -->
-    <service
-      android:name=".SessionTimerService"
-      android:exported="false"
-      android:foregroundServiceType="dataSync" />
 
     <!-- Stub service: declared and toggleable in system Settings so the
          "Accessibility" permission check has something real to point at.

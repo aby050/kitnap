@@ -1,12 +1,30 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { Schedule } from '../data/store';
 import { fieldStyle, palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
+
+/** "09:00" <-> a Date carrying that time (today's date, ignored). The picker
+ *  needs a real Date; the rest of the app only ever stores "HH:MM" strings. */
+function hhmmToDate(hhmm: string): Date {
+  const d = new Date();
+  const [h, m] = hhmm.split(':').map(Number);
+  d.setHours(Number.isFinite(h) ? h : 9, Number.isFinite(m) ? m : 0, 0, 0);
+  return d;
+}
+function dateToHhmm(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+function formatHhmm(hhmm: string): string {
+  if (!hhmm) return '';
+  const d = hhmmToDate(hhmm);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
 
 /** Rules were display-only before this — this is where you actually add or
  *  edit a recurring block window. Schedules are persisted by the caller, so
@@ -25,6 +43,17 @@ export default function ScheduleEditorScreen({
   const [draftStart, setDraftStart] = useState('');
   const [draftEnd, setDraftEnd] = useState('');
   const [draftDays, setDraftDays] = useState('Every day');
+  // Which field's native picker is open — Android's is a one-shot dialog
+  // (opens and closes itself on pick), iOS's is inline and needs its own
+  // dismiss, so both fields share this rather than each owning a boolean.
+  const [openPicker, setOpenPicker] = useState<'start' | 'end' | null>(null);
+
+  const onPickTime = (which: 'start' | 'end') => (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setOpenPicker(null);
+    if (event.type === 'dismissed' || !date) return;
+    if (which === 'start') setDraftStart(dateToHhmm(date));
+    else setDraftEnd(dateToHhmm(date));
+  };
 
   const startNew = () => {
     setEditing({ id: `s${Date.now()}`, name: '', start: '', end: '', days: 'Every day' });
@@ -76,21 +105,43 @@ export default function ScheduleEditorScreen({
               style={styles.input}
             />
             <View style={styles.timeRow}>
-              <TextInput
-                value={draftStart}
-                onChangeText={setDraftStart}
-                placeholder="Start — 09:00"
-                placeholderTextColor={palette.textTertiary}
-                style={[styles.input, styles.timeInput]}
-              />
-              <TextInput
-                value={draftEnd}
-                onChangeText={setDraftEnd}
-                placeholder="End — 17:00"
-                placeholderTextColor={palette.textTertiary}
-                style={[styles.input, styles.timeInput]}
-              />
+              <Pressable
+                onPress={() => setOpenPicker('start')}
+                style={[styles.input, styles.timeInput, styles.timeField]}
+              >
+                <Text style={draftStart ? styles.timeValue : styles.timePlaceholder}>
+                  {draftStart ? formatHhmm(draftStart) : 'Start'}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setOpenPicker('end')}
+                style={[styles.input, styles.timeInput, styles.timeField]}
+              >
+                <Text style={draftEnd ? styles.timeValue : styles.timePlaceholder}>
+                  {draftEnd ? formatHhmm(draftEnd) : 'End'}
+                </Text>
+              </Pressable>
             </View>
+
+            {/* Android's picker is a self-contained dialog; iOS's is inline
+                and needs its own "Done" since the spinner doesn't dismiss
+                itself. */}
+            {openPicker && (
+              <>
+                <DateTimePicker
+                  value={hhmmToDate(openPicker === 'start' ? draftStart || '09:00' : draftEnd || '17:00')}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={onPickTime(openPicker)}
+                  themeVariant="dark"
+                />
+                {Platform.OS === 'ios' && (
+                  <Pressable onPress={() => setOpenPicker(null)} style={styles.pickerDone}>
+                    <Text style={styles.pickerDoneText}>Done</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
             <View style={styles.daysRow}>
               {['Every day', 'Mon–Fri', 'Weekends'].map((d) => (
                 <Pressable
@@ -190,6 +241,15 @@ const styles = StyleSheet.create({
   },
   timeRow: { flexDirection: 'row', gap: 10 },
   timeInput: { flex: 1 },
+  timeField: { justifyContent: 'center' },
+  timeValue: { color: palette.text, fontSize: 16, fontWeight: '600' },
+  timePlaceholder: { color: palette.textTertiary, fontSize: 16 },
+  pickerDone: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  pickerDoneText: { color: palette.accent, fontSize: 15, fontWeight: '700' },
   daysRow: { flexDirection: 'row', gap: 8 },
   dayChip: {
     paddingVertical: 10,

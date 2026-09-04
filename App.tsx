@@ -14,6 +14,7 @@ import OnboardingMark from './src/onboarding/OnboardingMark';
 import AffirmationScreen from './src/onboarding/AffirmationScreen';
 import BenefitsScreen from './src/onboarding/BenefitsScreen';
 import TrialTimelineScreen from './src/onboarding/TrialTimelineScreen';
+import PurchaseSuccessScreen, { PurchaseResult } from './src/onboarding/PurchaseSuccessScreen';
 import ThemePickerScreen from './src/onboarding/ThemePickerScreen';
 import IntensityScreen from './src/onboarding/IntensityScreen';
 import FutureSelfScreen from './src/onboarding/FutureSelfScreen';
@@ -34,6 +35,8 @@ import { QUESTION_CHUNKS } from './src/onboarding/questions';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
 import { estimateDailyHours, recommendSetup } from './src/data/setupPlan';
 import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
+import { usePurchases } from './src/data/usePurchases';
+import { purchasedBailoutCount } from './src/data/purchases';
 
 const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
   steady: 'balanced',
@@ -73,6 +76,7 @@ type Stage =
   | 'benefits'
   | 'paywall'
   | 'trial'
+  | 'purchased'
   | 'discount'
   | 'referral'
   | 'welcome'
@@ -82,6 +86,7 @@ type Answer = { value: string; label: string };
 
 export default function App() {
   const [stage, setStage] = useState<Stage>('loading');
+  const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [themeKey, setThemeKey] = useState<ThemeKey>('quiet');
   const [goal, setGoal] = useState<GoalData>(EMPTY_GOAL);
@@ -93,7 +98,13 @@ export default function App() {
 
   const [persisted, setPersisted] = useState<PersistedState>(DEFAULT_STATE);
   const [loaded, setLoaded] = useState(false);
+  // Configured once here so entitlement state is the same everywhere.
+  const purchases = usePurchases();
   const [pendingShieldPackage, setPendingShieldPackage] = useState<string | null>(null);
+  // Set when Apple's shield "Let me in" button reopens Byre via the
+  // device-activity:// scheme — routes straight to the unlock challenge
+  // instead of Home, which is what tapping that button is supposed to mean.
+  const [pendingIOSUnlock, setPendingIOSUnlock] = useState(false);
   // Which run of questions we are on, and whether its permission ask is showing.
   const [chunk, setChunk] = useState(0);
   const [askingPermission, setAskingPermission] = useState(false);
@@ -129,6 +140,22 @@ export default function App() {
     if (loaded) saveState(persisted);
   }, [loaded, persisted]);
 
+  const grantBailouts = React.useCallback((quantity: number) => {
+    setPersisted((prev) => ({ ...prev, emergencyTokens: (prev.emergencyTokens ?? 0) + quantity }));
+  }, []);
+
+  // A reinstall wipes the local balance while the store still remembers every
+  // consumable ever bought. Take the higher of the two rather than
+  // overwriting — the store can't know how many were already spent, so
+  // trusting it outright would hand back bailouts the user already used.
+  useEffect(() => {
+    if (!loaded || !purchases.info) return;
+    const owned = purchasedBailoutCount(purchases.info);
+    setPersisted((prev) =>
+      owned > (prev.emergencyTokens ?? 0) ? { ...prev, emergencyTokens: owned } : prev,
+    );
+  }, [loaded, purchases.info]);
+
   // Keep the native Accessibility Service's blocked-package list in sync —
   // it can't read PersistedState directly, so this is the one bridge point.
   useEffect(() => {
@@ -148,6 +175,11 @@ export default function App() {
     const handleUrl = (url: string | null) => {
       const pkg = parseShieldDeepLink(url);
       if (pkg) setPendingShieldPackage(pkg);
+      // iOS's shield has no per-app payload to carry (Family Controls tokens
+      // are opaque) — the scheme firing at all is the entire signal.
+      if (url?.startsWith('byre://unlock') || url?.startsWith('device-activity://')) {
+        setPendingIOSUnlock(true);
+      }
     };
     Linking.getInitialURL().then(handleUrl);
     const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
@@ -339,9 +371,59 @@ export default function App() {
           )}
 
           {/* World Seed (landmarks chrome) is skipped — world is deprioritized.
-              Paywall, trial/discount, and referral stay hidden from the funnel.
-              Straight from Benefits to Welcome. */}
-          {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('welcome')} />}
+              The old chart paywall and the discount/referral retention screens
+              stay out of the funnel; the plan picker below is the one paywall,
+              and it sits between Benefits and Welcome. */}
+          {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('paywall')} />}
+
+          {/* The value-prop paywall comes before the plan picker: it makes the
+              case, the picker takes the money. "Not now" is the only route to
+              the discount offer, and only when one is actually configured —
+              otherwise declining just lands on the picker. */}
+          {stage === 'paywall' && (
+            <PaywallScreen
+              name={name}
+              hoursBack={Math.max(1, Math.round(dailyHours))}
+              personalLine={goal.line || undefined}
+              onContinue={() => setStage('trial')}
+              onDecline={
+                purchases.discountOffering ? () => setStage('discount') : undefined
+              }
+            />
+          )}
+
+          {stage === 'discount' && (
+            <DiscountPaywallScreen
+              offering={purchases.discountOffering}
+              fullPriceOffering={purchases.offering}
+              onPurchased={grantBailouts}
+              onStart={(result) => {
+                setPurchaseResult(result ?? null);
+                setStage(result ? 'purchased' : 'welcome');
+              }}
+              // Declining the last-chance offer still leaves the plan picker,
+              // so someone who only wanted the monthly plan isn't stranded.
+              onClose={() => setStage('trial')}
+            />
+          )}
+
+          {stage === 'trial' && (
+            <TrialTimelineScreen
+              onStart={(result) => {
+                // No result means no live product — there is nothing to
+                // confirm, so skip the confirmation rather than show an empty
+                // one claiming a purchase that never happened.
+                setPurchaseResult(result ?? null);
+                setStage(result ? 'purchased' : 'welcome');
+              }}
+              offering={purchases.offering}
+              onPurchased={grantBailouts}
+            />
+          )}
+
+          {stage === 'purchased' && purchaseResult && (
+            <PurchaseSuccessScreen result={purchaseResult} onContinue={() => setStage('welcome')} />
+          )}
 
           {stage === 'welcome' && <WelcomeScreen onDone={completeOnboarding} />}
 
@@ -355,7 +437,12 @@ export default function App() {
               onPatch={patch}
               pendingShieldPackage={pendingShieldPackage}
               onShieldConsumed={() => setPendingShieldPackage(null)}
+              pendingIOSUnlock={pendingIOSUnlock}
+              onIOSUnlockConsumed={() => setPendingIOSUnlock(false)}
               onDeleteAccount={handleDeleteAccount}
+              bailoutProducts={purchases.bailoutProducts}
+              isPro={purchases.pro}
+              customerInfo={purchases.info}
             />
           )}
 
