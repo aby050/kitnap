@@ -60,24 +60,23 @@ type Plan = {
    *  bold — Apple 3.1.2(c) requires the billed amount to be the most
    *  conspicuous pricing element, with the trial itself subordinate to it. */
   isTrial?: boolean;
+  /** Human trial length, e.g. "7 days". Held as its own field because the row
+   *  name is the billing term now — parsing the length back out of display
+   *  copy broke the moment that copy changed. */
+  trialLabel?: string;
 };
 
 /** Shown only until the store answers, and on the rare launch where it never
- *  does. Real prices come from RevenueCat so they are localised and correct
- *  in every storefront — hardcoded ₹ figures are wrong for most of the world. */
+ *  does. These rows carry **no price at all** — deliberately. The previous
+ *  version hardcoded ₹499/₹99, which is the wrong currency and the wrong
+ *  number for every storefront outside India, and is what an App Review
+ *  device on a US account would have been shown when RevenueCat failed to
+ *  answer. A price we cannot read from the store is a price we do not print:
+ *  the rows degrade to "unavailable" and the purchase falls through to the
+ *  free plan, which `buy()` already handles when `pkg` is absent. */
 const FALLBACK_PLANS: Plan[] = [
-  {
-    key: 'trial',
-    name: '7-day free trial',
-    note: 'Free for 7 days, then ₹499/yr. Cancel anytime.',
-    price: '₹499',
-    per: '/yr',
-    bailouts: 1,
-    badge: 'Start here',
-    isTrial: true,
-  },
-  { key: 'monthly', name: 'Monthly', note: 'Billed every month', price: '₹99', per: '/mo', bailouts: 2 },
-  { key: 'yearly', name: 'Yearly', note: 'Only ₹41.58/mo — save 58%', price: '₹499', per: '/yr', bailouts: 10 },
+  { key: 'monthly', name: 'Monthly', note: 'Billed every month', price: '', per: '', bailouts: 2 },
+  { key: 'yearly', name: 'Yearly', note: 'Billed once a year', price: '', per: '', bailouts: 10 },
 ];
 
 /** How many bailouts each plan grants. Keyed by RevenueCat package
@@ -97,16 +96,21 @@ function toPlans(pkgs: PurchasesPackage[]): Plan[] {
     if (intro && intro.price === 0) {
       const unit = intro.periodUnit.toLowerCase();
       const plural = intro.periodNumberOfUnits === 1 ? unit : `${unit}s`;
+      // Apple 3.1.2(c): the row is titled by what it *bills*, not by the
+      // trial. Naming it "7-day free trial" made the free period the row's
+      // identity and pushed the billed amount into a secondary position.
+      // The trial survives as subordinate note copy underneath.
       rows.unshift({
         key: `trial:${pkg.identifier}`,
-        name: `${intro.periodNumberOfUnits}-${unit} free trial`,
-        note: `Free for ${intro.periodNumberOfUnits} ${plural}, then ${p.priceString}${annual ? '/yr' : '/mo'}. Cancel anytime.`,
+        name: annual ? 'Yearly' : 'Monthly',
+        note: `${intro.periodNumberOfUnits} ${plural} free first, then billed ${p.priceString}${annual ? ' a year' : ' a month'}. Cancel anytime.`,
         price: p.priceString,
         per: annual ? '/yr' : '/mo',
         bailouts: 1,
         badge: 'Start here',
         pkg,
         isTrial: true,
+        trialLabel: `${intro.periodNumberOfUnits} ${plural}`,
       });
     }
     rows.push({
@@ -236,10 +240,14 @@ export default function TrialTimelineScreen({
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.planPrice}>
-                  {p.price}
-                  <Text style={styles.planPer}>{p.per}</Text>
-                </Text>
+                {p.price ? (
+                  <Text style={styles.planPrice}>
+                    {p.price}
+                    <Text style={styles.planPer}>{p.per}</Text>
+                  </Text>
+                ) : (
+                  <Text style={styles.planPer}>Unavailable</Text>
+                )}
                 {p.badge && (
                   <View style={styles.badge}>
                     <Text style={styles.badgeText}>{p.badge}</Text>
@@ -252,24 +260,33 @@ export default function TrialTimelineScreen({
       </ScrollView>
 
       <View style={styles.ctaWrap}>
+        {/* Apple 3.1.2(c): the billed amount is the most conspicuous pricing
+            element in the flow. This button is the largest thing on the
+            screen, so it states the amount that will actually be charged —
+            on the trial plan too, where the label used to read "Start my
+            free days" and omit the price entirely. The free period is
+            stated below, subordinate in size and colour. */}
         <GradientButton
           label={
             busy
               ? 'One moment…'
-              : selected.isTrial
-                ? 'Start my free days'
-                : `Continue — ${selected.price}${selected.per}`
+              : selected.price
+                ? `Subscribe — ${selected.price}${selected.per}`
+                : 'Continue'
           }
           onPress={busy ? () => {} : buy}
         />
+        {selected.isTrial && !busy && (
+          <Text style={styles.trialSub}>{selected.trialLabel} free first</Text>
+        )}
         {busy && <ActivityIndicator color={palette.text} style={{ marginTop: 10 }} />}
         {/* Guideline 3.1.2 disclosure. The plan's title, length and price are
             on the row above; this states the renewal terms, and the two links
             below are required to be in the binary next to the purchase. */}
         <Text style={styles.legal}>
           {selected.isTrial
-            ? `Free for ${selected.name.split('-')[0]} days, then it renews at ${selected.price}${selected.per} unless you turn off auto-renew at least 24 hours before the trial ends. Manage or cancel any time in your Apple Account settings.`
-            : `Renews automatically ${selected.key === 'yearly' ? 'each year' : 'each month'} at the price shown unless you turn off auto-renew at least 24 hours before the period ends. Manage or cancel any time in your Apple Account settings.`}
+            ? `Free for ${selected.trialLabel}, then it renews at ${selected.price}${selected.per} unless you turn off auto-renew at least 24 hours before the trial ends. Manage or cancel any time in your Apple Account settings.`
+            : `Renews automatically ${selected.per === '/yr' ? 'each year' : 'each month'} at the price shown unless you turn off auto-renew at least 24 hours before the period ends. Manage or cancel any time in your Apple Account settings.`}
         </Text>
         {/* A way past the paywall.
             Without this, a purchase that fails — no network, a declined card,
@@ -369,11 +386,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   radioOn: { backgroundColor: palette.accent, borderColor: palette.accent },
-  planName: { color: palette.text, fontSize: 16.5, fontWeight: '700' },
+  planName: { color: palette.text, fontSize: 15, fontWeight: '600' },
   planNote: { color: palette.textSecondary, fontSize: 12.5, marginTop: 2 },
   bailoutRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 },
   bailoutText: { color: palette.accent, fontSize: 12.5, fontWeight: '700' },
-  planPrice: { color: palette.text, fontSize: 17, fontWeight: '800' },
+  // 3.1.2(c) — the billed amount outranks every other text in the row.
+  planPrice: { color: palette.text, fontSize: 22, fontWeight: '900' },
   planPer: { color: palette.textSecondary, fontSize: 13, fontWeight: '500' },
   badge: {
     position: 'absolute',
@@ -387,4 +405,6 @@ const styles = StyleSheet.create({
   badgeText: { color: '#062', fontSize: 11.5, fontWeight: '800' },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 12 },
   legal: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
+  // Subordinate to the billed amount on the button above, per 3.1.2(c).
+  trialSub: { color: palette.textSecondary, fontSize: 12.5, fontWeight: '600', textAlign: 'center', marginTop: 8 },
 });

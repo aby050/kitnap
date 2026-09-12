@@ -67,6 +67,7 @@
         }
       ],
       "expo-notifications",
+      "./plugins/withNoBackgroundAudio.js",
       "./plugins/withUsageStatsPermission.js",
       "./plugins/withAndroidReleaseSigning.js",
       [
