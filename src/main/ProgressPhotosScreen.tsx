@@ -50,7 +50,13 @@ export default function ProgressPhotosScreen({
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      {/* Was the hardcoded pre-theme blue, which left this screen blue-black
+          while the rest of the app followed the chosen scheme. */}
+      <LinearGradient
+        colors={[...gradients.ground]}
+        locations={[...gradients.groundLocations]}
+        style={StyleSheet.absoluteFill}
+      />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>

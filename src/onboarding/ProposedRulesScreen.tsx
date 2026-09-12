@@ -246,14 +246,14 @@ export default function ProposedRulesScreen({ name, onContinue }: { name: string
                 {/* Shield/Calendar SVG header inside popup */}
                 <View style={styles.modalGraphics}>
                   <Svg width={100} height={40} viewBox="0 0 100 40" fill="none">
-                    <Rect x="5" y="10" width="20" height="20" rx="4" stroke="#476BEB" strokeWidth="2" fill="none" />
-                    <Line x1="10" y1="7" x2="10" y2="12" stroke="#476BEB" strokeWidth="2.2" strokeLinecap="round" />
-                    <Line x1="20" y1="7" x2="20" y2="12" stroke="#476BEB" strokeWidth="2.2" strokeLinecap="round" />
+                    <Rect x="5" y="10" width="20" height="20" rx="4" stroke={palette.accent} strokeWidth="2" fill="none" />
+                    <Line x1="10" y1="7" x2="10" y2="12" stroke={palette.accent} strokeWidth="2.2" strokeLinecap="round" />
+                    <Line x1="20" y1="7" x2="20" y2="12" stroke={palette.accent} strokeWidth="2.2" strokeLinecap="round" />
                     
                     <Path d="M 36 20 L 54 20" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeDasharray="3 3" />
                     <Path d="M 50 16 L 55 20 L 50 24" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" />
 
-                    <Path d="M74 30s6-3 6-8V15l-6-2-6 2v5c0 5 6 8 6 8z" stroke="#476BEB" strokeWidth="2" fill="none" />
+                    <Path d="M74 30s6-3 6-8V15l-6-2-6 2v5c0 5 6 8 6 8z" stroke={palette.accent} strokeWidth="2" fill="none" />
                   </Svg>
                 </View>
 
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     marginLeft: 14,
   },
   socialProof: {
-    color: '#476BEB',
+    color: palette.accent,
     fontSize: 15,
     textAlign: 'center',
     fontWeight: '600',
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 2,
     borderColor: 'rgba(111, 227, 169, 0.2)',
-    shadowColor: '#476BEB',
+    shadowColor: palette.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -480,10 +480,10 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: '#476BEB',
+    backgroundColor: palette.accent,
   },
   modalActiveText: {
-    color: '#476BEB',
+    color: palette.accent,
     fontSize: 12.5,
     fontWeight: '700',
   },

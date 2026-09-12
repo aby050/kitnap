@@ -361,7 +361,16 @@ const MIN_OS_WINDOW_MINUTES = 15;
   const token = native.getFamilyActivitySelectionId(SELECTION_ID);
   if (!token) return;
 
-  const reblock = [{ type: 'blockSelection', familyActivitySelectionId: SELECTION_ID }];
+  // `as const` so `type` narrows to the literal the native Action union
+  // expects — without it TypeScript widens it to `string` and both
+  // configureActions calls below fail to type-check.
+  // `as const` on the FIELD, not the array. The literal has to narrow to the
+  // native Action union — a bare object widens `type` to `string` and both
+  // configureActions calls below fail — but `as const` on the whole array
+  // makes it readonly, and configureActions takes a mutable `Action[]`.
+  const reblock = [
+    { type: 'blockSelection' as const, familyActivitySelectionId: SELECTION_ID },
+  ];
 
   // Two callbacks, not one. `eventDidReachThreshold` only fires if the granted
   // apps are used for the whole window; `intervalDidEnd` fires when the window

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { KP } from './repEngine';
+import { palette } from '../../design/tokens';
 
 /**
  * The joints, drawn over the camera.
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    backgroundColor: '#476BEB',
+    backgroundColor: palette.accent,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.9)',
     // Reads against a bright shirt and a dark room alike.

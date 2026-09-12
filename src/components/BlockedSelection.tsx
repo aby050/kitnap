@@ -312,7 +312,13 @@ const styles = StyleSheet.create({
   // this control, and a full-screen scrim from a component used inside three
   // different scrollviews would sit under their headers.
   confirmOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    // Spelled out rather than `StyleSheet.absoluteFillObject`, which this RN
+    // version's types no longer expose.
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.78)',
     borderRadius: radius.xl,
     alignItems: 'center',

@@ -22,7 +22,7 @@ function classify(log: ReturnType<typeof getDay>, avgSaved: number): DayType {
 const TYPE_COLOR: Record<DayType, string> = {
   none: palette.surfaceHigh,
   low: palette.accent,
-  avg: '#8B9CF2',
+  avg: palette.accent,
   high: palette.warn,
   challenge: palette.danger,
   goal: palette.accent,

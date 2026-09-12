@@ -325,11 +325,25 @@ export function seedProgressFromLegacy(hoursReclaimed: number, firstOpenDate: st
 }
 
 /**
- * Local modeled percentile until a real user-base ranking exists.
+ * A score for THIS person's own activity. Not a ranking against anybody.
+ *
+ * ⚠️ Read the name carefully before using this: it was called
+ * `globalPercentile` and surfaced under the label "percentile", which told
+ * the user they were ahead of N% of Byre's users. Byre has no user base to
+ * compare against — there is no server, no ranking, and this function never
+ * saw another account. It is a weighted blend of the user's OWN totals mapped
+ * into 12–95, and presenting that as a percentile is an invented statistic of
+ * exactly the kind AUDIT.md flags (C4) and the project's own rule forbids.
+ *
+ * The maths is unchanged and still useful as a single progress figure — only
+ * the claim attached to it was false. Renamed and relabelled rather than
+ * removed. Do not reintroduce "percentile", "top N%", or "better than"
+ * copy around it unless a real ranking exists to back it.
+ *
  * Weights: focus 30%, time saved 25%, streak 20%, lock sessions 15%, blocked 10%.
- * Mapped into 12–95 so a first day is never 0% and no one is shown as #1.
+ * Mapped into 12–95 so a first day is never 0% and no one is shown as maxed.
  */
-export function globalPercentile(progress: ProgressState): { percent: number; score: number } {
+export function focusScore(progress: ProgressState): { percent: number; score: number } {
   const t = totals(progress);
   const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
   const score =
@@ -373,3 +387,7 @@ export function shareMessage(def: AchievementDef, extra?: string): string {
   const line = extra ? `${def.shareLine} ${extra}` : def.shareLine;
   return `${def.name}\n${line}\n\n— Byre`;
 }
+
+/** @deprecated Misleading name — see `focusScore`. Kept as an alias only so a
+ *  stale import cannot silently resolve to nothing. */
+export const globalPercentile = focusScore;

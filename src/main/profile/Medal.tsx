@@ -13,6 +13,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 import { AchievementDef } from '../../data/progress';
+import { palette } from '../../design/tokens';
 
 let medalIdCounter = 0;
 
@@ -102,7 +103,7 @@ export default function Medal({
           </SvgGradient>
 
           <SvgGradient id={`${gid}-mint`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#6E8CF5" />
+            <Stop offset="0%" stopColor={palette.accent} />
             <Stop offset="100%" stopColor="#0F3B73" />
           </SvgGradient>
 
