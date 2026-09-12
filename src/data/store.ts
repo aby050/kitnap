@@ -139,13 +139,26 @@ export type GateReflection = {
   unlocked: boolean;
 };
 
-/** An immutable record of every token spend and purchase, for auditability.
+/** Why a Bailout left the balance. Both of these are real spend paths —
+ *  the timer cancel and the gate/shield skip — and the screen copy has to
+ *  name both, not just the timer. */
+export type TokenSpendReason = 'gate-skip' | 'timer-cancel';
+
+/** Why a Bailout entered the balance. `starting-grant` is the two free ones,
+ *  `carried-over` is what survives a delete-account wipe, `testing` is the
+ *  dev-only top-up — kept distinct so a ledger read never has to guess
+ *  whether a balance was paid for. */
+export type TokenGrantReason = 'purchased' | 'restored' | 'starting-grant' | 'carried-over' | 'testing';
+
+export type TokenReason = TokenSpendReason | TokenGrantReason;
+
+/** An immutable record of every token spend and grant, for auditability.
  *  Capped at 200 entries — oldest are dropped first. */
 export type TokenLedgerEntry = {
   /** ISO timestamp of the transaction. */
   date: string;
-  reason: 'gate-skip' | 'timer-cancel' | 'purchased';
-  /** Negative for spends, positive for purchases. */
+  reason: TokenReason;
+  /** Negative for spends, positive for grants. */
   delta: number;
   /** Balance immediately after this transaction. */
   balanceAfter: number;
@@ -158,6 +171,87 @@ export function appendTokenLedger(
   entry: TokenLedgerEntry,
 ): TokenLedgerEntry[] {
   return [...existing, entry].slice(-MAX_TOKEN_LEDGER);
+}
+
+/** The result of a balance change: the new balance and the new ledger, always
+ *  moved together so one can never be written without the other. */
+export type TokenTxn = { balance: number; ledger: TokenLedgerEntry[] };
+
+/**
+ * The single place a Bailout is ever spent. Returns `null` — not a silently
+ * unchanged balance — when there is nothing to spend, so a caller that forgets
+ * the zero check gets a value it cannot use rather than a free unlock. Every
+ * spend path in the app goes through here; none of them do their own
+ * arithmetic.
+ */
+export function spendToken(
+  balance: number,
+  ledger: TokenLedgerEntry[],
+  reason: TokenSpendReason,
+  now: number = Date.now(),
+): TokenTxn | null {
+  if (!Number.isFinite(balance) || balance <= 0) return null;
+  const next = balance - 1;
+  return {
+    balance: next,
+    ledger: appendTokenLedger(ledger, {
+      date: new Date(now).toISOString(),
+      reason,
+      delta: -1,
+      balanceAfter: next,
+    }),
+  };
+}
+
+/**
+ * The single place Bailouts are ever added — purchases, restores, the starting
+ * grant, the dev top-up. A non-positive quantity is a no-op rather than a
+ * ledger entry for nothing.
+ */
+export function grantTokens(
+  balance: number,
+  ledger: TokenLedgerEntry[],
+  quantity: number,
+  reason: TokenGrantReason,
+  now: number = Date.now(),
+): TokenTxn {
+  const safe = Number.isFinite(balance) ? Math.max(0, balance) : 0;
+  const qty = Math.floor(quantity);
+  if (!Number.isFinite(qty) || qty <= 0) return { balance: safe, ledger };
+  const next = safe + qty;
+  return {
+    balance: next,
+    ledger: appendTokenLedger(ledger, {
+      date: new Date(now).toISOString(),
+      reason,
+      delta: qty,
+      balanceAfter: next,
+    }),
+  };
+}
+
+/**
+ * Sets the balance to an absolute figure, used only by the dev top-up. Logged
+ * like everything else so a tester's 99 is never mistaken for a purchase.
+ */
+export function setTokenBalance(
+  balance: number,
+  ledger: TokenLedgerEntry[],
+  target: number,
+  now: number = Date.now(),
+): TokenTxn {
+  const safe = Number.isFinite(balance) ? Math.max(0, balance) : 0;
+  const next = Math.max(0, Math.floor(target));
+  if (next === safe) return { balance: safe, ledger };
+  return {
+    balance: next,
+    ledger: appendTokenLedger(ledger, {
+      date: new Date(now).toISOString(),
+      reason: 'testing',
+      delta: next - safe,
+      balanceAfter: next,
+    }),
+  };
 }
 
 const MAX_GATE_REFLECTIONS = 100;
