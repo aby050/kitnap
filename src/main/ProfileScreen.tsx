@@ -278,7 +278,7 @@ export default function ProfileScreen({
   return (
     <View style={styles.root}>
       {/* Ambient ground + gem bloom, so the screen has a light source. */}
-      <LinearGradient colors={['#04140D', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
@@ -291,7 +291,7 @@ export default function ProfileScreen({
         </View>
 
         <LinearGradient
-          colors={['#04140D', 'rgba(4,20,13,0.85)', 'rgba(0,0,0,0)']}
+          colors={['#050C16', 'rgba(5,12,22,0.85)', 'rgba(0,0,0,0)']}
           locations={[0, 0.45, 1]}
           style={styles.topFade}
           pointerEvents="none"

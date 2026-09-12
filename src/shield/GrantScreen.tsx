@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { Button, Ring, Screen } from '../design/primitives';
 import Icon from '../ui/Icon';
 import { palette, radius, space, type } from '../design/tokens';
@@ -25,6 +36,32 @@ export default function GrantScreen({
   const [remaining, setRemaining] = useState(secondsLeft);
   const [confirmEarly, setConfirmEarly] = useState(false);
 
+  // Glyph entrance: pop in with a spring.
+  const glyphScale = useSharedValue(0.5);
+  const glyphOpacity = useSharedValue(0);
+  // Slow pulse after entrance.
+  const glyphPulse = useSharedValue(1);
+
+  useEffect(() => {
+    glyphOpacity.value = withTiming(1, { duration: 300 });
+    glyphScale.value = withSpring(1, { damping: 12, stiffness: 200 });
+    setTimeout(() => {
+      glyphPulse.value = withRepeat(
+        withSequence(
+          withTiming(1.12, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1.0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      );
+    }, 600);
+  }, []);
+
+  const glyphAnimStyle = useAnimatedStyle(() => ({
+    opacity: glyphOpacity.value,
+    transform: [{ scale: glyphScale.value * glyphPulse.value }],
+  }));
+
   useEffect(() => {
     setRemaining(secondsLeft());
     const id = setInterval(() => setRemaining(secondsLeft()), 1000);
@@ -41,21 +78,23 @@ export default function GrantScreen({
   return (
     <Screen edges={['top', 'bottom']} bloom>
       <View style={styles.body}>
-        <Animated.View entering={FadeIn.duration(400)} style={styles.glyphTile}>
+        {/* Animated glyph tile — springs in, then breathes */}
+        <Animated.View style={[styles.glyphTile, glyphAnimStyle]}>
           <Icon name={emergency ? 'key' : 'hourglass'} size={30} color={palette.accent} strokeWidth={1.7} />
         </Animated.View>
 
-        <Animated.Text entering={FadeInDown.delay(120).duration(400)} style={styles.headline}>
+        <Animated.Text entering={FadeInUp.delay(100).duration(420)} style={styles.headline}>
           {emergency ? `Everything is open for ${minutes} minutes.` : `${minutes} minutes.`}
         </Animated.Text>
 
-        <Animated.Text entering={FadeInDown.delay(220).duration(400)} style={styles.sub}>
+        <Animated.Text entering={FadeInUp.delay(200).duration(400)} style={styles.sub}>
           {emergency
             ? 'No questions. Nothing logged against you. Go handle it.'
             : 'Already counting down. Go — apps lock again when it hits zero.'}
         </Animated.Text>
 
-        <Animated.View entering={FadeIn.delay(400).duration(400)} style={styles.ringWrap}>
+        {/* Ring animates its own progress via the animated Ring component */}
+        <Animated.View entering={FadeIn.delay(360).duration(440)} style={styles.ringWrap}>
           <Ring progress={progress} size={176} thickness={4}>
             <Text style={styles.timerText}>
               {mm}

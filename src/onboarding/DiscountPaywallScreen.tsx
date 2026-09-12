@@ -7,6 +7,7 @@ import { GradientButton } from '../components/ui';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 import { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import { FREE_EMERGENCY_TOKENS } from '../data/store';
 import { purchaseSubscription, restorePurchases } from '../data/purchases';
 import { PurchaseResult } from './PurchaseSuccessScreen';
 
@@ -65,7 +66,14 @@ export default function DiscountPaywallScreen({
 
   const buy = async () => {
     if (!pkg) {
-      onStart();
+      // Same reasoning as the plan picker: never advance silently. State the
+      // outcome rather than dropping the user on the home screen unbriefed.
+      onStart({
+        planName: 'Free plan',
+        bailouts: FREE_EMERGENCY_TOKENS,
+        isTrial: false,
+        free: true,
+      });
       return;
     }
     setBusy(true);
@@ -118,9 +126,9 @@ export default function DiscountPaywallScreen({
 
         <View style={{ height: 34 }} />
 
-        <Feature icon={<Icon name="shield" size={19} color={palette.text} />} title="Focus, uninterrupted." desc="Finally do your best work yet." />
-        <Feature icon={<Icon name="calendar" size={19} color={palette.text} />} title="Own your time." desc="And fill your days with more intention." />
-        <Feature icon={<Icon name="user" size={19} color={palette.text} />} title="Be fully present." desc="Because life isn't happening on your screen." />
+        <Feature icon={<Icon name="shield" size={19} color={palette.text} />} title="A friend holds the code." desc="Loosening Strict mode takes a code only they have — you send it yourself." />
+        <Feature icon={<Icon name="calendar" size={19} color={palette.text} />} title="10 emergency tokens." desc="For the moments a challenge genuinely can't wait." />
+        <Feature icon={<Icon name="user" size={19} color={palette.text} />} title="Strict mode, verified." desc="Push-ups and squats confirmed on camera, not on trust." />
 
         <View style={{ height: 22 }} />
 

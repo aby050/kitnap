@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import BlockedAppsPill from '../components/BlockedAppsPill';
 import ScreenTimeCard from '../components/ScreenTimeCard';
 import { getIntensity, IntensityKey } from '../data/themes';
@@ -153,6 +159,10 @@ export default function HomeScreen({
   const [showBailout, setShowBailout] = useState(false);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Spring-pop the hero ring whenever the duration changes.
+  const heroScale = useSharedValue(1);
+  const heroAnimStyle = useAnimatedStyle(() => ({ transform: [{ scale: heroScale.value }] }));
+
   const stopAdjust = () => {
     if (holdTimer.current) {
       clearTimeout(holdTimer.current);
@@ -170,6 +180,10 @@ export default function HomeScreen({
     const tick = () => {
       tapLight();
       setDurationMinutes((c) => stepTo(c, dir));
+      // Micro-pop on each step so the ring feels alive.
+      heroScale.value = withSpring(1.04, { damping: 10, stiffness: 400 }, () => {
+        heroScale.value = withSpring(1, { damping: 14, stiffness: 300 });
+      });
       holdTimer.current = setTimeout(tick, holdDelay(Date.now() - pressedAt));
     };
     tick();
@@ -235,7 +249,7 @@ export default function HomeScreen({
         </Animated.View>
 
         {/* Commitment hero */}
-        <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={styles.hero}>
+        <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={[styles.hero, heroAnimStyle]}>
           <Ring progress={ringProgress} size={248} thickness={4}>
             <Text style={[type.overline, styles.heroLabel]}>
               {/* Blocking is already on by default (see BlockedAppsPill above)
@@ -319,12 +333,17 @@ export default function HomeScreen({
           </View>
         )}
 
-        {/* Session shortcuts */}
+        {/* Session shortcuts — "For you" and "Digital detox" are hidden.
+            Both were shelves of timer presets rather than anything about this
+            user, and they pushed the two things Home actually exists for (the
+            block itself, and what it is blocking) below two carousels. The
+            component is kept intact so the shelves can come back.
         <PresetSections
           onStartPreset={(minutes, label, hardMode) => onStartPreset?.(minutes, label, hardMode)}
           blockedCount={blockedPackages.length}
           onOpenBlockedApps={onOpenBlockedApps}
         />
+        */}
 
         {/* Screen time */}
         <Card onPress={Platform.OS === 'ios' ? undefined : onOpenApps} style={styles.section}>
@@ -378,7 +397,7 @@ export default function HomeScreen({
 
         {/* Unlock difficulty + Bailouts — both real screens already, just
             without an entry point on Home before this. */}
-        <View style={styles.twinRow}>
+        <Animated.View entering={FadeIn.delay(200).duration(motion.transition)} style={styles.twinRow}>
           <Pressable style={styles.twinCard} onPress={onOpenDifficulty}>
             <Icon name="pulse" size={20} color={palette.accent} />
             <Text style={styles.twinValue}>{intensityKey ? getIntensity(intensityKey).name : 'Steady'}</Text>
@@ -389,7 +408,7 @@ export default function HomeScreen({
             <Text style={styles.twinValue}>{bailoutBalance}</Text>
             <Text style={styles.twinLabel}>{bailoutBalance === 1 ? 'Bailout' : 'Bailouts'}</Text>
           </Pressable>
-        </View>
+        </Animated.View>
 
 
       </ScrollView>
@@ -463,7 +482,9 @@ const styles = StyleSheet.create({
   },
 
   cta: { marginTop: space.xl, gap: space.md, alignItems: 'stretch' },
-  manageRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  // `alignSelf: 'center'` to match BlockedAppsPill directly above it — the
+  // row was left-aligned under a centred pill, so the two read as unrelated.
+  manageRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: space.xs },
   manageText: { color: palette.textTertiary },
   screenTime: { marginBottom: 4 },
   twinRow: { flexDirection: 'row', gap: 12, marginTop: space.lg },

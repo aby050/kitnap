@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useSharedValue } from 'react-native-reanimated';
 import { ActivityKind, PoseDetector } from './types';
 
 /**
@@ -17,7 +18,9 @@ export function usePoseDetector(
   _onRep?: () => void,
 ): PoseDetector {
   const reset = useCallback(() => {}, []);
+  const keypoints = useSharedValue<number[]>([]);
   return {
+    keypoints,
     available: false,
     loading: false,
     reps: 0,

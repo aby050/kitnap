@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.abhay.byre",
       "appleTeamId": "RG96N3U9GH",
       "supportsTablet": true,
-      "buildNumber": "3",
+      "buildNumber": "7",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
         "NSCameraUsageDescription": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone.",
@@ -46,7 +46,7 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "versionCode": 3,
+      "versionCode": 4,
       "package": "com.abhay.byre"
     },
     "web": {
@@ -60,7 +60,12 @@
           "cameraPermission": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone."
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": false
+        }
+      ],
       "expo-notifications",
       "./plugins/withUsageStatsPermission.js",
       "./plugins/withAndroidReleaseSigning.js",

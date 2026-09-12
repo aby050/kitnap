@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { palette, space } from '../design/tokens';
+import { LinearGradient } from 'expo-linear-gradient';
+import { gradients, palette, radius, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
 import { PurchasesStoreProduct } from 'react-native-purchases';
@@ -10,14 +11,32 @@ import { BAILOUT_PRODUCTS, purchaseBailouts } from '../data/purchases';
 
 /** Copy per product id. Prices are never hardcoded — they come from the
  *  store so they're right in every currency and stay right after a reprice. */
-const PACK_COPY: Record<string, { label: string; desc: string }> = {
-  bailout_key1: { label: '1 Bailout', desc: 'One extra way out of a locked timer.' },
-  bailout_key3: { label: '3 Bailouts', desc: 'Best for most people.' },
-  bailout_key5: { label: '5 Bailouts', desc: 'Rarely need to top up again.' },
+const PACK_COPY: Record<string, { label: string; desc: string; qty: number }> = {
+  bailout_key: { label: 'Single', desc: 'One way out, when you need it.', qty: 1 },
+  bailout_key3: { label: 'Three', desc: 'Covers a bad week.', qty: 3 },
+  bailout_key10: { label: 'Ten', desc: 'Stop thinking about it.', qty: 10 },
 };
+
+/** Keys drawn on a card, capped so ten doesn't become a wall of glyphs. */
+const MAX_GLYPHS = 5;
 
 /** Cheapest first, so the screen never opens on the biggest ask. */
 const PACK_ORDER = Object.keys(PACK_COPY);
+
+/** A row of key glyphs standing in for the quantity, so the size of the pack
+ *  is felt before it is read. Ten keys would be noise, so anything past the
+ *  cap draws the cap plus a count. */
+function KeyRow({ qty, dim }: { qty: number; dim?: boolean }) {
+  const shown = Math.min(qty, MAX_GLYPHS);
+  return (
+    <View style={styles.keyRow}>
+      {Array.from({ length: shown }, (_, i) => (
+        <BailoutGlyph key={i} size={18} color={dim ? palette.textTertiary : palette.accent} />
+      ))}
+      {qty > MAX_GLYPHS && <Text style={styles.keyMore}>+{qty - MAX_GLYPHS}</Text>}
+    </View>
+  );
+}
 
 export default function EmergencyTokensScreen({
   tokenBalance,
@@ -55,6 +74,77 @@ export default function EmergencyTokensScreen({
     }
   };
 
+  /* Per-key price, computed from the store's own numbers rather than written
+   * down here — a hardcoded "save 33%" becomes a lie the moment anything is
+   * repriced, and this app doesn't print numbers it hasn't measured. */
+  const unitPrices = sorted.map((p) => {
+    const qty = PACK_COPY[p.identifier]?.qty ?? 1;
+    return p.price > 0 && qty > 0 ? p.price / qty : Infinity;
+  });
+  const bestUnit = Math.min(...unitPrices, Infinity);
+
+  const renderPack = (product: PurchasesStoreProduct, index: number) => {
+    const copy = PACK_COPY[product.identifier];
+    const qty = copy?.qty ?? 1;
+    const pending = buying === product.identifier;
+    const unit = unitPrices[index];
+    // Only the genuinely cheapest per key gets the badge, and only when there
+    // is something to compare it against.
+    const isBest = sorted.length > 1 && unit === bestUnit && Number.isFinite(unit);
+    const eachLabel =
+      product.price > 0 && qty > 1
+        ? `${(product.price / qty).toFixed(2)} ${product.currencyCode} each`
+        : null;
+
+    return (
+      <Pressable
+        key={product.identifier}
+        onPress={buying ? undefined : () => buy(product)}
+        style={({ pressed }) => [
+          styles.pack,
+          isBest && styles.packBest,
+          pressed && !buying && styles.packPressed,
+        ]}
+      >
+        {isBest && (
+          <View style={styles.bestPill}>
+            <Text style={styles.bestPillText}>BEST VALUE</Text>
+          </View>
+        )}
+
+        <KeyRow qty={qty} />
+
+        <View style={styles.packHead}>
+          <Text style={styles.packQty}>{qty}</Text>
+          <Text style={styles.packLabel}>{qty === 1 ? 'Bailout' : 'Bailouts'}</Text>
+        </View>
+        <Text style={styles.packDesc}>{copy?.desc ?? product.description}</Text>
+
+        <View style={styles.packFooter}>
+          {eachLabel && <Text style={styles.packEach}>{eachLabel}</Text>}
+          <View style={styles.buyWrap}>
+            {pending ? (
+              <View style={styles.buyBtnPlain}>
+                <ActivityIndicator size="small" color="#08120F" />
+              </View>
+            ) : (
+              <LinearGradient
+                colors={isBest ? gradients.accent : ['#1C1C22', '#141419']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.buyBtn}
+              >
+                <Text style={[styles.buyText, isBest && styles.buyTextBest]}>
+                  {product.priceString}
+                </Text>
+              </LinearGradient>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -67,7 +157,11 @@ export default function EmergencyTokensScreen({
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
-          <BailoutGlyph size={64} />
+          {/* A lit disc behind the key so the balance reads as the subject of
+              the screen rather than a stat above a list. */}
+          <View style={styles.heroGlow}>
+            <BailoutGlyph size={58} />
+          </View>
           <Text style={styles.balanceValue}>{tokenBalance}</Text>
           <Text style={styles.balanceLabel}>{tokenBalance === 1 ? 'Bailout' : 'Bailouts'} available</Text>
           {/* TESTING ONLY — see onTestTopUp. Must not ship. */}
@@ -78,73 +172,64 @@ export default function EmergencyTokensScreen({
           )}
         </Animated.View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>What is this?</Text>
-          <Text style={styles.cardBody}>
-            Once a focus timer is locked, it can't be stopped for free — that's the whole point. A
-            Bailout is the way out early: use one, and the session ends immediately, no questions asked.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Everyone starts with 2, free</Text>
-          <Text style={styles.cardBody}>
-            Not a trial, not a hook — genuinely free, forever. We're not going to charge you the moment
-            you're already struggling to stick to a session. If you never buy another one, that's fine;
-            the app still works exactly as intended.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Bailouts don't expire or reset</Text>
-          <Text style={styles.cardBody}>
-            Unused Bailouts carry over indefinitely. They're only ever used when you actively choose to leave
-            a locked timer early — never automatically, never without confirming first.
-          </Text>
-        </View>
-
-        <Text style={styles.sectionLabel}>Get more</Text>
-        {sorted.length === 0
-          ? PACK_ORDER.map((id) => (
-              <View key={id} style={styles.packRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.packLabel}>{PACK_COPY[id].label}</Text>
-                  <Text style={styles.packDesc}>{PACK_COPY[id].desc}</Text>
+        {/* The store first. The explanation used to sit above it, so anyone
+            arriving to actually buy something scrolled past three essays to
+            find the packs. */}
+        <Text style={styles.sectionLabel}>GET MORE</Text>
+        {sorted.length === 0 ? (
+          <>
+            {PACK_ORDER.map((id) => (
+              <View key={id} style={[styles.pack, styles.packDisabled]}>
+                <KeyRow qty={PACK_COPY[id].qty} dim />
+                <View style={styles.packHead}>
+                  <Text style={[styles.packQty, styles.packQtyDim]}>{PACK_COPY[id].qty}</Text>
+                  <Text style={styles.packLabel}>
+                    {PACK_COPY[id].qty === 1 ? 'Bailout' : 'Bailouts'}
+                  </Text>
                 </View>
-                <View style={styles.packBuyBtn}>
-                  <Text style={styles.packBuyText}>Soon</Text>
+                <Text style={styles.packDesc}>{PACK_COPY[id].desc}</Text>
+                <View style={styles.packFooter}>
+                  <View style={styles.buyWrap}>
+                    <View style={styles.buyBtnPlain}>
+                      <Text style={styles.buyText}>Soon</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
-            ))
-          : sorted.map((product) => {
-              const copy = PACK_COPY[product.identifier];
-              const pending = buying === product.identifier;
-              return (
-                <Pressable
-                  key={product.identifier}
-                  onPress={buying ? undefined : () => buy(product)}
-                  style={styles.packRow}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.packLabel}>{copy?.label ?? product.title}</Text>
-                    <Text style={styles.packDesc}>{copy?.desc ?? product.description}</Text>
-                  </View>
-                  <View style={styles.packBuyBtn}>
-                    {pending ? (
-                      <ActivityIndicator size="small" color={palette.text} />
-                    ) : (
-                      <Text style={styles.packBuyText}>{product.priceString}</Text>
-                    )}
-                  </View>
-                </Pressable>
-              );
-            })}
-        {sorted.length === 0 && (
-          <Text style={styles.purchaseNote}>
-            Bailout packs aren't reachable right now — check your connection and try again. Your free
-            Bailouts work either way.
-          </Text>
+            ))}
+            <Text style={styles.purchaseNote}>
+              Bailout packs aren't reachable right now — check your connection and try again. Your
+              free Bailouts work either way.
+            </Text>
+          </>
+        ) : (
+          sorted.map(renderPack)
         )}
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>What a Bailout does</Text>
+          <Text style={styles.cardBody}>
+            Once a focus timer is locked it can't be stopped for free — that's the whole point. A
+            Bailout ends the session immediately, no questions asked.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Two are free, forever</Text>
+          <Text style={styles.cardBody}>
+            Not a trial and not a hook. We're not going to charge you at the exact moment you're
+            already struggling. Never buy another and the app still works as intended.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>They never expire</Text>
+          <Text style={styles.cardBody}>
+            Unused Bailouts carry over indefinitely, and are only ever spent when you choose to
+            leave a locked timer early — never automatically, never without confirming.
+          </Text>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -164,6 +249,16 @@ const styles = StyleSheet.create({
   headerTitle: { color: palette.text, fontSize: 18, fontWeight: '700' },
   scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 60 },
   hero: { alignItems: 'center', gap: 4, marginBottom: 26 },
+  heroGlow: {
+    width: 108,
+    height: 108,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+  },
   balanceValue: { color: palette.text, fontSize: 40, fontWeight: '800', marginTop: 12 },
   balanceLabel: { color: palette.textSecondary, fontSize: 14, fontWeight: '600' },
   testBtn: {
@@ -184,23 +279,68 @@ const styles = StyleSheet.create({
   },
   cardTitle: { color: palette.text, fontSize: 15.5, fontWeight: '700', marginBottom: 6 },
   cardBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 20 },
-  sectionLabel: { color: palette.textTertiary, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 16, marginBottom: 10 },
-  packRow: {
+  sectionLabel: { color: palette.textTertiary, fontSize: 11.5, fontWeight: '800', letterSpacing: 1.2, marginBottom: 12 },
+  keyRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 12 },
+  keyMore: { color: palette.textTertiary, fontSize: 12.5, fontWeight: '700', marginLeft: 2 },
+
+  pack: {
+    backgroundColor: palette.surfaceRaised,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: 18,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  // The cheapest-per-key card carries the accent edge. Nothing else on the
+  // screen does, so it reads as the recommendation without a word of pressure.
+  packBest: { borderColor: palette.accentBorder, backgroundColor: palette.accentSoft },
+  packPressed: { opacity: 0.85 },
+  packDisabled: { opacity: 0.55 },
+
+  bestPill: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+    borderRadius: 999,
+    backgroundColor: palette.accent,
+  },
+  bestPillText: { color: '#08120F', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.7 },
+
+  packHead: { flexDirection: 'row', alignItems: 'baseline', gap: 7 },
+  packQty: { color: palette.text, fontSize: 30, fontWeight: '800', letterSpacing: -1 },
+  packQtyDim: { color: palette.textSecondary },
+  packLabel: { color: palette.textSecondary, fontSize: 15, fontWeight: '600' },
+  packDesc: { color: palette.textTertiary, fontSize: 13, marginTop: 4, lineHeight: 18 },
+
+  packFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: palette.surface,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 10,
+    justifyContent: 'space-between',
+    marginTop: 16,
   },
-  packLabel: { color: palette.text, fontSize: 15, fontWeight: '700' },
-  packDesc: { color: palette.textSecondary, fontSize: 12.5, marginTop: 2 },
-  packBuyBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 14,
+  packEach: { color: palette.textQuaternary, fontSize: 11.5, fontWeight: '600' },
+  buyWrap: { marginLeft: 'auto' },
+  buyBtn: {
+    minWidth: 96,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buyBtnPlain: {
+    minWidth: 96,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: palette.glass,
   },
-  packBuyText: { color: palette.textQuaternary, fontSize: 12.5, fontWeight: '700' },
+  buyText: { color: palette.text, fontSize: 14.5, fontWeight: '800' },
+  buyTextBest: { color: '#08120F' },
   purchaseNote: { color: palette.textTertiary, fontSize: 12, lineHeight: 17, textAlign: 'center', marginTop: 8 },
 });

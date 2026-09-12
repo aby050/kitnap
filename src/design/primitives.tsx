@@ -15,12 +15,15 @@ import { SafeAreaView, Edge } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import Animated, {
+  Easing,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import Icon, { IconName } from '../ui/Icon';
+import AnimatedIcon from '../ui/AnimatedIcon';
 import { tapLight } from '../ui/haptics';
 import {
   control,
@@ -46,18 +49,36 @@ import {
  * PRESS FEEDBACK
  * One shared gesture feel: a fast dip on press-in, a spring back out. Applied
  * to everything tappable so the whole app responds with one hand.
+ *
+ * Scale alone is not enough feedback at these amounts (a Row moves 1.5%, which
+ * is almost invisible on a phone), so the same clock also drives an `overlay`
+ * opacity. A control opts into it by rendering `press.overlay` as an absolute
+ * fill; scale and highlight then arrive and leave together instead of being two
+ * separately tuned effects.
  * ───────────────────────────────────────────────────────────── */
 
 function usePress(scale: number = motion.pressScale) {
-  const s = useSharedValue(1);
-  const style = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
+  /** 0 at rest, 1 fully pressed — one value so everything stays in phase. */
+  const s = useSharedValue(0);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - s.value * (1 - scale) }],
+  }));
+  const overlay = useAnimatedStyle(() => ({ opacity: Math.max(0, s.value) }));
   return {
     style,
+    overlay,
+    /** The raw 0→1, for controls that want to ride the same press with a
+     *  second gesture of their own (see `SectionHeader`'s chevron). */
+    progress: s,
     onPressIn: () => {
-      s.value = withTiming(scale, { duration: motion.instant });
+      s.value = withTiming(1, { duration: motion.instant });
     },
+    // Under-damped on the way out, so a control settles a hair past its resting
+    // size. That tiny overshoot is what makes a press feel released rather than
+    // merely ended — and `Math.max(0, …)` above keeps the highlight from
+    // flickering back on when the spring dips below zero.
     onPressOut: () => {
-      s.value = withSpring(1, motion.spring);
+      s.value = withSpring(0, motion.spring);
     },
   };
 }
@@ -105,7 +126,7 @@ export function GlowField({
 }
 
 /**
- * The ground every screen sits on: near-black with the faintest mint lift at
+ * The ground every screen sits on: near-black with the faintest azure lift at
  * the top. `bloom` adds a centred glow behind the content for hero screens
  * (Shield, running timer); leave it off for list screens.
  */
@@ -197,7 +218,7 @@ export type ButtonVariant = 'primary' | 'accent' | 'outline' | 'ghost' | 'danger
 /**
  * Variants, and when to use which:
  *   primary  white fill — the single most likely action on a screen. One only.
- *   accent   mint fill  — reserved for *starting* a session; nothing else.
+ *   accent   azure fill — reserved for *starting* a session; nothing else.
  *   outline  hairline pill — every other affirmative action. The workhorse.
  *   ghost    text only — dismiss, skip, "not now".
  *   danger   coral — spending a token, unblocking early, deleting.
@@ -284,6 +305,17 @@ export function Button({
             style={[StyleSheet.absoluteFill, { borderRadius: radius.pill }]}
           />
         )}
+        {/* Press highlight. A filled button darkens (it has nowhere brighter to
+            go); an outline or ghost one gains a faint glass fill. */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.btnOverlay,
+            { backgroundColor: filled ? 'rgba(0,0,0,0.16)' : palette.glass },
+            press.overlay,
+          ]}
+          pointerEvents="none"
+        />
         {loading ? (
           <ActivityIndicator size="small" color={fg} />
         ) : (
@@ -367,16 +399,17 @@ export function Pill({
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
-  const fg =
+  const restFg =
     tone === 'accent'
       ? palette.accent
       : tone === 'warn'
         ? palette.warn
         : tone === 'danger'
           ? palette.danger
-          : selected
-            ? palette.text
-            : palette.textSecondary;
+          : palette.textSecondary;
+  // Only a neutral pill brightens on selection; a toned one already carries its
+  // meaning in the colour, so selection is shown by the border instead.
+  const fg = tone === 'neutral' && selected ? palette.text : restFg;
   const bd =
     tone === 'accent'
       ? palette.accentBorder
@@ -388,6 +421,8 @@ export function Pill({
             ? palette.borderStrong
             : palette.border;
 
+  const press = usePress(0.94);
+
   const body = (
     <View
       style={[
@@ -396,16 +431,41 @@ export function Pill({
         style,
       ]}
     >
-      {icon && <Icon name={icon} size={13} color={fg} strokeWidth={1.9} />}
+      {icon &&
+        (selected === undefined ? (
+          <Icon name={icon} size={13} color={fg} strokeWidth={1.9} />
+        ) : (
+          // Selectable: the glyph cross-fades to the selected colour and pops,
+          // so a chip toggling reads as a reaction rather than a repaint.
+          <AnimatedIcon
+            name={icon}
+            size={13}
+            color={restFg}
+            activeColor={fg}
+            active={selected}
+            pop={selected}
+            strokeWidth={1.9}
+          />
+        ))}
       <Text style={[type.caption, { color: fg }]}>{label}</Text>
     </View>
   );
 
   if (!onPress) return body;
   return (
-    <Pressable onPress={() => { tapLight(); onPress(); }} hitSlop={6}>
-      {body}
-    </Pressable>
+    <Animated.View style={press.style}>
+      <Pressable
+        onPress={() => {
+          tapLight();
+          onPress();
+        }}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        hitSlop={6}
+      >
+        {body}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -468,13 +528,35 @@ export function SectionHeader({
         <Text style={type.overline}>{title}</Text>
         {!!hint && <Text style={[type.sub, styles.sectionHint]}>{hint}</Text>}
       </View>
-      {!!actionLabel && !!onAction && (
-        <Pressable onPress={() => { tapLight(); onAction(); }} hitSlop={8} style={styles.sectionAction}>
-          <Text style={[type.caption, { color: palette.accent }]}>{actionLabel}</Text>
-          <Icon name="chevronRight" size={13} color={palette.accent} strokeWidth={2} />
-        </Pressable>
-      )}
+      {!!actionLabel && !!onAction && <SectionAction label={actionLabel} onPress={onAction} />}
     </View>
+  );
+}
+
+/** The optional "See all" affordance on a {@link SectionHeader}. Split out so it
+ *  can own the hooks a plain conditional branch can't. The chevron slides on the
+ *  same press value that scales the label, so the arrow leads the tap. */
+function SectionAction({ label, onPress }: { label: string; onPress: () => void }) {
+  const press = usePress(0.94);
+  const nudge = useAnimatedStyle(() => ({ transform: [{ translateX: press.progress.value * 3 }] }));
+  return (
+    <Animated.View style={press.style}>
+      <Pressable
+        onPress={() => {
+          tapLight();
+          onPress();
+        }}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        hitSlop={8}
+        style={styles.sectionAction}
+      >
+        <Text style={[type.caption, { color: palette.accent }]}>{label}</Text>
+        <Animated.View style={nudge}>
+          <Icon name="chevronRight" size={13} color={palette.accent} strokeWidth={2} />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -542,6 +624,11 @@ export function Row({
         onPressOut={press.onPressOut}
       >
         {inner}
+        {/* A row moves too little for scale alone to register as a press. */}
+        <Animated.View
+          style={[StyleSheet.absoluteFill, styles.rowOverlay, press.overlay]}
+          pointerEvents="none"
+        />
       </Pressable>
     </Animated.View>
   );
@@ -617,7 +704,10 @@ export function Editorial({
   );
 }
 
-/** Circular progress. Children render centred inside — usually a Stat. */
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/** Circular progress. Children render centred inside — usually a Stat.
+ *  Progress changes animate smoothly via a spring so the ring never jumps. */
 export function Ring({
   progress,
   size = 200,
@@ -637,11 +727,22 @@ export function Ring({
   const r = (size - thickness) / 2;
   const circ = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, progress));
+
+  // Animate the dash offset so progress changes glide rather than jump.
+  const animP = useSharedValue(p);
+  React.useEffect(() => {
+    animP.value = withTiming(p, { duration: motion.hero, easing: Easing.out(Easing.cubic) });
+  }, [p]);
+
+  const animProps = useAnimatedProps(() => ({
+    strokeDashoffset: circ * (1 - animP.value),
+  }));
+
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={thickness} fill="none" />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={r}
@@ -649,7 +750,7 @@ export function Ring({
           strokeWidth={thickness}
           fill="none"
           strokeDasharray={`${circ} ${circ}`}
-          strokeDashoffset={circ * (1 - p)}
+          animatedProps={animProps}
           strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
@@ -659,34 +760,57 @@ export function Ring({
   );
 }
 
-/** Horizontal bar. Used for daily usage and any single-value comparison. */
+/**
+ * Horizontal bar. Used for daily usage and any single-value comparison.
+ *
+ * The fill grows into place and re-animates whenever `progress` changes, so a
+ * usage bar updating mid-session reads as movement rather than a jump — the
+ * same treatment `Ring` gets.
+ *
+ * This is the one place in the design system that animates a layout property:
+ * `scaleX` on a full-width bar would stretch the right-hand rounded cap into an
+ * oval. It's a single short animation on a small view, so the cost is a
+ * non-issue; nothing else should copy the pattern.
+ */
 export function Meter({
   progress,
   color = palette.accent,
   height = 6,
+  animate = true,
   style,
 }: {
   progress: number;
   color?: string;
   height?: number;
+  animate?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const p = Math.max(0, Math.min(1, progress));
+  const t = useSharedValue(animate ? 0 : p);
+
+  React.useEffect(() => {
+    if (!animate) {
+      t.value = p;
+      return;
+    }
+    t.value = withTiming(p, { duration: motion.hero, easing: Easing.out(Easing.cubic) });
+  }, [p, animate, t]);
+
+  const fill = useAnimatedStyle(() => ({ width: `${t.value * 100}%` }));
+
   return (
     <View style={[styles.meterTrack, { height, borderRadius: height / 2 }, style]}>
-      <View
-        style={{
-          width: `${p * 100}%`,
-          height: '100%',
-          borderRadius: height / 2,
-          backgroundColor: color,
-        }}
+      <Animated.View
+        style={[
+          { height: '100%', borderRadius: height / 2, backgroundColor: color },
+          fill,
+        ]}
       />
     </View>
   );
 }
 
-/** Tab switcher. Sized so it lines up with a Button of the same width. */
+/** Tab switcher with a spring-animated sliding pill indicator. */
 export function SegmentedControl<T extends string>({
   options,
   value,
@@ -698,8 +822,22 @@ export function SegmentedControl<T extends string>({
   onChange: (v: T) => void;
   style?: StyleProp<ViewStyle>;
 }) {
+  const idx = options.findIndex((o) => o.value === value);
+  const pillX = useSharedValue(idx);
+
+  React.useEffect(() => {
+    pillX.value = withSpring(idx, { damping: 22, stiffness: 280, mass: 0.8 });
+  }, [idx]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pillX.value * (100 / options.length) + '%' as unknown as number }],
+    width: `${100 / options.length}%`,
+  }));
+
   return (
     <View style={[styles.segment, style]}>
+      {/* Sliding background pill */}
+      <Animated.View style={[styles.segPill, pillStyle]} pointerEvents="none" />
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -711,7 +849,7 @@ export function SegmentedControl<T extends string>({
               if (!active) tapLight();
               onChange(o.value);
             }}
-            style={[styles.segItem, active && styles.segItemActive]}
+            style={styles.segItem}
           >
             <Text
               style={[type.caption, active ? styles.segTextActive : undefined]}
@@ -746,7 +884,9 @@ export function EmptyState({
   return (
     <View style={styles.empty}>
       <View style={styles.emptyIcon}>
-        <Icon name={icon} size={22} color={palette.textTertiary} />
+        {/* Presents itself rather than being already-there: an empty screen is
+            the one place a little motion is reassuring rather than noisy. */}
+        <AnimatedIcon name={icon} size={22} color={palette.textTertiary} delay={90} />
       </View>
       <Text style={[type.title3, styles.emptyTitle]}>{title}</Text>
       <Text style={[type.callout, styles.emptyBody]}>{body}</Text>
@@ -784,6 +924,7 @@ const styles = StyleSheet.create({
   btnCompact: { alignSelf: 'center' },
   btnFillWidth: { width: '100%' },
   btnLabel: { includeFontPadding: false, textAlignVertical: 'center' },
+  btnOverlay: { borderRadius: radius.pill },
   btnDisabled: { opacity: 0.38 },
   field: {
     ...fieldStyle,
@@ -853,6 +994,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowSub: { marginTop: space.xxs },
+  rowOverlay: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.base },
   rowValue: { maxWidth: 130, textAlign: 'right' },
 
   statLabel: { marginBottom: space.sm },
@@ -868,6 +1010,16 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     borderRadius: radius.pill,
     padding: 3,
+    position: 'relative',
+  },
+  segPill: {
+    position: 'absolute',
+    top: 3,
+    bottom: 3,
+    left: 3,
+    borderRadius: radius.pill,
+    backgroundColor: palette.surfaceHigh,
+    zIndex: 0,
   },
   segItem: {
     flex: 1,
@@ -876,8 +1028,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.pill,
     paddingHorizontal: space.sm,
+    zIndex: 1,
   },
-  segItemActive: { backgroundColor: palette.surfaceHigh },
   segTextActive: { color: palette.text },
 
   empty: { alignItems: 'center', gap: space.md, paddingVertical: space.huge },

@@ -21,6 +21,14 @@ const BANDS: Record<ActivityKind, { min: number; max: number; base: number }> = 
   squats: { min: 6, max: 20, base: 10 },
   'jumping jacks': { min: 6, max: 20, base: 12 },
   'push-ups': { min: 4, max: 15, base: 8 },
+  // Easy movements, so the counts run higher — the ask is still a real minute
+  // of moving, just a far more approachable one.
+  marching: { min: 10, max: 40, base: 20 },
+  // Arm raises are the least demanding movement in the set, so the count is
+  // the thing that makes it a real minute of effort rather than a formality.
+  'arm raises': { min: 40, max: 70, base: 50 },
+  'side raises': { min: 30, max: 60, base: 40 },
+  'toe touches': { min: 10, max: 30, base: 15 },
 };
 
 /** How far back the history signal looks. */

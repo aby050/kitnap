@@ -4,6 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingRow } from '../components/ui';
 import { palette, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
+import { DEMO_DAYS } from '../data/demoData';
+
+/** Derived rather than written out, so the copy can't drift from the seed the
+ *  way it did when DEMO_DAYS went from 60 to 183. */
+const DEMO_SPAN = `${Math.round(DEMO_DAYS / 30.4)} months`;
 
 function Group({ children }: { children: React.ReactNode }) {
   return <View style={styles.group}>{children}</View>;
@@ -125,10 +130,20 @@ export default function SettingsScreen({
           />
         </Group>
 
-        {/* Guardian is hidden until there's a way to actually reach the
-            friend holding the code — it needs an email/SMS service Byre
-            doesn't have, so shipping the row would promise a handoff that
-            never happens. The screen itself is left intact behind it. */}
+        {onOpenGuardian && (
+          <>
+            <GroupLabel>Accountability</GroupLabel>
+            <Group>
+              <SettingRow
+                icon={<RowIcon name="shield" />}
+                title="Guardian"
+                subtitle="A friend holds the code to loosen Strict mode"
+                onPress={onOpenGuardian}
+                last
+              />
+            </Group>
+          </>
+        )}
 
         <GroupLabel>Account</GroupLabel>
         <Group>
@@ -167,7 +182,7 @@ export default function SettingsScreen({
               <SettingRow
                 icon={<RowIcon name="chart" />}
                 title="Load demo data"
-                subtitle="Fill 2 months of history to preview populated screens"
+                subtitle={`Fill ${DEMO_SPAN} of history to preview populated screens`}
                 onPress={onLoadDemoData}
               />
               <SettingRow

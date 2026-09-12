@@ -11,6 +11,7 @@ import {
 } from '../data/iosScreenTime';
 import { palette, radius } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
+import HoldButton from './HoldButton';
 
 let DeviceActivitySelectionSheetViewPersisted: any = null;
 if (Platform.OS === 'ios') {
@@ -41,6 +42,42 @@ const LIST_ICON = 61;
 /** A SwiftUI Label row: LIST_ICON plus padding. */
 const ROW = LIST_ICON + 24;
 
+/**
+ * Every way to weaken the block, and what it costs to use one.
+ *
+ * These three actions used to be single unconfirmed taps — "Clear all" lifted
+ * every restriction instantly, and the picker (the only route to *removing* an
+ * app) opened on one tap. That made the strictest thing in the app the easiest
+ * thing to undo: at the moment of craving, Settings was a faster path than the
+ * challenge it exists to make you do.
+ *
+ * They are now holds, not taps, following the same principle the intensity dial
+ * already used — tightening is instant, loosening has to survive a moment of
+ * intent. The clear is the heaviest because it is the most complete undo.
+ */
+type Loosening = 'clear' | 'reset' | 'edit';
+
+const LOOSENING: Record<Loosening, { title: string; body: string; label: string; holdMs: number }> = {
+  clear: {
+    title: 'Unblock everything?',
+    body: 'Every app you picked opens normally again, immediately. Nothing is kept — you would choose them all over from scratch.',
+    label: 'Hold to unblock everything',
+    holdMs: 2600,
+  },
+  reset: {
+    title: 'Clear the leftover block?',
+    body: 'This releases apps still blocked from a previous install. If you meant to keep them blocked, pick them again afterwards.',
+    label: 'Hold to clear',
+    holdMs: 1800,
+  },
+  edit: {
+    title: 'Change what is blocked?',
+    body: "Apple's picker lets you remove apps as easily as add them, and it never tells Byre which you touched. Adding is free; this hold is the price of being able to take one off.",
+    label: 'Hold to open the picker',
+    holdMs: 1400,
+  },
+};
+
 export default function BlockedSelection({
   compact,
   onChanged,
@@ -50,6 +87,7 @@ export default function BlockedSelection({
   onChanged?: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [confirming, setConfirming] = useState<Loosening | null>(null);
   const [counts, setCounts] = useState(() => getSelectionCounts());
   const [revision, setRevision] = useState(0);
 
@@ -58,6 +96,21 @@ export default function BlockedSelection({
     setRevision((r) => r + 1);
     onChanged?.();
   }, [onChanged]);
+
+  /** Runs the loosening the user just held for. */
+  const commit = useCallback(
+    (which: Loosening) => {
+      setConfirming(null);
+      if (which === 'clear') clearBlockedSelection();
+      if (which === 'reset') resetAllBlocks();
+      if (which === 'edit') {
+        setPickerOpen(true);
+        return;
+      }
+      refresh();
+    },
+    [refresh],
+  );
 
   // The native side publishes the saved selection ~100ms after the picker
   // mounts, and again on every tap inside it. Closing the sheet here (as this
@@ -161,7 +214,7 @@ export default function BlockedSelection({
       {!compact && (
         <>
           <Pressable
-            onPress={() => setPickerOpen(true)}
+            onPress={() => (empty ? setPickerOpen(true) : setConfirming('edit'))}
             style={({ pressed }) => [styles.edit, pressed && styles.editOn]}
           >
             <Icon name="shield" size={16} color={palette.accent} />
@@ -172,16 +225,34 @@ export default function BlockedSelection({
             picked — the icons above are drawn by iOS itself.
           </Text>
           {!empty && (
-            <Pressable onPress={() => { clearBlockedSelection(); refresh(); }} hitSlop={8}>
+            <Pressable onPress={() => setConfirming('clear')} hitSlop={8}>
               <Text style={styles.clearText}>Clear all</Text>
             </Pressable>
           )}
           {orphanedShield && (
-            <Pressable onPress={() => { resetAllBlocks(); refresh(); }} hitSlop={8}>
+            <Pressable onPress={() => setConfirming('reset')} hitSlop={8}>
               <Text style={styles.clearText}>Reset stuck blocks</Text>
             </Pressable>
           )}
         </>
+      )}
+
+      {confirming && (
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>{LOOSENING[confirming].title}</Text>
+            <Text style={styles.confirmBody}>{LOOSENING[confirming].body}</Text>
+            <HoldButton
+              label={LOOSENING[confirming].label}
+              holdMs={LOOSENING[confirming].holdMs}
+              onComplete={() => commit(confirming)}
+              style={styles.confirmHold}
+            />
+            <Pressable onPress={() => setConfirming(null)} hitSlop={8}>
+              <Text style={styles.confirmCancel}>Leave it as it is</Text>
+            </Pressable>
+          </View>
+        </View>
       )}
 
       {pickerOpen && DeviceActivitySelectionSheetViewPersisted && (
@@ -236,6 +307,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  // Covers the card it sits in rather than the screen: the confirm belongs to
+  // this control, and a full-screen scrim from a component used inside three
+  // different scrollviews would sit under their headers.
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    borderRadius: radius.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  confirmBox: { alignSelf: 'stretch', gap: 12 },
+  confirmTitle: { color: palette.text, fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  confirmBody: {
+    color: palette.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
+  confirmHold: { alignSelf: 'stretch', marginTop: 4 },
+  confirmCancel: {
+    color: palette.textTertiary,
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 4,
   },
   orphanNote: {
     color: palette.textSecondary,

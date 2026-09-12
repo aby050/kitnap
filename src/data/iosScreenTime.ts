@@ -224,7 +224,7 @@ export function homeLineForToday(personalLine?: string): string {
   return personalLine || momentLine() || shieldLineForToday().subtitle;
 }
 
-const MINT = { red: 111, green: 227, blue: 169, alpha: 1 };
+const BLUE = { red: 76, green: 158, blue: 255, alpha: 1 };
 const NEAR_BLACK = { red: 8, green: 10, blue: 12, alpha: 1 };
 const WHITE = { red: 255, green: 255, blue: 255, alpha: 1 };
 const DIM = { red: 255, green: 255, blue: 255, alpha: 0.62 };
@@ -284,10 +284,10 @@ export function configureShield(_title?: string, personalLine?: string) {
       // the background colour, which is what made the buttons unreadable.
       backgroundBlurStyle: 1,
       iconSystemName: line.icon,
-      iconTint: MINT,
+      iconTint: BLUE,
       primaryButtonLabel: 'Let me in',
-      primaryButtonLabelColor: { red: 4, green: 18, blue: 12, alpha: 1 },
-      primaryButtonBackgroundColor: MINT,
+      primaryButtonLabelColor: { red: 4, green: 14, blue: 28, alpha: 1 },
+      primaryButtonBackgroundColor: BLUE,
       secondaryButtonLabel: 'Fine, later',
       // The secondary label sits on the blur itself, so it needs real
       // contrast rather than the dimmed treatment used on the subtitle.
@@ -337,6 +337,13 @@ export function configureShield(_title?: string, personalLine?: string) {
   );
 }
 
+/**
+ * Apple's floor for both a DeviceActivitySchedule interval and a
+ * DeviceActivityEvent threshold. Anything shorter makes startMonitoring throw,
+ * which is how a three-minute grant ended up with no OS-level expiry at all.
+ */
+const MIN_OS_WINDOW_MINUTES = 15;
+
 /** Starts monitoring for exactly this grant window, with a usage threshold
  *  that fires blockSelection once someone actually uses the granted apps for
  *  `grantMinutes`.
@@ -347,49 +354,94 @@ export function configureShield(_title?: string, personalLine?: string) {
  *  (re)started, so a second unlock the same day only needed the *remaining*
  *  minutes to hit the threshold — it looked like it ended early. The
  *  schedule below is scoped to just this grant (now → now+grantMinutes,
- *  non-repeating), so each unlock always gets a genuinely fresh window. */
-export function startGrantWindow(grantMinutes: number) {
+ *  non-repeating), so each unlock always gets a genuinely fresh window. */export function startGrantWindow(grantMinutes: number) {
   if (!native) return;
   // DeviceActivityEvent needs the actual selection token, not the
   // persisted-id shorthand that blockSelection/unblockSelection accept.
   const token = native.getFamilyActivitySelectionId(SELECTION_ID);
   if (!token) return;
+
+  const reblock = [{ type: 'blockSelection', familyActivitySelectionId: SELECTION_ID }];
+
+  // Two callbacks, not one. `eventDidReachThreshold` only fires if the granted
+  // apps are used for the whole window; `intervalDidEnd` fires when the window
+  // simply runs out. Registering only the first meant someone who opened a
+  // blocked app for a minute and then set the phone down was never re-blocked
+  // by the OS at all — the threshold never came, so neither did the block.
   native.configureActions({
     activityName: DAILY_ACTIVITY_NAME,
     callbackName: 'eventDidReachThreshold',
     eventName: GRANT_EVENT_NAME,
-    actions: [{ type: 'blockSelection', familyActivitySelectionId: SELECTION_ID }],
+    actions: reblock,
   });
+  native.configureActions({
+    activityName: DAILY_ACTIVITY_NAME,
+    callbackName: 'intervalDidEnd',
+    actions: reblock,
+  });
+
+  // Deliberately longer than the grant the user is shown: fifteen minutes is
+  // Apple's floor and the grant is three, so this is a *backstop*, not the
+  // primary expiry. `startGrantClock` and `enforcePersistentBlock()` re-block at
+  // the real grant length whenever Byre is alive. This exists so that force-
+  // quitting Byre the moment the door opens costs fifteen minutes instead of
+  // buying unlimited access, which is what it bought before.
+  const windowMinutes = Math.max(grantMinutes, MIN_OS_WINDOW_MINUTES);
   const start = new Date();
-  const end = new Date(start.getTime() + grantMinutes * 60_000);
-  native.startMonitoring(
-    DAILY_ACTIVITY_NAME,
-    {
-      intervalStart: { hour: start.getHours(), minute: start.getMinutes() },
-      intervalEnd: { hour: end.getHours(), minute: end.getMinutes() },
-      repeats: false,
-    },
-    [
+  const end = new Date(start.getTime() + windowMinutes * 60_000);
+
+  // A window running past midnight comes back with intervalEnd < intervalStart,
+  // which is a schedule that never ends. Clamp to the last minute of the day,
+  // and skip the backstop entirely if what's left of today is under Apple's
+  // floor — the JS clock and foreground enforcement still cover that window, and
+  // a schedule that never ends would be worse than none.
+  const crossesMidnight = end.getDate() !== start.getDate();
+  const startMinuteOfDay = start.getHours() * 60 + start.getMinutes();
+  if (crossesMidnight && 23 * 60 + 59 - startMinuteOfDay < MIN_OS_WINDOW_MINUTES) return;
+  const intervalEnd = crossesMidnight
+    ? { hour: 23, minute: 59 }
+    : { hour: end.getHours(), minute: end.getMinutes() };
+
+  // startMonitoring throws on a schedule Apple rejects. There was no catch
+  // anywhere in this chain and it ran *after* unblockSelectedApps(), so a throw
+  // left the apps open with no re-block scheduled — precisely the state this
+  // function exists to prevent. Callers now unblock last; a failure here costs
+  // the backstop, not the block.
+  try {
+    native.startMonitoring(
+      DAILY_ACTIVITY_NAME,
       {
-        familyActivitySelection: token,
-        threshold: { minute: grantMinutes },
-        eventName: GRANT_EVENT_NAME,
+        intervalStart: { hour: start.getHours(), minute: start.getMinutes() },
+        intervalEnd,
+        repeats: false,
       },
-    ],
-  );
+      [
+        {
+          familyActivitySelection: token,
+          threshold: { minute: windowMinutes },
+          eventName: GRANT_EVENT_NAME,
+        },
+      ],
+    );
+  } catch (e) {
+    console.warn('[byre] grant backstop not armed', e);
+  }
 }
 
-/** Full grant flow: unblock now, and arm the native threshold so it
- *  re-blocks itself after `grantMinutes` of actual use — no JS timer
- *  involved, so it still works if the app gets backgrounded or killed. */
+/** Full grant flow: arm the re-block, then open the door.
+ *
+ *  Order is the whole point. The clock is recorded and the OS backstop armed
+ *  *before* unblockSelectedApps(), so there is no window in which the apps are
+ *  open and nothing is scheduled to close them again. The old order unblocked
+ *  first, and since startMonitoring throws on a sub-fifteen-minute schedule,
+ *  every single grant took that throw *after* the door was already open. */
 export function grantTemporaryAccess(grantMinutes: number) {
-  unblockSelectedApps();
   // Recorded before the window is armed so a crash between the two still
   // leaves the app knowing the door is open and how much is left. The clock
-  // The clock starts here, not when the user leaves — three minutes means
-  // three minutes.
+  // starts here, not when the user leaves — three minutes means three minutes.
   startGrantClock(grantMinutes * 60_000);
   startGrantWindow(grantMinutes);
+  unblockSelectedApps();
 }
 
 /* ------------------------------------------------------------------ *

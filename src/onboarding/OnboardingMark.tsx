@@ -1,18 +1,35 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import ByreOrb from '../components/ByreOrb';
 
 /** Header mark — small enough to sit above copy and the Screen Time card
- *  without covering them. Kept constant so it never resizes across screens. */
+ *  without covering them. Constant across every screen that shares a layout
+ *  with body copy, so it never resizes underneath the reader. */
 export const ONBOARDING_MARK_SIZE = 52;
+
+/** The education slides carry three short lines and nothing else, so the
+ *  mark is the only thing with room to grow into — it reads as the brand
+ *  moment there rather than as a header. */
+export const ONBOARDING_MARK_SIZE_LARGE = 240;
+
+/** How far the large mark drops below the safe area. The education slides
+ *  carry three short lines and then a lot of nothing; the mark moves down
+ *  into that gap rather than hugging the status bar with a hole beneath it. */
+const LARGE_DROP = 56;
 
 /** Breathing room above the mark, inside the safe area. */
 const MARK_OFFSET = 12;
 
 /** In-flow spacer matching the overlay so titles and questions don't sit
  *  under it. Overlay + slot share this number so the mark never jumps. */
-export const ONBOARDING_MARK_SLOT = MARK_OFFSET + ONBOARDING_MARK_SIZE + 20;
+export const markSlotHeight = (large?: boolean) =>
+  MARK_OFFSET +
+  (large ? LARGE_DROP + ONBOARDING_MARK_SIZE_LARGE : ONBOARDING_MARK_SIZE) +
+  20;
+
+export const ONBOARDING_MARK_SLOT = markSlotHeight(false);
 
 /**
  * The Byre mark, lifted out of individual screens so it can stay mounted
@@ -21,20 +38,35 @@ export const ONBOARDING_MARK_SLOT = MARK_OFFSET + ONBOARDING_MARK_SIZE + 20;
  * the actual mark once. `hidden` only fades it — never unmounts — so a
  * permission card can cover the slot without reloading the mark afterwards.
  */
-export default function OnboardingMark({ hidden }: { hidden?: boolean }) {
+export default function OnboardingMark({ hidden, large }: { hidden?: boolean; large?: boolean }) {
   const insets = useSafeAreaInsets();
+  // The orb is always drawn at its largest and scaled down, so growing and
+  // shrinking never remounts it — the whole point of hoisting it out of the
+  // screens was that it survives the education → questions handoff. Scaling
+  // from the top edge keeps it pinned under the safe area while the slot
+  // below it changes height.
+  const scaleStyle = useAnimatedStyle(() => ({
+    // translateY before scale: the drop is in real points, and scaling after
+    // it keeps the small state pinned where it has always been.
+    transform: [
+      { translateY: withTiming(large ? LARGE_DROP : 0, { duration: 420 }) },
+      { scale: withTiming(large ? 1 : ONBOARDING_MARK_SIZE / ONBOARDING_MARK_SIZE_LARGE, { duration: 420 }) },
+    ],
+  }));
   return (
     <View
       pointerEvents="none"
       style={[styles.overlay, { top: insets.top + MARK_OFFSET, opacity: hidden ? 0 : 1 }]}
     >
-      <ByreOrb size={ONBOARDING_MARK_SIZE} awake />
+      <Animated.View style={[styles.orbBox, scaleStyle]}>
+        <ByreOrb size={ONBOARDING_MARK_SIZE_LARGE} awake />
+      </Animated.View>
     </View>
   );
 }
 
-export function OnboardingMarkSlot() {
-  return <View style={styles.slot} />;
+export function OnboardingMarkSlot({ large }: { large?: boolean }) {
+  return <View style={{ height: markSlotHeight(large) }} />;
 }
 
 const styles = StyleSheet.create({
@@ -45,7 +77,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 8,
   },
-  slot: {
-    height: ONBOARDING_MARK_SLOT,
+  orbBox: {
+    width: ONBOARDING_MARK_SIZE_LARGE,
+    height: ONBOARDING_MARK_SIZE_LARGE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transformOrigin: 'top center',
   },
 });

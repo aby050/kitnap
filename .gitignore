@@ -50,3 +50,4 @@ expo*.log
 
 # Local secrets
 .env
+*.ipa

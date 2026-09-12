@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { useCameraPermissions } from 'expo-camera';
+import { useKeepAwake } from 'expo-keep-awake';
 import { GateQuestion } from '../data/gateQuestions';
 import { Button, Meter, Ring, Stat } from '../design/primitives';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
-import { tapLight, tapMedium } from '../ui/haptics';
+import { tapLight, tapMedium, warning } from '../ui/haptics';
 import BreathingExercise from './BreathingExercise';
 import PosePreview from './activity/PosePreview';
+import PoseDots from './activity/PoseDots';
 import { usePoseDetector } from './activity/usePoseDetector';
 import { useCameraMotion } from './activity/useCameraMotion';
 import { TapState, createTapState, feedTap, tapHint, tapSetSatisfied } from './activity/tapGuard';
@@ -46,7 +48,22 @@ import {
  */
 const DETECTOR_DEADLINE_MS = 6000;
 
+/**
+ * How long the whole set gets.
+ *
+ * A cap rather than a stopwatch: the point is that the unlock costs a real,
+ * bounded effort, not that it becomes a race. Running out doesn't strand
+ * anyone — the count resets and the set can be started again, and the Bailout
+ * and Emergency routes are untouched throughout, exactly as on every other
+ * blocking screen.
+ */
+const SET_TIME_MS = 3 * 60 * 1000;
+
 type Props = {  q: Extract<GateQuestion, { kind: 'activity' }>;
+  /** Live rep target for a given movement. Needed because the movement can be
+   *  swapped mid-challenge, and 50 arm raises is not 10 squats — before this
+   *  the target stayed on whatever was first picked. */
+  repsFor?: (activity: ActivityKind) => number;
   onDone: () => void;
   /** Reports the attempt for the adaptive difficulty model. Fires once, on
    *  completion or on falling back to breathing — never on a token skip, which
@@ -54,17 +71,26 @@ type Props = {  q: Extract<GateQuestion, { kind: 'activity' }>;
   onComplete?: (session: ActivitySessionResult) => void;
 };
 
-export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
+export default function ActivityChallenge({ q, repsFor, onDone, onComplete }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [fellBackToBreathing, setFellBackToBreathing] = useState(false);
 
   // Swappable: a push-up is impossible in a lift, on a bad shoulder, or in a
   // shirt you can't get on the floor in. Refusing to bend just means the
   // Bailout gets spent instead, which teaches nothing.
+  /* Doing push-ups is not touching the screen, so iOS counts the whole
+   * challenge as idle and dims, then locks — mid-set, with the camera up.
+   * The user's hands are on the floor; they cannot tap to keep it alive.
+   * Held only while this screen is mounted, so it never leaks into the rest
+   * of the app. */
+  useKeepAwake('byre-activity-challenge');
+
   const [activity, setActivity] = useState<ActivityKind>(
     isActivityKind(q.activity) ? q.activity : 'squats',
   );
-  const target = Math.max(1, q.reps);
+  // Follows the movement, not the question: `q.reps` is only the cold-start
+  // default for whatever was picked first.
+  const target = Math.max(1, repsFor?.(activity) ?? q.reps);
 
   const swapActivity = () => {
     tapLight();
@@ -137,6 +163,55 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
     if (counted) tapMedium();
     setTapView({ reps: tapRef.current.reps, hint: tapHint(tapRef.current, target, now) });
   };
+
+  /* ── the set clock ───────────────────────────────────────────────── */
+  /**
+   * Three minutes to finish, then the count starts over.
+   *
+   * Restarting rather than failing is deliberate: a hard fail would leave the
+   * only ways out a Bailout or Emergency, which turns a missed clock into a
+   * charge. Restarting keeps the cost in effort, where this feature's whole
+   * argument is that it belongs.
+   */
+  const [deadline, setDeadline] = useState(() => Date.now() + SET_TIME_MS);
+  const [msLeft, setMsLeft] = useState(SET_TIME_MS);
+  const [expiredCount, setExpiredCount] = useState(0);
+
+  const restartSet = useCallback(() => {
+    tapRef.current = createTapState(activity);
+    setTapView({ reps: 0, hint: 'Tap once per rep as you go.' });
+    setManualLatched(false);
+    pose.reset();
+    motion.reset();
+    setDeadline(Date.now() + SET_TIME_MS);
+    setMsLeft(SET_TIME_MS);
+  }, [activity, pose, motion]);
+
+  // Swapping the movement is starting a different set, so it gets its own
+  // clock rather than inheriting whatever was left of the last one.
+  useEffect(() => {
+    setDeadline(Date.now() + SET_TIME_MS);
+    setMsLeft(SET_TIME_MS);
+  }, [activity]);
+
+  useEffect(() => {
+    if (finished.current) return;
+    const id = setInterval(() => {
+      const left = deadline - Date.now();
+      if (left <= 0) {
+        setExpiredCount((n) => n + 1);
+        warning();
+        restartSet();
+        return;
+      }
+      setMsLeft(left);
+    }, 250);
+    return () => clearInterval(id);
+  }, [deadline, restartSet]);
+
+  const clock = `${Math.floor(Math.max(0, msLeft) / 60000)}:${String(
+    Math.floor((Math.max(0, msLeft) % 60000) / 1000),
+  ).padStart(2, '0')}`;
 
   // See `manualLatched`. Deliberately keyed on counted taps, not on the tier
   // itself: latching the moment we drop would strand a slow-warming camera on
@@ -263,6 +338,10 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
       <View style={styles.stage}>
         <View style={styles.cameraWrap}>
           <PosePreview frameHandler={pose.frameHandler} deciding={pose.loading} />
+          {/* Only while the pose tier is genuinely running. On the motion or
+              tap tiers there are no joints to draw, and faking a skeleton
+              there would be claiming the camera sees something it doesn't. */}
+          {tier === 'pose' && pose.available && <PoseDots keypoints={pose.keypoints} />}
           {coachVisible && (
             <View style={styles.coach} pointerEvents="none">
               <Text style={styles.coachHint}>{hint}</Text>
@@ -274,6 +353,10 @@ export default function ActivityChallenge({ q, onDone, onComplete }: Props) {
             <Ring progress={target > 0 ? reps / target : 0} size={96} thickness={5} color={palette.accent}>
               <Stat value={`${reps}`} unit={`/${target}`} align="center" compact />
             </Ring>
+            <Text style={[styles.clock, msLeft <= 30000 && styles.clockLow]}>{clock}</Text>
+            {expiredCount > 0 && (
+              <Text style={styles.clockNote}>Time ran out — count restarted</Text>
+            )}
           </View>
         </View>
       </View>
@@ -318,6 +401,10 @@ const SINGULAR: Record<ActivityKind, string> = {
   squats: 'squat',
   'jumping jacks': 'jack',
   'push-ups': 'push-up',
+  marching: 'march',
+  'arm raises': 'raise',
+  'side raises': 'raise',
+  'toe touches': 'touch',
 };
 
 const styles = StyleSheet.create({
@@ -347,7 +434,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
   },
-  repOverlay: { position: 'absolute', right: 14, top: 14 },
+  repOverlay: { position: 'absolute', right: 14, top: 14, alignItems: 'center' },
+  clock: {
+    marginTop: 8,
+    color: palette.textSecondary,
+    fontSize: 15,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  // The last thirty seconds are the only ones worth drawing attention to.
+  clockLow: { color: palette.accent },
+  clockNote: {
+    marginTop: 4,
+    maxWidth: 120,
+    textAlign: 'center',
+    color: palette.textTertiary,
+    fontSize: 11,
+    lineHeight: 15,
+  },
   coach: {
     position: 'absolute',
     left: 14,

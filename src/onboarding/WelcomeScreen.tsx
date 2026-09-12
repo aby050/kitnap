@@ -16,7 +16,7 @@ import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const { width, height } = Dimensions.get('window');
-const CONFETTI_COLORS = ['#f5c542', '#e07a5f', '#8fb8ff', '#6FE3A9', '#ff7ab8', '#7dd8ff', '#d9f77e'];
+const CONFETTI_COLORS = ['#f5c542', '#e07a5f', '#8fb8ff', '#4C9EFF', '#ff7ab8', '#7dd8ff', '#d9f77e'];
 
 function ConfettiPiece({ index }: { index: number }) {
   const fall = useSharedValue(0);

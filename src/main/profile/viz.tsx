@@ -20,8 +20,8 @@ import Medal from './Medal';
 import { AchievementDef } from '../../data/progress';
 
 /**
- * The Profile visual language — an "Opal"-style focus dashboard rendered
- * entirely in vector so it ships with the app (no bitmaps, no emoji).
+ * The Profile visual language — Byre's own azure/glass focus dashboard,
+ * rendered entirely in vector so it ships with the app (no bitmaps, no emoji).
  *
  *  · GemHero      the iridescent focus crystal + glow bloom (screen centrepiece)
  *  · IntensityBars two-tone stacked bar chart (mint = held, coral = slip)
@@ -62,7 +62,7 @@ export function GemHero({ size = 208, glow = palette.accent }: { size?: number; 
           {/* Play-of-colour: mint → teal → blue → violet → gold, the opal spectrum. */}
           <SvgGradient id={`${g}-body`} x1="0.12" y1="0.05" x2="0.9" y2="0.98">
             <Stop offset="0" stopColor="#D6FCEA" />
-            <Stop offset="0.24" stopColor="#7CF5B0" />
+            <Stop offset="0.24" stopColor="#8FC4FF" />
             <Stop offset="0.46" stopColor="#6FE3E8" />
             <Stop offset="0.66" stopColor="#8FA9FF" />
             <Stop offset="0.84" stopColor="#C79BFF" />
@@ -144,12 +144,12 @@ export function IntensityBars({
     <View style={style}>
       <Svg width={width} height={height}>
         <Defs>
-          {/* Main Focus gradient — vibrant lime to mint */}
+          {/* Main Focus gradient — sky blue to azure */}
           <SvgGradient id={`${g}-good`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#C9FFA0" />
-            <Stop offset="25%" stopColor="#7CF5B0" />
-            <Stop offset="80%" stopColor="#43C588" />
-            <Stop offset="100%" stopColor="#258E5E" />
+            <Stop offset="0%" stopColor="#C7E4FF" />
+            <Stop offset="25%" stopColor="#8FC4FF" />
+            <Stop offset="80%" stopColor="#2F7FE0" />
+            <Stop offset="100%" stopColor="#0F3B73" />
           </SvgGradient>
           {/* Slip / Hard Unlock warning gradient */}
           <SvgGradient id={`${g}-bad`} x1="0" y1="0" x2="0" y2="1">
@@ -279,8 +279,8 @@ export function CalendarHeatmap({
       <Svg width={width} height={h}>
         <Defs>
           <SvgGradient id={`${g}-glow`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#C9FFA0" />
-            <Stop offset="100%" stopColor="#6FE3A9" />
+            <Stop offset="0%" stopColor="#C7E4FF" />
+            <Stop offset="100%" stopColor={palette.accent} />
           </SvgGradient>
         </Defs>
 
@@ -392,7 +392,7 @@ export function CalendarHeatmap({
 }
 
 /* ─────────────────────────────────────────────────────────────
- * DONUT — modern Apple Activity / Opal segmented usage ring
+ * DONUT — segmented usage ring
  * ───────────────────────────────────────────────────────────── */
 
 export function Donut({
@@ -591,7 +591,7 @@ export function SegmentBar({
 
 export function GradientMeter({
   progress,
-  colors = ['#8FA9FF', palette.accent] as const,
+  colors = ['#C7E4FF', palette.accent] as const,
   height = 8,
   style,
 }: {
@@ -729,7 +729,7 @@ export function MiniBarTrend({
     <Svg width={width} height={height}>
       <Defs>
         <SvgGradient id={`${g}-c`} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#C9FFA0" />
+          <Stop offset="0%" stopColor="#C7E4FF" />
           <Stop offset="100%" stopColor={color} />
         </SvgGradient>
       </Defs>

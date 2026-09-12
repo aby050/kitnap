@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+  withSpring,
+} from 'react-native-reanimated';
 import { GateQuestion, pickChallenge } from '../data/gateQuestions';
 import { KeyboardAvoider } from '../components/KeyboardAware';
 import { Intensity } from '../data/themes';
@@ -19,6 +28,9 @@ type Props = {
   /** Resolves the adaptive rep target for a given movement. Undefined leaves
    *  Family G's built-in defaults alone. */
   repsFor?: (activity: ActivityKind) => number;
+  /** Completed-session history, so a movement finished in the last 24 hours
+   *  is rested and the next unlock asks for a different one. */
+  activitySessions?: ActivitySessionResult[];
   /** Reports a finished (or abandoned) physical attempt, for the difficulty
    *  model. Never fires for a token skip — that isn't a workout. */
   onActivityComplete?: (session: ActivitySessionResult) => void;
@@ -28,18 +40,89 @@ type Props = {
   /** Tokens the user currently holds — "Skip with a token" is only offered
    *  when this is > 0. */
   tokenBalance: number;
+  /** The schedule sealing the exits right now. While this is set the gate shows
+   *  the window instead of a challenge — there is nothing to attempt, because
+   *  passing it would not open anything. */
+  lockdown?: { name: string; end: string } | null;
+  /** Why emergency access was refused, if it just was. */
+  emergencyRefusal?: string | null;
   /** Spends one token and grants the unlock immediately, no challenge. */
   onSkipWithToken: () => void;
+  /** Called whenever the user types in a Family C ('type') challenge so the
+   *  parent can capture the text before the grant fires. The parent stores it
+   *  as pendingReflection and commits it on resolution. */
+  onReflectionChange?: (prompt: string, text: string) => void;
 };
+
+/** Family C — Self-confrontation. The user types a free-text response; the
+ *  text is captured via onTextChange so the parent can store it as a
+ *  reflection regardless of whether the gate is passed or abandoned. */
+function TypeQuestion({
+  q,
+  onDone,
+  onTextChange,
+}: {
+  q: Extract<GateQuestion, { kind: 'type' }>;
+  onDone: () => void;
+  onTextChange?: (text: string) => void;
+}) {
+  const [input, setInput] = useState('');
+  const ready = input.trim().length >= q.minChars;
+
+  const handleChange = (text: string) => {
+    setInput(text);
+    onTextChange?.(text);
+  };
+
+  return (
+    <View style={styles.qBody}>
+      <Animated.View entering={FadeInDown.duration(340)}>
+        <Text style={styles.prompt}>{q.prompt}</Text>
+      </Animated.View>
+      <Animated.View entering={FadeInDown.delay(80).duration(340)} style={{ width: '100%' }}>
+        <Field
+          value={input}
+          onChangeText={handleChange}
+          placeholder="Write your answer…"
+          multiline
+          style={[styles.input, styles.inputMultiline]}
+          autoFocus
+        />
+        <Text style={styles.charHint}>
+          {ready ? 'Ready — tap Continue.' : `${Math.max(0, q.minChars - input.trim().length)} more characters`}
+        </Text>
+      </Animated.View>
+      <View style={styles.ctaWrap}>
+        <Button label="Continue" variant="primary" disabled={!ready} onPress={onDone} />
+      </View>
+    </View>
+  );
+}
 
 function MathQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'math' }>; onDone: () => void }) {
   const [input, setInput] = useState('');
   const [wrong, setWrong] = useState(false);
   const answer = q.op === '+' ? q.a + q.b : q.op === '−' ? q.a - q.b : q.a * q.b;
 
+  // Horizontal shake on wrong answer — tactile feedback without a modal.
+  const shakeX = useSharedValue(0);
+  const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shakeX.value }] }));
+
+  const triggerShake = () => {
+    shakeX.value = withSequence(
+      withTiming(-10, { duration: 60 }),
+      withTiming(10, { duration: 60 }),
+      withTiming(-8, { duration: 55 }),
+      withTiming(8, { duration: 55 }),
+      withTiming(-4, { duration: 50 }),
+      withSpring(0, { damping: 14, stiffness: 300 }),
+    );
+  };
+
   const submit = () => {
     if (Number(input.trim()) === answer) onDone();
     else {
+      triggerShake();
       setWrong(true);
       setInput('');
       setTimeout(() => setWrong(false), 900);
@@ -48,19 +131,29 @@ function MathQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'math' }
 
   return (
     <View style={styles.qBody}>
-      <Text style={styles.prompt}>{q.prompt}</Text>
-      <Text style={styles.mathExpr}>
-        {q.a} {q.op} {q.b} = ?
-      </Text>
-      <Field
-        value={input}
-        onChangeText={setInput}
-        keyboardType="number-pad"
-        placeholder="Your answer"
-        style={[styles.input, wrong && styles.inputWrong]}
-        autoFocus
-      />
-      {wrong && <Text style={styles.wrongText}>Not quite — try again.</Text>}
+      <Animated.View entering={FadeInDown.duration(340)}>
+        <Text style={styles.prompt}>{q.prompt}</Text>
+      </Animated.View>
+      <Animated.View entering={FadeInDown.delay(80).duration(340)}>
+        <Text style={styles.mathExpr}>
+          {q.a} {q.op} {q.b} = ?
+        </Text>
+      </Animated.View>
+      <Animated.View style={shakeStyle}>
+        <Field
+          value={input}
+          onChangeText={setInput}
+          keyboardType="number-pad"
+          placeholder="Your answer"
+          style={[styles.input, wrong && styles.inputWrong]}
+          autoFocus
+        />
+      </Animated.View>
+      {wrong && (
+        <Animated.Text entering={FadeIn.duration(200)} style={styles.wrongText}>
+          Not quite — try again.
+        </Animated.Text>
+      )}
       <View style={styles.ctaWrap}>
         <Button label="Continue" variant="primary" disabled={input.trim().length === 0} onPress={submit} />
       </View>
@@ -73,30 +166,34 @@ function QuizQuestion({ q, onDone }: { q: Extract<GateQuestion, { kind: 'quiz' }
 
   return (
     <View style={styles.qBody}>
-      <Text style={styles.prompt}>{q.prompt}</Text>
+      <Animated.View entering={FadeInDown.duration(340)}>
+        <Text style={styles.prompt}>{q.prompt}</Text>
+      </Animated.View>
       <View style={styles.options}>
         {q.options.map((opt, i) => {
           const isChosen = chosen === i;
           const isCorrect = i === q.correctIndex;
           const showState = chosen !== null && (isChosen || isCorrect);
           return (
-            <Pressable
-              key={opt}
-              disabled={chosen !== null}
-              onPress={() => setChosen(i)}
-              style={[
-                styles.option,
-                showState && isCorrect && styles.optionCorrect,
-                showState && isChosen && !isCorrect && styles.optionWrong,
-              ]}
-            >
-              <Text style={styles.optionText}>{opt}</Text>
-            </Pressable>
+            // Stagger each option 60ms apart so they cascade in.
+            <Animated.View key={opt} entering={FadeInUp.delay(80 + i * 60).duration(320)}>
+              <Pressable
+                disabled={chosen !== null}
+                onPress={() => setChosen(i)}
+                style={[
+                  styles.option,
+                  showState && isCorrect && styles.optionCorrect,
+                  showState && isChosen && !isCorrect && styles.optionWrong,
+                ]}
+              >
+                <Text style={styles.optionText}>{opt}</Text>
+              </Pressable>
+            </Animated.View>
           );
         })}
       </View>
       {chosen !== null && (
-        <Animated.View entering={FadeIn.duration(250)} style={styles.quizFoot}>
+        <Animated.View entering={FadeInUp.duration(280)} style={styles.quizFoot}>
           <Text style={styles.hint}>{q.explain}</Text>
           <View style={styles.ctaWrap}>
             <Button label="Continue" variant="primary" onPress={onDone} />
@@ -112,19 +209,25 @@ export default function GateScreen({
   futureSelfMessage,
   healthLimitRaw,
   repsFor,
+  activitySessions,
   onActivityComplete,
   onGranted,
   onAbandoned,
   onEmergency,
   tokenBalance,
+  lockdown = null,
+  emergencyRefusal = null,
   onSkipWithToken,
+  onReflectionChange,
 }: Props) {
   // One challenge, chosen once per mount. Lazy initial state rather than a
   // useMemo: the adaptive rep target is derived from state that can change
   // while this screen is up (a finished session is recorded before the grant
   // lands), and with that in a dependency list the question would reroll out
   // from under a user who had just finished it.
-  const [q] = useState<GateQuestion>(() => pickChallenge(intensity.key, healthLimitRaw, repsFor));
+  const [q] = useState<GateQuestion>(() =>
+    pickChallenge(intensity.key, healthLimitRaw, repsFor, activitySessions),
+  );
   const [showFutureSelf, setShowFutureSelf] = useState(!!futureSelfMessage);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);
 
@@ -132,6 +235,26 @@ export default function GateScreen({
     success();
     onGranted(intensity.grantMinutes);
   };
+
+  // A lockdown window comes before everything else on this screen, including
+  // the message from your earlier self — there is no decision to inform, so
+  // showing a challenge would be theatre. Passing it would grant nothing.
+  if (lockdown) {
+    return (
+      <Screen edges={['top', 'bottom']} bloom>
+        <Animated.View entering={FadeIn.duration(500)} style={styles.qBody}>
+          <Text style={[type.overline, styles.eyebrow]}>{lockdown.name}</Text>
+          <Text style={styles.futureSelf}>
+            You set this window to run until {lockdown.end}. No challenge, no Bailout, no emergency
+            access until then.
+          </Text>
+          <View style={styles.ctaWrap}>
+            <Button label="Close" variant="primary" onPress={onAbandoned} />
+          </View>
+        </Animated.View>
+      </Screen>
+    );
+  }
 
   if (showFutureSelf) {
     return (
@@ -159,13 +282,28 @@ export default function GateScreen({
         </Pressable>
       </View>
 
+      {/* Tapping Emergency past its daily limit used to set a flag no screen
+          rendered — the button simply did nothing and never said why. */}
+      {emergencyRefusal && (
+        <Animated.Text entering={FadeIn.duration(220)} style={styles.refusal}>
+          {emergencyRefusal}
+        </Animated.Text>
+      )}
+
       <KeyboardAvoider style={styles.flex}>
       <Animated.View entering={FadeInUp.duration(380)} style={styles.flex}>
         {q.kind === 'breathe' && <BreathingExercise q={q} onDone={grant} />}
         {q.kind === 'math' && <MathQuestion q={q} onDone={grant} />}
         {q.kind === 'quiz' && <QuizQuestion q={q} onDone={grant} />}
+        {q.kind === 'type' && (
+          <TypeQuestion
+            q={q}
+            onDone={grant}
+            onTextChange={(text) => onReflectionChange?.(q.prompt, text)}
+          />
+        )}
         {q.kind === 'activity' && (
-          <ActivityChallenge q={q} onDone={grant} onComplete={onActivityComplete} />
+          <ActivityChallenge q={q} repsFor={repsFor} onDone={grant} onComplete={onActivityComplete} />
         )}
       </Animated.View>
       </KeyboardAvoider>
@@ -213,6 +351,13 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingTop: space.xs },
   challengeLabel: { color: palette.textTertiary },
   emergency: { ...type.sub, color: palette.textTertiary, fontWeight: '600' },
+  refusal: {
+    ...type.sub,
+    color: palette.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: space.lg,
+    paddingBottom: space.sm,
+  },
 
   skipWrap: { alignItems: 'center', paddingBottom: space.xl },
   skipLink: { ...type.sub, color: palette.textTertiary, fontWeight: '600', textDecorationLine: 'underline' },
@@ -262,6 +407,13 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     backgroundColor: palette.surfaceRaised,
   },
+  inputMultiline: {
+    textAlign: 'left',
+    minHeight: 100,
+    textAlignVertical: 'top',
+    paddingTop: space.md,
+  },
+  charHint: { ...type.sub, color: palette.textTertiary, marginTop: space.xs, textAlign: 'right' },
   inputWrong: { borderColor: palette.danger },
   wrongText: { ...type.sub, color: palette.danger, marginTop: -space.sm },
   ctaWrap: { width: '100%' },

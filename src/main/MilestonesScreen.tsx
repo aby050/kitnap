@@ -63,7 +63,7 @@ export default function MilestonesScreen({
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#04140D', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
@@ -142,7 +142,7 @@ export default function MilestonesScreen({
                         <View style={styles.tierMeterRow}>
                           <GradientMeter
                             progress={earned ? 1 : pct}
-                            colors={earned ? ['#8BEFBC', '#4FCB92'] : isNext ? ['#B9D97A', palette.accent] : ['#5FE0D6', '#8FA9FF']}
+                            colors={earned ? ['#8FC4FF', '#1C5FB8'] : isNext ? ['#6FB3FF', palette.accent] : ['#5FE0D6', '#8FA9FF']}
                             height={7}
                             style={{ flex: 1 }}
                           />
@@ -284,12 +284,12 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
   },
   tierEarned: { borderColor: palette.border, backgroundColor: palette.surfaceRaised },
-  tierNext: { borderColor: palette.accentBorder, backgroundColor: 'rgba(111,227,169,0.06)' },
+  tierNext: { borderColor: palette.accentBorder, backgroundColor: 'rgba(76,158,255,0.06)' },
   tierBody: { flex: 1, gap: 5 },
   tierEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tierEyebrow: { color: palette.textTertiary, fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
   tierEyebrowEarned: { color: palette.accent },
-  tierEyebrowNext: { color: '#B9D97A' },
+  tierEyebrowNext: { color: '#6FB3FF' },
   tierName: { color: palette.text, fontSize: 16.5, fontWeight: '800', letterSpacing: -0.3 },
   tierDesc: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 17 },
   tierMeterRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 4 },
@@ -362,9 +362,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(111,227,169,0.14)',
+    backgroundColor: 'rgba(76,158,255,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(111,227,169,0.3)',
+    borderColor: 'rgba(76,158,255,0.3)',
   },
   unlockedBadgeText: {
     color: palette.accent,

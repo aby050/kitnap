@@ -31,15 +31,29 @@ import { Directory, File, Paths } from 'expo-file-system';
  * accept the licence. The float variants will load and then be rejected by
  * `validatePoseModel`, on purpose: see `poseModel.ts`.
  *
- * This file uses TensorFlow Hub's public int8 export directly — no account or
- * licence click needed, and it is the same model Kaggle hosts. `validatePoseModel`
- * refuses to run on anything else, so pointing at a float16/float32 build just
- * results in the pose tier not activating, never in wrong keypoints.
+ * This used to point at TensorFlow Hub's public int8 export. **That no longer
+ * works**: tfhub.dev has been retired and its models moved to Kaggle, so the URL
+ * returns 404 and the mirror bucket
+ * (`storage.googleapis.com/tfhub-lite-models/...`) answers 403. Kaggle's own
+ * download is licence-gated and needs an authenticated request, so there is no
+ * URL that can be hardcoded here and still work.
+ *
+ * Leaving the dead URL in place cost more than the missing tier: every single
+ * challenge spent ~5 seconds waiting on a download that could never succeed
+ * before falling back to the tap counter. Empty means "look on disk only",
+ * which fails in milliseconds instead.
+ *
+ * To turn the pose tier on, do one of:
+ *   1. Push `movenet.tflite` (int8) to `<documents>/models/` on the device, or
+ *   2. Host that file somewhere fetchable and set `POSE_MODEL_URL` to it.
+ *
+ * `validatePoseModel` refuses to run on anything but the int8 build, so
+ * pointing at a float16/float32 model just leaves the tier off, never wrong
+ * keypoints.
  */
 
 /** Set this to fetch the model on first use. Empty means "only look on disk". */
-export const POSE_MODEL_URL =
-  'https://tfhub.dev/google/lite-model/movenet/singlepose/lightning/tflite/int8/4?lite-format=tflite';
+export const POSE_MODEL_URL = '';
 
 const MODEL_DIR = new Directory(Paths.document, 'models');
 const MODEL_NAME = 'movenet.tflite';
@@ -67,6 +81,18 @@ function bundledModel(): string | null {
   }
 }
 
+/** A model pushed to the Documents root rather than into `models/`. Same size
+ *  floor as everywhere else, so a truncated or wrong-format file is refused
+ *  here too rather than being handed to the interpreter. */
+function sideloadedModel(): string | null {
+  try {
+    const file = new File(Paths.document, MODEL_NAME);
+    return file.exists && file.size >= MIN_MODEL_BYTES ? file.uri : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * @returns a `file://` URI for the model, or null if there isn't one. Never
  *          throws — every failure here means "no pose tier", which the caller
@@ -75,6 +101,17 @@ function bundledModel(): string | null {
 export async function resolvePoseModel(): Promise<string | null> {
   const bundled = bundledModel();
   if (bundled) return bundled;
+
+  // Documents root, checked before the models/ subdirectory.
+  //
+  // `xcrun devicectl device copy to` is how the model actually gets onto a
+  // device by hand, and it will not create an intermediate directory: given a
+  // destination of `Documents/models` it replaces that directory with the file
+  // itself, and given `Documents` it drops the file in the root. Insisting on
+  // exactly one layout meant a correct, byte-identical model sitting on the
+  // device was ignored. Accept either.
+  const flat = sideloadedModel();
+  if (flat) return flat;
 
   try {
     const destination = new File(MODEL_DIR, MODEL_NAME);

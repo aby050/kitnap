@@ -12,7 +12,7 @@ import { palette, radius, space } from '../design/tokens';
 
 /** The signature pill CTA. Delegates to `Button` so height, width, radius and
  *  type stay in one place. `light` is the default primary (white); `aurora` is
- *  mint, reserved for starting a session; `ghost` is the outlined workhorse. */
+ *  azure, reserved for starting a session; `ghost` is the outlined workhorse. */
 export function GradientButton({
   label,
   onPress,

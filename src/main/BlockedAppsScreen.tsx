@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   removeIcon: { color: palette.textSecondary, fontSize: 12 },
   addRow: { flexDirection: 'row', gap: 10 },
   input: { flex: 1, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 16, backgroundColor: palette.glass, color: palette.text, fontSize: 14 },
-  addBtn: { paddingHorizontal: 20, borderRadius: 16, backgroundColor: 'rgba(111,227,169,0.15)', borderWidth: 1, borderColor: palette.accent, alignItems: 'center', justifyContent: 'center' },
+  addBtn: { paddingHorizontal: 20, borderRadius: 16, backgroundColor: 'rgba(76,158,255,0.15)', borderWidth: 1, borderColor: palette.accent, alignItems: 'center', justifyContent: 'center' },
   addBtnText: { color: palette.accent, fontSize: 14, fontWeight: '700' },
   hint: { color: palette.textTertiary, fontSize: 11.5, lineHeight: 16, marginTop: 8 },
 });

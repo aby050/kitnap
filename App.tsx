@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import SplashFlow from './src/onboarding/SplashFlow';
@@ -35,6 +35,7 @@ import { QUESTION_CHUNKS } from './src/onboarding/questions';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
 import { estimateDailyHours, recommendSetup } from './src/data/setupPlan';
 import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
+import { effectiveBlockedPackages } from './src/data/scheduleEnforcer';
 import { usePurchases } from './src/data/usePurchases';
 import { purchasedBailoutCount } from './src/data/purchases';
 
@@ -156,10 +157,19 @@ export default function App() {
     );
   }, [loaded, purchases.info]);
 
-  // Keep the native Accessibility Service's blocked-package list in sync —
-  // it can't read PersistedState directly, so this is the one bridge point.
+  // Keep the native Accessibility Service's blocked-package list in sync.
+  // The base list is always enforced — schedules are lockdown windows that
+  // close the escape hatches, not windows that decide *whether* to block — so
+  // this only needs to re-run when the list itself changes, plus on foreground
+  // in case the service was restarted while Byre was away.
   useEffect(() => {
-    if (loaded) setBlockedPackages(persisted.blockedPackages);
+    if (!loaded) return;
+    const sync = () => setBlockedPackages(effectiveBlockedPackages(persisted.blockedPackages));
+    sync();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') sync();
+    });
+    return () => sub.remove();
   }, [loaded, persisted.blockedPackages]);
 
   // Battery/responsiveness follows the same intensity dial the user already
@@ -238,7 +248,9 @@ export default function App() {
 
           {stage === 'splash' && <SplashFlow onDone={() => setStage('education')} />}
 
-          {(stage === 'education' || stage === 'onboarding') && <OnboardingMark />}
+          {(stage === 'education' || stage === 'onboarding') && (
+            <OnboardingMark large={stage === 'education'} />
+          )}
 
           {stage === 'education' && (
             <EducationScreen onContinue={() => setStage('onboarding')} />
