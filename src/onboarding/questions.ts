@@ -31,12 +31,84 @@ export const CONTROL_LEVEL_NAMES = [
   'Absolute monarch',
 ];
 
+/** The two answers to the `returning` question. Exported so the branch in
+ *  OnboardingFlow compares against the same constant the option renders from,
+ *  rather than a duplicated string literal that silently stops matching the
+ *  moment the copy is reworded. */
+/** The physical unlocks Strict mode can ask for. `MOVEMENTS[3]` is the
+ *  opt-out: choosing it, or declaring a limitation on the previous question,
+ *  routes Strict mode to the quiz challenge instead — never negotiable. */
+export const MOVEMENTS = [
+  'Push-ups',
+  'Squats',
+  'Jumping jacks',
+  'I’d rather not move',
+] as const;
+
+/** Where the user usually is when a block fires. Picks a movement that is
+ *  actually possible there — jumping jacks at a desk in an office is a
+ *  challenge nobody completes, and an unlock nobody can pass is an unlock
+ *  that gets the app deleted. */
+export const BLOCK_PLACES = ['At a desk', 'In bed', 'On the sofa', 'Out and about'] as const;
+
+export const RETURNING_NEW = 'I’m new here';
+export const RETURNING_EXISTING = 'I’ve used Byre before';
+
 /** All onboarding questions — permissions are asked upfront now
  *  (PermissionBoardingPassScreen, before this screen ever mounts), not
  *  interleaved with questions. */
 export const QUESTIONS: Question[] = [
   { id: 'intro', kind: 'static', prompt: "I'll help protect your focus." },
+  /* Asked before anything else: a returning user should not be walked through
+   * a setup they have already done. Answering "before" jumps straight to sign
+   * in (see OnboardingFlow.handleAnswer) rather than continuing the funnel.
+   * The exact string is matched there — keep them in step. */
+  {
+    id: 'returning',
+    kind: 'choice',
+    prompt: 'Have you used **Byre** before?',
+    options: [RETURNING_NEW, RETURNING_EXISTING],
+  },
   { id: 'name', kind: 'text', prompt: "First, what's your **name**?", placeholder: 'John' },
+  /* ── The movement questions ────────────────────────────────────────────
+   * Asked in the first thirty seconds, immediately after the name, because
+   * they are the only questions in this flow that no other app in the
+   * category could ask. Everything below them — what matters to you, what
+   * stopped you last time, what you'd rather be doing — is asked by every
+   * screen-time app there is, and a setup that opens with those reads as
+   * interchangeable no matter how good the rest of the app is.
+   *
+   * They also do real work: the chosen movement and the honest rep baseline
+   * seed the Strict-mode target, so the first challenge is calibrated to this
+   * person instead of a fixed number. */
+  {
+    id: 'healthLimit',
+    kind: 'text',
+    prompt: 'Any **illness, injury, or physical limitation** we should know about? Some unlock challenges involve light movement.',
+    placeholder: 'e.g. bad knee — or leave blank',
+    optional: true,
+  },
+  {
+    id: 'movement',
+    kind: 'choice',
+    prompt: 'Pick your **key**. This is what gets you back into a blocked app.',
+    options: [...MOVEMENTS],
+  },
+  {
+    id: 'repBaseline',
+    kind: 'slider',
+    prompt: 'Honestly — how many can you do **right now**, in one go?',
+    min: 1,
+    max: 30,
+    default: 8,
+    maxPlus: true,
+  },
+  {
+    id: 'whereBlocked',
+    kind: 'choice',
+    prompt: 'Where are you usually **sitting** when you reach for the phone?',
+    options: [...BLOCK_PLACES],
+  },
   {
     id: 'matters',
     kind: 'choice',
@@ -67,13 +139,6 @@ export const QUESTIONS: Question[] = [
     max: 10,
     default: 5,
     labels: CONTROL_LEVEL_NAMES,
-  },
-  {
-    id: 'healthLimit',
-    kind: 'text',
-    prompt: 'Any **illness, injury, or physical limitation** we should know about? Some unlock challenges involve light movement.',
-    placeholder: 'e.g. bad knee — or leave blank',
-    optional: true,
   },
   {
     id: 'triedBefore',

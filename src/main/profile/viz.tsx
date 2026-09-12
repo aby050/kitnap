@@ -15,7 +15,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 import Icon, { IconName } from '../../ui/Icon';
-import { palette } from '../../design/tokens';
+import { gradients, palette } from '../../design/tokens';
 import Medal from './Medal';
 import { AchievementDef } from '../../data/progress';
 
@@ -62,16 +62,16 @@ export function GemHero({ size = 208, glow = palette.accent }: { size?: number; 
           {/* Play-of-colour: mint → teal → blue → violet → gold, the opal spectrum. */}
           <SvgGradient id={`${g}-body`} x1="0.12" y1="0.05" x2="0.9" y2="0.98">
             <Stop offset="0" stopColor="#D6FCEA" />
-            <Stop offset="0.24" stopColor="#8FC4FF" />
+            <Stop offset="0.24" stopColor="#6E8CF5" />
             <Stop offset="0.46" stopColor="#6FE3E8" />
-            <Stop offset="0.66" stopColor="#8FA9FF" />
+            <Stop offset="0.66" stopColor="#7F92E0" />
             <Stop offset="0.84" stopColor="#C79BFF" />
             <Stop offset="1" stopColor="#FFE29A" />
           </SvgGradient>
           <SvgGradient id={`${g}-flash`} x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.0} />
             <Stop offset="0.5" stopColor="#BFFFF0" stopOpacity={0.55} />
-            <Stop offset="1" stopColor="#8FA9FF" stopOpacity={0.0} />
+            <Stop offset="1" stopColor="#7F92E0" stopOpacity={0.0} />
           </SvgGradient>
           <SvgGradient id={`${g}-ped`} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor="#1C1C21" />
@@ -94,7 +94,7 @@ export function GemHero({ size = 208, glow = palette.accent }: { size?: number; 
           />
           {/* Colour flashes — soft internal iridescence */}
           <Path d="M74 44 C104 40 142 66 138 104 C120 92 96 84 70 96 C58 74 62 52 74 44 Z" fill={`url(#${g}-flash)`} />
-          <Path d="M118 118 C136 120 150 138 138 156 C120 150 104 150 92 158 C104 132 106 120 118 118 Z" fill="#8FA9FF" opacity={0.28} />
+          <Path d="M118 118 C136 120 150 138 138 156 C120 150 104 150 92 158 C104 132 106 120 118 118 Z" fill="#7F92E0" opacity={0.28} />
           <Path d="M50 108 C66 104 86 116 84 138 C68 138 56 132 46 140 C42 126 42 114 50 108 Z" fill="#FFE29A" opacity={0.22} />
           {/* Facet lines */}
           <Path d="M100 24 L100 172 M40 92 L160 100 M60 46 L150 150 M150 52 L54 148" stroke="#FFFFFF" strokeOpacity={0.18} strokeWidth={1} />
@@ -139,6 +139,12 @@ export function IntensityBars({
   const minStub = 5; // empty days show a neat stub in the track
   const notch = 7; // fixed coral marker height for a slip day
   const cornerR = Math.min(bw / 2, 4);
+  // Mean of the days that actually happened, not of the whole array — a run
+  // of not-yet-lived days at the end of the week would otherwise drag the
+  // average down and make today look better than it was.
+  const logged = data.filter((d) => d.value > 0);
+  const avg = logged.length ? logged.reduce((t, d) => t + d.value, 0) / logged.length : 0;
+  const avgY = height - (avg / max) * (height - notch - 4);
 
   return (
     <View style={style}>
@@ -146,10 +152,13 @@ export function IntensityBars({
         <Defs>
           {/* Main Focus gradient — sky blue to azure */}
           <SvgGradient id={`${g}-good`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#C7E4FF" />
-            <Stop offset="25%" stopColor="#8FC4FF" />
-            <Stop offset="80%" stopColor="#2F7FE0" />
-            <Stop offset="100%" stopColor="#0F3B73" />
+            {/* Was a hardcoded blue ramp, so the bars stayed blue in the mint
+                scheme — and the legend dot beside them, which uses
+                palette.accent, disagreed with the bars it was labelling. */}
+            <Stop offset="0%" stopColor={gradients.chartGood[0]} />
+            <Stop offset="25%" stopColor={gradients.chartGood[1]} />
+            <Stop offset="80%" stopColor={gradients.chartGood[2]} />
+            <Stop offset="100%" stopColor={gradients.chartGood[3]} />
           </SvgGradient>
           {/* Slip / Hard Unlock warning gradient */}
           <SvgGradient id={`${g}-bad`} x1="0" y1="0" x2="0" y2="1">
@@ -158,8 +167,13 @@ export function IntensityBars({
           </SvgGradient>
           {/* Frosted track background */}
           <SvgGradient id={`${g}-track`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
-            <Stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+            {/* stopOpacity, NOT an alpha inside rgba(). react-native-svg does
+                not honour the alpha channel of an rgba() string on a gradient
+                stop — it renders the colour at full opacity — so this track
+                was painting a near-solid WHITE column behind every bar. The
+                tall white shapes in the chart were the track, not data. */}
+            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.06} />
+            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0.02} />
           </SvgGradient>
         </Defs>
 
@@ -172,6 +186,40 @@ export function IntensityBars({
           stroke="rgba(255, 255, 255, 0.08)"
           strokeWidth={1}
         />
+
+        {/* Average line.
+            A column chart says which day was biggest but not whether any of
+            them was a normal day — the reader has to eyeball a mean across
+            the tops. Drawing it makes every bar readable as above or below
+            par at a glance, which is the single highest-value mark you can
+            add to a bar chart. Dashed and dim so it reads as a reference,
+            never as another series. Suppressed when nothing is logged, so an
+            empty chart doesn't claim an average of zero. */}
+        {avg > 0 && (
+          <>
+            <Line
+              x1={0}
+              y1={avgY}
+              x2={width}
+              y2={avgY}
+              stroke={palette.accent}
+              strokeOpacity={0.55}
+              strokeWidth={1}
+              strokeDasharray="3 4"
+            />
+            <SvgText
+              x={width}
+              y={Math.max(9, avgY - 5)}
+              fill={palette.accent}
+              fillOpacity={0.8}
+              fontSize={9}
+              fontWeight="700"
+              textAnchor="end"
+            >
+              avg
+            </SvgText>
+          </>
+        )}
 
         {data.map((d, i) => {
           const x = i * (bw + gap);
@@ -198,7 +246,7 @@ export function IntensityBars({
                 width={bw}
                 height={barH}
                 rx={cornerR}
-                fill={d.value > 0 ? `url(#${g}-good)` : 'rgba(255,255,255,0.08)'}
+                fill={d.value > 0 ? `url(#${g}-good)` : 'rgba(255,255,255,0.10)'}
               />
 
               {/* Specular highlight cap on top of active bars */}
@@ -792,7 +840,7 @@ export function TierConnector() {
  * (UsageStatsManager gives us no icon bitmap, only a package name).
  * ───────────────────────────────────────────────────────────── */
 
-const APP_COLORS = ['#F0604A', '#8FA9FF', palette.accent, '#E9AE62', '#C79BFF', '#5FE0D6'];
+const APP_COLORS = ['#F0604A', '#7F92E0', palette.accent, '#E9AE62', '#C79BFF', '#5FE0D6'];
 
 export function appColor(seed: string): string {
   let h = 0;

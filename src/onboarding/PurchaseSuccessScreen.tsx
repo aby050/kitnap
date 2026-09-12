@@ -77,7 +77,7 @@ export default function PurchaseSuccessScreen({
             colors={
               free
                 ? ['#08120F', '#101A17', '#1B2F28', '#2E4A3F']
-                : ['#080D14', '#0F1A26', '#153458', '#1C5FB8']
+                : ['#080D14', '#0F1A26', '#153458', '#1C3FA8']
             }
             locations={[0, 0.4, 0.76, 1]}
             start={{ x: 0.05, y: 0 }}

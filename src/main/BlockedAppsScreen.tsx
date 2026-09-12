@@ -6,7 +6,7 @@ import { keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import { INTENSITIES, IntensityKey, getIntensity } from '../data/themes';
-import { palette } from '../design/tokens';
+import { palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 /** Real, editable blocked-apps list — replaces the old mock AppPickerScreen
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
   headerGlyph: { color: palette.text, fontSize: 19 },
   headerTitle: { color: palette.text, fontSize: 18, fontWeight: '700' },
-  scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 100 },
+  scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: space.tabClearance },
   notice: { backgroundColor: 'rgba(255,213,79,0.08)', borderRadius: 16, padding: 14, marginBottom: 8 },
   noticeText: { color: 'rgba(255,213,79,0.9)', fontSize: 12.5, lineHeight: 18 },
   sectionLabel: { color: palette.textTertiary, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 10 },
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   removeIcon: { color: palette.textSecondary, fontSize: 12 },
   addRow: { flexDirection: 'row', gap: 10 },
   input: { flex: 1, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 16, backgroundColor: palette.glass, color: palette.text, fontSize: 14 },
-  addBtn: { paddingHorizontal: 20, borderRadius: 16, backgroundColor: 'rgba(76,158,255,0.15)', borderWidth: 1, borderColor: palette.accent, alignItems: 'center', justifyContent: 'center' },
+  addBtn: { paddingHorizontal: 20, borderRadius: 16, backgroundColor: 'rgba(71,107,235,0.15)', borderWidth: 1, borderColor: palette.accent, alignItems: 'center', justifyContent: 'center' },
   addBtnText: { color: palette.accent, fontSize: 14, fontWeight: '700' },
   hint: { color: palette.textTertiary, fontSize: 11.5, lineHeight: 16, marginTop: 8 },
 });

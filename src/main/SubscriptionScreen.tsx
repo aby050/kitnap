@@ -77,7 +77,7 @@ export default function SubscriptionScreen({
             same aurora card the rest of the app uses, and on the free plan it
             does the job a status card can't: say what Pro is for. */}
         <LinearGradient
-          colors={isPro ? ['#080D14', '#0F1A26', '#153458', '#1C5FB8'] : ['#101314', '#171B1A', '#1F2A26']}
+          colors={isPro ? ['#080D14', '#0F1A26', '#153458', '#1C3FA8'] : ['#101314', '#171B1A', '#1F2A26']}
           locations={[0, 0.4, 0.76, 1]}
           start={{ x: 0.05, y: 0 }}
           end={{ x: 1, y: 1 }}

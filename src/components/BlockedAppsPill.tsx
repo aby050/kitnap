@@ -83,11 +83,13 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 15,
     borderRadius: 999,
-    backgroundColor: palette.glass,
+    // On-colour fill: palette.glass is black-on-black and disappears against
+    // the saturated ground this pill sits on.
+    backgroundColor: palette.onColor,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: palette.onColorBorder,
   },
-  pillOn: { backgroundColor: palette.glassPressed },
+  pillOn: { backgroundColor: palette.onColorPressed },
   label: { color: palette.text, fontSize: 14.5, fontWeight: '700' },
-  none: { color: palette.textTertiary, fontSize: 13, fontWeight: '600' },
+  none: { color: palette.onColorTextDim, fontSize: 13, fontWeight: '600' },
 });

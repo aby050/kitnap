@@ -1,13 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import QuestionBlock from './QuestionBlock';
-import HistoryItem from './HistoryItem';
 import LoginScreen from '../main/LoginScreen';
 import { OnboardingMarkSlot } from './OnboardingMark';
-import { Question, QUESTIONS, resolvePrompt, stripEmphasis } from './questions';
+import {
+  Question,
+  QUESTIONS,
+  RETURNING_EXISTING,
+  resolvePrompt,
+  stripEmphasis,
+} from './questions';
 import { Account } from '../data/store';
 
 type Answer = { value: string; label: string };
@@ -44,7 +49,6 @@ export default function OnboardingFlow({
   // "Yes, sign in" interrupts the question stack with a real sign-in step;
   // "I'm new here" just continues — nothing to authenticate yet.
   const [showLogin, setShowLogin] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
 
   const rawQuestion = questions[stepIndex];
   const question = { ...rawQuestion, prompt: resolvePrompt(rawQuestion.prompt, answers) };
@@ -63,6 +67,21 @@ export default function OnboardingFlow({
     transform: [{ scaleX: progressFill.value }],
   }));
 
+  /* Whether the question fits without scrolling.
+   *
+   * Centring has to be conditional, measured rather than declared: with
+   * `flexGrow: 1` + `justifyContent: 'center'` a content box TALLER than the
+   * viewport is laid out from a negative offset, so the top of a long
+   * question renders above the scroll view and over the header. Short
+   * questions — most of them — centre; only the ten-option ones flow from the
+   * top and scroll. A small tolerance absorbs sub-pixel rounding, which would
+   * otherwise flip the two modes back and forth on a question that fits
+   * exactly.
+   */
+  const [viewportH, setViewportH] = useState(0);
+  const [contentH, setContentH] = useState(0);
+  const fits = viewportH > 0 && contentH > 0 && contentH <= viewportH + 1;
+
   const handleAnswer = (value: string, label: string) => {
     const nextAnswers = { ...answers, [question.id]: { value, label } };
     setAnswers(nextAnswers);
@@ -72,15 +91,14 @@ export default function OnboardingFlow({
       : history;
     if (label) setHistory(nextHistory);
 
-    // Login/signup disabled for now — "Yes, sign in" just continues like any
-    // other answer instead of opening LoginScreen.
-    // if (question.id === 'returning' && value === 'Yes, sign in') {
-    //   setShowLogin(true);
-    // }
-
-    requestAnimationFrame(() => {
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
-    });
+    // A returning user goes straight to sign in rather than through a setup
+    // they have already completed. `return` before advancing the step, or the
+    // flow moves to the next question underneath the login screen and they
+    // land mid-funnel on skip.
+    if (question.id === 'returning' && value === RETURNING_EXISTING) {
+      setShowLogin(true);
+      return;
+    }
 
     if (stepIndex < questions.length - 1) {
       setStepIndex(stepIndex + 1);
@@ -117,23 +135,21 @@ export default function OnboardingFlow({
       </View>
 
       <KeyboardAvoider>
-        <View style={styles.historyWrap}>
-          <ScrollView
-            ref={scrollRef}
-            style={styles.historyArea}
-            contentContainerStyle={styles.historyContent}
-            showsVerticalScrollIndicator={false}
-            {...keyboardScrollProps}
-          >
-            {history.map((h) => (
-              <HistoryItem key={h.id} prompt={h.prompt} label={h.label} />
-            ))}
-          </ScrollView>
-        </View>
-
-        <View style={styles.currentArea}>
+        {/* Scrollable, not a fixed flex box. A question with a long option
+            list (the "pick as many as you like" ones run to ten rows) plus a
+            multi-line headline is taller than the area, and React Native does
+            not clip overflow by default — the block drew itself straight over
+            the mark and the progress bar above it. */}
+        <ScrollView
+          style={styles.currentArea}
+          contentContainerStyle={[styles.currentContent, fits && styles.currentContentCentered]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
+          onContentSizeChange={(_w, h) => setContentH(h)}
+        >
           <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
-        </View>
+        </ScrollView>
       </KeyboardAvoider>
     </SafeAreaView>
   );
@@ -155,44 +171,35 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     width: '100%',
-    backgroundColor: 'rgba(76,158,255,0.85)',
+    backgroundColor: 'rgba(71,107,235,0.85)',
     transformOrigin: 'left center',
-  },
-  // Fixed pixel height + explicit clipping — a percentage maxHeight here
-  // silently fails to clip on React Native Web (it needs every ancestor up
-  // the tree to have a definite, non-auto height to resolve against), which
-  // let old answered questions bleed straight through into the current one.
-  //
-  // The height is definite rather than a maxHeight for a second reason: the
-  // band has to reserve its full size even when empty, or a short history
-  // shrink-wraps the ScrollView and the `flex-end` below has no spare room to
-  // push against. Reserving it also stops the current question sliding down
-  // the screen as the first few answers land.
-  historyWrap: {
-    marginTop: 8,
-    height: 130,
-    overflow: 'hidden',
-  },
-  historyArea: {
-    height: 130,
-  },
-  // Bottom-anchored: the newest answer sits at the foot of the band, right
-  // above the current question, and older ones stack upward out of the top.
-  historyContent: {
-    flexGrow: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 28,
-    paddingTop: 8,
-    paddingBottom: 4,
   },
   currentArea: {
     flex: 1,
-    alignItems: 'stretch',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    paddingTop: 24,
-    paddingBottom: 40,
+    // Belt and braces: RN does not clip overflow by default, and this box
+    // sits directly below a fixed-height history band it must never draw over.
+    overflow: 'hidden',
   },
+  currentContent: {
+    flexGrow: 1,
+    alignItems: 'stretch',
+    // Top-aligned, NOT centred. `flexGrow: 1` with `justifyContent: 'center'`
+    // centres correctly only while the content fits; once it is taller than
+    // the viewport the content box is laid out from a negative offset, so the
+    // top of the question rendered *above* the scroll view and straight over
+    // the mark, the progress bar and the answer history. Flowing from the top
+    // makes tall questions scroll normally, and short ones sit high — which is
+    // where the headline belongs on this layout anyway.
+    justifyContent: 'flex-start',
+    paddingHorizontal: 28,
+    // The question must never crowd the progress bar — they are different
+    // kinds of information (where you are vs what is being asked) and with
+    // only 12pt between them the headline read as a label on the bar.
+    paddingTop: 44,
+    paddingBottom: 48,
+  },
+  /* Applied only when the measurement above says the question fits. */
+  currentContentCentered: { justifyContent: 'center' },
   loginArea: {
     flex: 1,
     justifyContent: 'center',

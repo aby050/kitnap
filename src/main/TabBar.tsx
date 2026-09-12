@@ -9,7 +9,9 @@ import Animated, {
 import AnimatedIcon from '../ui/AnimatedIcon';
 import { IconName } from '../ui/Icon';
 import { curves } from '../design/motion';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { motion, palette } from '../design/tokens';
+import Glass, { liquidGlassAvailable } from '../design/Glass';
 import { tapLight } from '../ui/haptics';
 
 /**
@@ -22,10 +24,28 @@ import { tapLight } from '../ui/haptics';
  * over, the label cross-fades, and the whole item scales under the finger.
  *
  * Everything is `opacity`/`transform` only, so nothing relayouts mid-press.
+ *
+ * The bar itself is a *floating* glass pill rather than an edge-to-edge slab.
+ * That is not decoration: Liquid Glass refracts what passes beneath it, so it
+ * only reads as glass when content can actually travel under it on all four
+ * sides. A full-width bar pinned to the bottom edge has nothing moving below
+ * it and renders as a flat grey band.
+ *
+ * ⚠️ Because it floats over content rather than reserving space in the layout,
+ * every scrolling screen must pad its content by `TAB_BAR_SPACE` or the last
+ * row ends up underneath the bar.
  */
 
 const PILL_W = 60;
 const PILL_H = 32;
+
+/** Outer inset of the floating bar from the screen edges. */
+const SIDE_INSET = 16;
+const BOTTOM_GAP = 10;
+
+/** Height the bar occupies, for screens to pad their scroll content by.
+ *  Add the bottom safe-area inset on top of this at the call site. */
+export const TAB_BAR_SPACE = 78 + BOTTOM_GAP;
 
 export type TabDef<K extends string> = { key: K; label: string; mark: IconName };
 
@@ -54,10 +74,23 @@ export default function TabBar<K extends string>({
   }));
 
   const onLayout = (e: LayoutChangeEvent) => setRow(e.nativeEvent.layout.width);
+  const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.bar} onLayout={onLayout}>
+    <View
+      style={[styles.wrap, { bottom: Math.max(insets.bottom, 12) + BOTTOM_GAP }]}
+      pointerEvents="box-none"
+    >
+      <Glass
+        tone="regular"
+        cornerRadius={34}
+        // The whole bar reacts to touch as one pane on iOS 26 — the system
+        // highlight follows the finger across the glass, which is the effect
+        // that makes it feel liquid rather than merely blurred.
+        interactive
+        style={styles.bar}
+        onLayout={onLayout}
+      >
         {/* One indicator for the whole bar, positioned absolutely so it can
             travel without the items knowing about it. */}
         <Animated.View style={[styles.pill, pill]} pointerEvents="none" />
@@ -73,7 +106,7 @@ export default function TabBar<K extends string>({
             }}
           />
         ))}
-      </View>
+      </Glass>
     </View>
   );
 }
@@ -153,22 +186,31 @@ function TabLabel({ label, active }: { label: string; active: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
+  wrap: {
+    position: 'absolute',
+    left: SIDE_INSET,
+    right: SIDE_INSET,
+    backgroundColor: 'transparent',
+  },
   bar: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(6, 14, 11, 0.94)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    paddingBottom: 28,
-    paddingTop: 10,
-    width: '100%',
+    paddingVertical: 12,
+    paddingHorizontal: 6,
     justifyContent: 'space-around',
     alignItems: 'center',
+    // Only the fallback tiers need a drawn edge; real Liquid Glass renders
+    // its own specular rim and a manual border double-draws it.
+    ...(liquidGlassAvailable
+      ? null
+      : {
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: 'rgba(255,255,255,0.16)',
+        }),
   },
   pill: {
     position: 'absolute',
     left: 0,
-    top: 10,
+    top: 12,
     width: PILL_W,
     height: PILL_H,
     borderRadius: PILL_H / 2,

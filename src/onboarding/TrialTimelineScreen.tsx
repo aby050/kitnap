@@ -16,33 +16,6 @@ import {
 import { FREE_EMERGENCY_TOKENS } from '../data/store';
 import { PurchaseResult } from './PurchaseSuccessScreen';
 
-const STEPS: { icon: IconName; title: string; body: string; done: boolean }[] = [
-  {
-    icon: 'check',
-    title: 'Start your first block',
-    body: "You're on your way to turning intention into a daily habit.",
-    done: true,
-  },
-  {
-    icon: 'unlock',
-    title: 'Today: take back your focus',
-    body: 'Start your 7-day free trial and unlock Strict mode, schedules and Autofocus.',
-    done: false,
-  },
-  {
-    icon: 'bell',
-    title: 'Day 5: we remind you',
-    body: "We'll notify you two days before the trial ends. No surprise charge, ever.",
-    done: false,
-  },
-  {
-    icon: 'rocket',
-    title: 'Day 7: keep it going',
-    body: 'Only if you want to. Cancel in two taps and nothing you built is lost.',
-    done: false,
-  },
-];
-
 /** Bailouts are the one thing that differs by plan in a way people actually
  *  feel, so each plan states its own count rather than burying it in a
  *  features list. Yearly's ten is the reason to pick yearly. */
@@ -201,26 +174,16 @@ export default function TrialTimelineScreen({
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* The four-step "Day 5: we remind you / Day 7: keep it going"
+            timeline that used to open this screen is gone. It is the most
+            recognisable beat in the category's paywall — the same graphic,
+            often the same wording, ships in most of the apps Byre was judged
+            against under 4.3(a). The renewal terms it was illustrating are
+            stated in full beneath the CTA, where guideline 3.1.2 expects
+            them anyway. */}
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          Here's exactly what happens next
+          Choose how you want to keep it
         </Animated.Text>
-
-        <View style={styles.timeline}>
-          {STEPS.map((s, i) => (
-            <Animated.View key={s.title} entering={FadeInDown.delay(i * 90).duration(400)} style={styles.step}>
-              <View style={styles.rail}>
-                <View style={[styles.node, s.done && styles.nodeDone]}>
-                  <Icon name={s.icon} size={16} color={s.done ? '#062' : palette.text} strokeWidth={2.5} />
-                </View>
-                {i < STEPS.length - 1 && <View style={[styles.line, s.done && styles.lineDone]} />}
-              </View>
-              <View style={styles.stepBody}>
-                <Text style={styles.stepTitle}>{s.title}</Text>
-                <Text style={styles.stepText}>{s.body}</Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
 
         <View style={styles.plans}>
           {PLANS.map((p) => {
@@ -393,16 +356,17 @@ const styles = StyleSheet.create({
   // 3.1.2(c) — the billed amount outranks every other text in the row.
   planPrice: { color: palette.text, fontSize: 22, fontWeight: '900' },
   planPer: { color: palette.textSecondary, fontSize: 13, fontWeight: '500' },
+  // Amber savings chip, matching the reference's "Save 40%".
   badge: {
     position: 'absolute',
     top: -10,
     right: 14,
-    backgroundColor: palette.accent,
+    backgroundColor: palette.savings,
     borderRadius: 12,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
-  badgeText: { color: '#062', fontSize: 11.5, fontWeight: '800' },
+  badgeText: { color: palette.onSavings, fontSize: 11.5, fontWeight: '800' },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 12 },
   legal: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
   // Subordinate to the billed amount on the button above, per 3.1.2(c).

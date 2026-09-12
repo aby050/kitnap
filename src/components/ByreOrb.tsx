@@ -7,6 +7,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { brandMark } from '../ui/brandMark';
 
 type Props = {
   size?: number;
@@ -48,7 +49,7 @@ export default function ByreOrb({ size = 160, awake, style }: Props) {
     <View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, style]}>
       <Animated.View style={markStyle}>
         <Image
-          source={require('../../assets/byre-logo.png')}
+          source={brandMark}
           style={{ width: size, height: size }}
           resizeMode="contain"
           accessibilityLabel="Byre"

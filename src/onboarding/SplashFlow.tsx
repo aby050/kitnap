@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { curves } from '../design/motion';
 import { tapMedium } from '../ui/haptics';
+import { brandMark } from '../ui/brandMark';
 
 const { width } = Dimensions.get('window');
 
@@ -20,7 +21,7 @@ const { width } = Dimensions.get('window');
  *  bloom has somewhere to come up from. */
 const NEAR_BLACK = '#08050A';
 const BLUE_DEEP = '#081B33';
-const BLUE = '#4C9EFF';
+const BLUE = '#476BEB'; // brand mint — name kept to avoid churn
 
 /**
  * Beats, in ms. Longer than a normal splash on purpose: this screen is shown
@@ -207,7 +208,7 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
       <View style={styles.center}>
         <Animated.View style={markStyle}>
           <Image
-            source={require('../../assets/byre-logo.png')}
+            source={brandMark}
             style={styles.logo}
             resizeMode="contain"
             accessibilityLabel="Byre"

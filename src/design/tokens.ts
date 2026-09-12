@@ -1,4 +1,68 @@
 import { Platform, TextStyle, ViewStyle } from 'react-native';
+import { appearance } from './appearance';
+
+/**
+ * The two colour schemes, and the one bit of indirection that makes them
+ * switchable. Only the hues that actually differ live here — surfaces, text
+ * and hairlines are shared, because a scheme that changed everything would be
+ * two apps rather than two skins.
+ *
+ * `appearance` is resolved synchronously at import (see appearance.ts), so
+ * `SCHEME` is already correct by the time any screen's StyleSheet.create runs.
+ * That is the whole reason switching requires a reload: styles capture these
+ * values once, at module evaluation.
+ */
+const SCHEMES = {
+  /** Sampled from the reference motion study. */
+  blue: {
+    accent: '#476BEB',
+    accentPressed: '#3355D4',
+    accentSoft: 'rgba(71,107,235,0.14)',
+    accentBorder: 'rgba(71,107,235,0.30)',
+    accentRamp: 'rgba(71,107,235,0.38)',
+    accentRampMid: '#8B9CF2',
+    onLight: '#251C82',
+    secondary: '#ABBCF9',
+    onSecondary: '#4661CC',
+    surface: '#090C10',
+    surfaceRaised: '#101620',
+    surfaceHigh: '#182030',
+    ground: ['#0E0E10', '#0E0E10', '#141037', '#1D156D', '#2119AA', '#2C20F1', '#3943E6', '#4A67E2'],
+    rise: ['rgba(14,14,16,0)', 'rgba(20,16,55,0.75)', 'rgba(29,21,109,0.9)', 'rgba(33,25,170,0.95)', 'rgba(44,32,241,0.97)', 'rgba(57,67,230,0.98)', 'rgba(74,103,226,1)'],
+    bloom: ['rgba(71,107,235,0.26)', 'rgba(71,107,235,0.06)', 'rgba(0,0,0,0)'],
+    accentFill: ['#6E8CF5', '#3355D4'],
+    /* Vertical ramp for a chart bar, light top → deep base. Hand-picked per
+       scheme rather than derived: a programmatic tint of the accent goes
+       muddy at the dark end, and this is the one place the app draws a
+       four-stop gradient at small sizes where that shows. */
+    chartGood: ['#C7E4FF', '#6E8CF5', '#3355D4', '#0F3B73'],
+  },
+  /** The Byre mark's own mint — the app's original scheme. */
+  green: {
+    accent: '#6FE3A9',
+    accentPressed: '#5AD095',
+    accentSoft: 'rgba(111,227,169,0.12)',
+    accentBorder: 'rgba(111,227,169,0.26)',
+    accentRamp: 'rgba(111,227,169,0.38)',
+    accentRampMid: '#B9D97A',
+    onLight: '#07301F',
+    secondary: '#9FEFC9',
+    onSecondary: '#0B5638',
+    surface: '#0B0B0D',
+    surfaceRaised: '#131317',
+    surfaceHigh: '#1C1C21',
+    // Same ramp shape as blue — flat hold, steep climb, lightening tail — so
+    // the two schemes feel like one app in two colourways rather than two
+    // different gradients that happen to share a screen.
+    ground: ['#08100C', '#08100C', '#0A2418', '#0C3D28', '#0E6642', '#12A87C', '#2FC795', '#5FDDB1'],
+    rise: ['rgba(8,16,12,0)', 'rgba(10,36,24,0.75)', 'rgba(12,61,40,0.9)', 'rgba(14,102,66,0.95)', 'rgba(18,168,124,0.97)', 'rgba(47,199,149,0.98)', 'rgba(95,221,177,1)'],
+    bloom: ['rgba(111,227,169,0.22)', 'rgba(111,227,169,0.05)', 'rgba(0,0,0,0)'],
+    accentFill: ['#8BEFBC', '#4FCB92'],
+    chartGood: ['#D6FCEA', '#6FE3A9', '#2FA97B', '#0C3D28'],
+  },
+} as const;
+
+const SCHEME = SCHEMES[appearance];
 
 /**
  * Byre design tokens — the single source of truth for colour, type, spacing,
@@ -20,12 +84,12 @@ import { Platform, TextStyle, ViewStyle } from 'react-native';
  *
  * Chromatic colour is rationed to three hues with one meaning each, so a
  * colour on screen always carries information instead of decoration:
- *   accent (azure)   → active, on, positive, "you held the line"
+ *   accent (periwinkle) → active, on, positive, "you held the line"
  *   warn   (amber)   → caution, bedtime, approaching a limit
  *   danger (crimson) → cost, overuse, break-glass
  *
  * Primary actions are white-on-black rather than accent-coloured. High
- * contrast, never garish, and it keeps azure meaningful as a *state* colour.
+ * contrast, never garish, and it keeps periwinkle meaningful as a *state* colour.
  *
  * Azure was chosen deliberately over both the cool mint/green that most
  * focus-and-blocking apps default to (that similarity is what got Byre's
@@ -36,9 +100,9 @@ import { Platform, TextStyle, ViewStyle } from 'react-native';
 export const palette = {
   /* Surfaces, darkest → lightest */
   base: '#000000',
-  surface: '#090C10',
-  surfaceRaised: '#101620',
-  surfaceHigh: '#182030',
+  surface: SCHEME.surface,
+  surfaceRaised: SCHEME.surfaceRaised,
+  surfaceHigh: SCHEME.surfaceHigh,
   surfaceInverse: '#FFFFFF',
 
   /* Text, most → least prominent. Alpha-based so it composes over any surface. */
@@ -54,11 +118,46 @@ export const palette = {
   border: 'rgba(255,255,255,0.11)',
   borderStrong: 'rgba(255,255,255,0.18)',
 
-  /* Accent — azure. Active states, positive data, brand moments. */
-  accent: '#4C9EFF',
-  accentPressed: '#2F7FE0',
-  accentSoft: 'rgba(76,158,255,0.12)',
-  accentBorder: 'rgba(76,158,255,0.26)',
+  /* Accent — periwinkle, sampled from the reference motion study (the
+     highlighted headline line reads #476BEB there). Chosen over the mint of
+     the logo mark because the app ground is now that study's electric blue:
+     mint on that ground is a clash, and the mark keeps its own colour, so
+     the green still appears exactly where the brand lives. */
+  accent: SCHEME.accent,
+  accentPressed: SCHEME.accentPressed,
+  accentSoft: SCHEME.accentSoft,
+  accentBorder: SCHEME.accentBorder,
+
+  /* Label colour for a white primary control. The reference's white pill
+     carries deep indigo text (#251C82), never black — black on white over a
+     blue ground reads as a system alert rather than part of the screen. */
+  onLight: SCHEME.onLight,
+
+  /* ── On-colour surfaces ────────────────────────────────────────
+   * The ground saturates in the bottom third, and the dark glass fills used
+   * everywhere else (rgba black over black) simply vanish against it — a
+   * "translucent dark" chip on electric blue is just blue. Controls that
+   * live down there use these instead: white at low alpha, which reads as
+   * frosted on any hue and therefore works unchanged in both schemes. */
+  onColor: 'rgba(255,255,255,0.12)',
+  onColorPressed: 'rgba(255,255,255,0.20)',
+  onColorBorder: 'rgba(255,255,255,0.24)',
+  onColorText: 'rgba(255,255,255,0.92)',
+  onColorTextDim: 'rgba(255,255,255,0.66)',
+
+  /* Secondary control — the lavender pill in the reference ("Redeem").
+     Sampled fill #ABBCF9 with a #4661CC label. It sits between the white
+     primary and a bare ghost link: still obviously tappable, clearly not the
+     thing you are being pushed toward. */
+  secondary: SCHEME.secondary,
+  onSecondary: SCHEME.onSecondary,
+
+  /* Savings / promotional badge — the amber "Save 40%" chip.
+     ⚠️ ESTIMATED, not sampled: no frame in either reference video contains
+     the badge, so this is matched by eye from the still. Adjust if it reads
+     wrong beside the real thing. */
+  savings: '#FFD24A',
+  onSavings: '#3A2A00',
 
   /* Warn — amber/gold. Caution, bedtime, nearing a limit. */
   warn: '#E9B23E',
@@ -79,13 +178,13 @@ export const palette = {
 
 /**
  * Sequential ramp for usage/intensity data, low → high. Semantically ordered
- * (calm azure at low usage, crimson at high) so the colour itself reads as
+ * (calm periwinkle at low usage, crimson at high) so the colour itself reads as
  * "this is getting worse" without needing a legend.
  */
 export const dataRamp = [
-  'rgba(76,158,255,0.38)',
+  SCHEME.accentRamp,
   palette.accent,
-  '#6FB3FF',
+  SCHEME.accentRampMid,
   palette.warn,
   palette.danger,
 ] as const;
@@ -113,20 +212,55 @@ export const dataRamp = [
  * Both faces ship with the OS, so there is no font download, no flash of
  * unstyled text and no bundle cost.
  */
+/**
+ * Poppins — the geometric sans from the reference motion study. Loaded in
+ * App.tsx via @expo-google-fonts/poppins.
+ *
+ * ⚠️ With a custom font, `fontWeight` does NOT pick the face. React Native
+ * only synthesises weights for the system font; for a bundled family you must
+ * name the exact family per weight or every weight renders as Regular on
+ * Android and as a faux-bold smear on iOS. That is why this is a map of
+ * weight → family name rather than one `sans` entry, and why every `type`
+ * entry below carries an explicit `fontFamily`.
+ *
+ * `system` stays available for the two places a bundled font is wrong: the
+ * numeric tabular figures in countdowns (Poppins has no tabular set, so digits
+ * jitter as a timer counts down) and any text that must match OS chrome.
+ */
 export const fonts = {
-  sans: Platform.select({ ios: 'System', default: 'sans-serif' }) as string,
-  /** Hairline weights only render on Android via the explicitly named family. */
-  sansLight: Platform.select({ ios: 'System', default: 'sans-serif-light' }) as string,
-  serif: Platform.select({ ios: 'Georgia', default: 'serif' }) as string,
+  light: 'Poppins_300Light',
+  regular: 'Poppins_400Regular',
+  medium: 'Poppins_500Medium',
+  semibold: 'Poppins_600SemiBold',
+  bold: 'Poppins_700Bold',
+  extrabold: 'Poppins_800ExtraBold',
+  /** OS font. Keep for tabular numerals — see above. */
+  system: Platform.select({ ios: 'System', default: 'sans-serif' }) as string,
 } as const;
 
-export const numeric: TextStyle = { fontVariant: ['tabular-nums'] };
+/**
+ * Tabular figures for anything that counts. Deliberately also forces the OS
+ * font: Poppins ships no tabular set, so a countdown rendered in it both
+ * *jitters* (each digit is a different width, so "30" and "11" don't occupy
+ * the same box) and runs noticeably wider than San Francisco at the same
+ * size — wide enough that the unit label beside a hero figure was being
+ * clipped to "mir".
+ *
+ * Spread this LAST in a type entry so it wins over the entry's own
+ * fontFamily. Numerals are the one place the brand typeface is the wrong
+ * tool.
+ */
+export const numeric: TextStyle = {
+  fontVariant: ['tabular-nums'],
+  fontFamily: fonts.system,
+};
 
 export const type = {
   /** Countdowns and hero figures only — one per screen, maximum. */
   display: {
     fontSize: 64,
     lineHeight: 68,
+    fontFamily: fonts.bold,
     fontWeight: '700',
     letterSpacing: -2,
     color: palette.text,
@@ -136,6 +270,7 @@ export const type = {
   title1: {
     fontSize: 32,
     lineHeight: 38,
+    fontFamily: fonts.bold,
     fontWeight: '700',
     letterSpacing: -0.8,
     color: palette.text,
@@ -144,6 +279,7 @@ export const type = {
   title2: {
     fontSize: 24,
     lineHeight: 31,
+    fontFamily: fonts.bold,
     fontWeight: '700',
     letterSpacing: -0.5,
     color: palette.text,
@@ -152,6 +288,7 @@ export const type = {
   title3: {
     fontSize: 19,
     lineHeight: 25,
+    fontFamily: fonts.semibold,
     fontWeight: '600',
     letterSpacing: -0.3,
     color: palette.text,
@@ -160,6 +297,7 @@ export const type = {
   body: {
     fontSize: 16,
     lineHeight: 22,
+    fontFamily: fonts.medium,
     fontWeight: '500',
     letterSpacing: -0.1,
     color: palette.text,
@@ -167,6 +305,7 @@ export const type = {
   bodyStrong: {
     fontSize: 16,
     lineHeight: 22,
+    fontFamily: fonts.semibold,
     fontWeight: '600',
     letterSpacing: -0.1,
     color: palette.text,
@@ -175,6 +314,7 @@ export const type = {
   callout: {
     fontSize: 15,
     lineHeight: 22,
+    fontFamily: fonts.regular,
     fontWeight: '400',
     color: palette.textSecondary,
   } as TextStyle,
@@ -182,6 +322,7 @@ export const type = {
   sub: {
     fontSize: 13,
     lineHeight: 18,
+    fontFamily: fonts.regular,
     fontWeight: '400',
     color: palette.textTertiary,
   } as TextStyle,
@@ -189,6 +330,7 @@ export const type = {
   caption: {
     fontSize: 12,
     lineHeight: 16,
+    fontFamily: fonts.semibold,
     fontWeight: '600',
     color: palette.textTertiary,
   } as TextStyle,
@@ -197,6 +339,7 @@ export const type = {
   overline: {
     fontSize: 11,
     lineHeight: 14,
+    fontFamily: fonts.bold,
     fontWeight: '700',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -209,7 +352,7 @@ export const type = {
    * to give up, so it should never shout. Always paired with `unit`, never
    * with the unit baked into the same string. */
   hero: {
-    fontFamily: fonts.sansLight,
+    fontFamily: fonts.light,
     fontSize: 78,
     lineHeight: 82,
     fontWeight: '200',
@@ -221,38 +364,47 @@ export const type = {
   unit: {
     fontSize: 15,
     lineHeight: 20,
+    fontFamily: fonts.medium,
     fontWeight: '500',
     letterSpacing: 0.2,
     color: palette.textTertiary,
   } as TextStyle,
 
   /* ── Editorial voice ───────────────────────────────────────────
-   * Used as a pair on one line: the dim italic sets up, the accent roman
-   * lands. "You said you wanted" / "the mornings back". */
+   * Used as a pair on one line: the dim line sets up, the accent line lands.
+   * "You said you wanted" / "the mornings back".
+   *
+   * Was a Georgia italic. The reference motion study sets its headlines as
+   * heavy lowercase geometric sans on very tight leading, with one line
+   * coloured to carry the emphasis — so the italic is gone and the contrast
+   * is now weight and colour instead of slant. Leading is deliberately
+   * tighter than the fontSize ratio used elsewhere (1.1 vs ~1.3): the stacked
+   * two-tone headline only reads as one object when the lines nearly touch.
+   *
+   * No italic face is referenced anywhere. Naming a non-italic family with
+   * fontStyle:'italic' gives a faux-slanted smear, not a real italic. */
   editorial: {
-    fontFamily: fonts.serif,
-    fontStyle: 'italic',
-    fontSize: 29,
-    lineHeight: 39,
-    fontWeight: '400',
-    letterSpacing: -0.4,
+    fontFamily: fonts.extrabold,
+    fontSize: 30,
+    lineHeight: 33,
+    fontWeight: '800',
+    letterSpacing: -0.9,
     color: palette.textSecondary,
   } as TextStyle,
   editorialStrong: {
-    fontFamily: fonts.serif,
-    fontSize: 29,
-    lineHeight: 39,
-    fontWeight: '600',
-    letterSpacing: -0.4,
+    fontFamily: fonts.extrabold,
+    fontSize: 30,
+    lineHeight: 33,
+    fontWeight: '800',
+    letterSpacing: -0.9,
     color: palette.accent,
   } as TextStyle,
-  /** Smaller serif, for pull-quotes of the user's own typed words. */
+  /** Pull-quotes of the user's own typed words. */
   quote: {
-    fontFamily: fonts.serif,
-    fontStyle: 'italic',
+    fontFamily: fonts.medium,
     fontSize: 18,
-    lineHeight: 27,
-    fontWeight: '400',
+    lineHeight: 26,
+    fontWeight: '500',
     color: palette.text,
   } as TextStyle,
 } as const;
@@ -275,8 +427,15 @@ export const space = {
   huge: 48,
   /** Standard screen side padding — every screen uses this, nothing else. */
   gutter: 20,
-  /** Bottom padding that clears the floating tab bar. */
-  tabClearance: 116,
+  /** Bottom padding that clears the floating tab bar.
+   *
+   *  The bar genuinely floats now — it is a glass pill inset from the edges,
+   *  not a slab pinned to the bottom — so nothing in the layout reserves
+   *  space for it and every scrolling screen has to pad by this. 116 was
+   *  already too small for the old slab (the last row was showing through
+   *  it); the pill sits higher still, since it clears the home indicator by
+   *  the safe-area inset plus a gap. */
+  tabClearance: 150,
 } as const;
 
 export const radius = {
@@ -322,7 +481,7 @@ export const fieldStyle: TextStyle = {
 /* ─────────────────────────────────────────────────────────────
  * LIGHT
  *
- * The background is not flat black — an azure bloom bleeds up from behind the
+ * The background is not flat black — a periwinkle bloom bleeds up from behind the
  * content, so the screen has a light source. This is the difference between
  * "dark mode" and a designed dark surface. Rendered with a radial gradient
  * (see GlowField in primitives), never with a shadow: shadowColor is ignored
@@ -330,14 +489,49 @@ export const fieldStyle: TextStyle = {
  * ───────────────────────────────────────────────────────────── */
 
 export const gradients = {
-  /** App ground. Faintest possible azure lift at the top, true black below. */
-  ground: ['#050C16', '#000000', '#000000'] as readonly [string, string, string],
+  /** App ground — sampled directly from the reference motion study rather
+   *  than eyeballed, which is why it is eight stops and not three. The ramp
+   *  is not linear: it holds a flat near-black for the top fifth, climbs
+   *  steeply through indigo, peaks in saturation around 0.67 (#2C20F1), then
+   *  *lightens and desaturates* toward the bottom edge (#4A67E2). That final
+   *  lift is the part a 3-stop approximation always misses — without it the
+   *  screen reads as a flat blue wash instead of a light source sitting just
+   *  below the bottom bezel.
+   *
+   *  Must be used with `groundLocations` — the stops are unevenly spaced and
+   *  evenly distributing them collapses the whole effect. */
+  ground: SCHEME.ground as unknown as readonly [string, string, ...string[]],
+  /** Chart bar ramp for the active scheme — see SCHEMES.chartGood. */
+  chartGood: SCHEME.chartGood as unknown as readonly [string, string, string, string],
+  /** Stop positions for `ground`, measured off the same reference frame. */
+  /**
+   * Where each `ground` stop sits, top → bottom.
+   *
+   * Colour is confined to the **bottom 40%**: black holds flat to 0.60, then
+   * the whole ramp — the climb, the 0.85 saturation peak and the lightening
+   * tail — is compressed into the last third. The reference frame these
+   * colours were sampled from spreads the same ramp over roughly half the
+   * screen; this is deliberately tighter, which reads as a light source just
+   * under the bezel rather than a wash over the lower half.
+   *
+   * The two stops at 0.60/0.64 are both near-black by design: a single hard
+   * stop from flat black into indigo bands visibly on an OLED gradient.
+   */
+  groundLocations: [0, 0.6, 0.64, 0.69, 0.74, 0.83, 0.91, 1] as readonly [number, number, ...number[]],
+  /** The ground's rise on its own, transparent at the top — layered over an
+   *  existing dark background (onboarding's PersistentBackground) that paints
+   *  its own black rather than re-painting it. */
+  groundRise: SCHEME.rise as unknown as readonly [string, string, ...string[]],
+  /** Stop positions for `groundRise`, tracking `groundLocations` from its
+   *  second stop. Transparent until 0.58 so onboarding's animated black shows
+   *  through the top ~60% untouched. */
+  groundRiseLocations: [0, 0.58, 0.64, 0.69, 0.78, 0.88, 1] as readonly [number, number, ...number[]],
   /** Behind a hero figure or the Shield's line — a stronger centred bloom. */
-  bloom: ['rgba(76,158,255,0.22)', 'rgba(76,158,255,0.05)', 'rgba(0,0,0,0)'] as readonly [string, string, string],
+  bloom: SCHEME.bloom as unknown as readonly [string, string, string],
   /** Fill for a primary white control, so it isn't a dead flat rectangle. */
-  light: ['#FFFFFF', '#E8ECEA'] as readonly [string, string],
+  light: ['#FFFFFF', '#F2F3FF'] as readonly [string, string],
   /** Fill for an accent-filled control. */
-  accent: ['#8FC4FF', '#2F7FE0'] as readonly [string, string],
+  accent: SCHEME.accentFill as unknown as readonly [string, string],
   /** Top-down scrim so content can scroll under the status bar legibly. */
   scrimTop: ['rgba(0,0,0,0.9)', 'rgba(0,0,0,0)'] as readonly [string, string],
 } as const;

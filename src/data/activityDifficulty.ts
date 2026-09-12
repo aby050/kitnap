@@ -46,6 +46,9 @@ export type RepTargetInput = {
   now: Date;
   /** True when they told us something major changed recently. */
   lifeChange?: boolean;
+  /** What they said in onboarding they could do in ONE go, for this movement.
+   *  Used only until real history exists — see the note in computeRepTarget. */
+  baseline?: number;
 };
 
 export type RepTarget = {
@@ -74,14 +77,32 @@ function ageFactor(age: number | undefined): { factor: number; reason: string | 
   return { factor: 0.85, reason: 'gentler target while you are still growing' };
 }
 
+/** Share of a declared one-go maximum to ask for on a single unlock.
+ *
+ *  Not 100%: the unlock has to be completable on the tenth try of a bad day,
+ *  not just on the day they were feeling strong enough to claim a number.
+ *  Asking someone for their true maximum every time they want their phone is
+ *  how the app gets deleted. 60% is real effort that still finishes. */
+const BASELINE_SHARE = 0.6;
+
 export function computeRepTarget(input: RepTargetInput): RepTarget {
-  const { activity, age, history, now, lifeChange } = input;
+  const { activity, age, history, now, lifeChange, baseline } = input;
   const band = BANDS[activity];
   const reasons: string[] = [];
 
   const age0 = ageFactor(age);
   if (age0.reason) reasons.push(age0.reason);
+  /* Start from what THIS person said they can do, not from a generic band
+   * base. The band base is an average of nobody: it gives the same first
+   * challenge to someone who can do 3 push-ups and someone who can do 30, and
+   * exactly one of them completes it. The declared baseline is replaced by
+   * real history as soon as there is any — it is a starting point, not a
+   * claim the app keeps trusting. */
   let target = band.base * age0.factor;
+  if (baseline && Number.isFinite(baseline) && baseline > 0) {
+    target = baseline * BASELINE_SHARE * age0.factor;
+    reasons.push('based on what you said you can do');
+  }
 
   /* ── 1. Recent performance, same movement ─────────────────────────── */
   const recent = (history ?? [])

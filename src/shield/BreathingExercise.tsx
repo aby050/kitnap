@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(76,158,255,0.18)',
+    backgroundColor: 'rgba(71,107,235,0.18)',
     borderWidth: 1.5,
     borderColor: palette.accent,
   },

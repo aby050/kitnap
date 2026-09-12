@@ -3,6 +3,15 @@ import { StatusBar } from 'expo-status-bar';
 import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  useFonts,
+  Poppins_300Light,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
 import SplashFlow from './src/onboarding/SplashFlow';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
 import PermissionBoardingPassScreen from './src/onboarding/PermissionBoardingPassScreen';
@@ -20,7 +29,6 @@ import IntensityScreen from './src/onboarding/IntensityScreen';
 import FutureSelfScreen from './src/onboarding/FutureSelfScreen';
 import PaywallScreen from './src/onboarding/PaywallScreen';
 import GroundRulesScreen from './src/onboarding/GroundRulesScreen';
-import DiscountPaywallScreen from './src/onboarding/DiscountPaywallScreen';
 import AppPickerScreen from './src/onboarding/AppPickerScreen';
 import IOSAppPickerScreen from './src/onboarding/IOSAppPickerScreen';
 import ProposedRulesScreen from './src/onboarding/ProposedRulesScreen';
@@ -78,7 +86,6 @@ type Stage =
   | 'paywall'
   | 'trial'
   | 'purchased'
-  | 'discount'
   | 'referral'
   | 'welcome'
   | 'app';
@@ -86,6 +93,19 @@ type Stage =
 type Answer = { value: string; label: string };
 
 export default function App() {
+  // Every weight the type scale names has to be loaded here: with a bundled
+  // family React Native will not synthesise a missing weight, it silently
+  // falls back to the system font for that style only — which shows up as one
+  // stray San Francisco label in an otherwise Poppins screen.
+  const [fontsLoaded] = useFonts({
+    Poppins_300Light,
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+  });
+
   const [stage, setStage] = useState<Stage>('loading');
   const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
@@ -239,6 +259,17 @@ export default function App() {
   const intensityRecommendation = recommendIntensity(answers, dailyHours, hoursFromUsage || fromUsage);
   const suggestedTheme = suggestTheme(answers.interests?.value);
 
+  // Hold on the painted background rather than flashing unstyled system-font
+  // text for a frame while the faces decode.
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.root}>
+        <PersistentBackground />
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -389,33 +420,18 @@ export default function App() {
           {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('paywall')} />}
 
           {/* The value-prop paywall comes before the plan picker: it makes the
-              case, the picker takes the money. "Not now" is the only route to
-              the discount offer, and only when one is actually configured —
-              otherwise declining just lands on the picker. */}
+              case, the picker takes the money.
+              The exit-intent "Too Expensive? Here is 50% OFF" screen that used
+              to sit behind "Not now" is gone: a last-chance discount fired at
+              someone who just declined is the single most copied screen in
+              this category, and it was one of the things making Byre's funnel
+              read as a reskin under guideline 4.3(a). */}
           {stage === 'paywall' && (
             <PaywallScreen
               name={name}
               hoursBack={Math.max(1, Math.round(dailyHours))}
               personalLine={goal.line || undefined}
               onContinue={() => setStage('trial')}
-              onDecline={
-                purchases.discountOffering ? () => setStage('discount') : undefined
-              }
-            />
-          )}
-
-          {stage === 'discount' && (
-            <DiscountPaywallScreen
-              offering={purchases.discountOffering}
-              fullPriceOffering={purchases.offering}
-              onPurchased={grantBailouts}
-              onStart={(result) => {
-                setPurchaseResult(result ?? null);
-                setStage(result ? 'purchased' : 'welcome');
-              }}
-              // Declining the last-chance offer still leaves the plan picker,
-              // so someone who only wanted the monthly plan isn't stranded.
-              onClose={() => setStage('trial')}
             />
           )}
 

@@ -4,6 +4,7 @@
   "main": "index.ts",
   "dependencies": {
     "@brighthustle/react-native-usage-stats-manager": "^0.1.5",
+    "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/metro-runtime": "~57.0.11",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -22,6 +23,7 @@
     "expo-dev-client": "~57.0.14",
     "expo-file-system": "~57.0.5",
     "expo-font": "~57.0.1",
+    "expo-glass-effect": "~57.0.3",
     "expo-haptics": "~57.0.1",
     "expo-image-manipulator": "~57.0.16",
     "expo-image-picker": "~57.0.11",
@@ -37,6 +39,7 @@
     "react-native-device-activity": "^0.6.1",
     "react-native-fast-tflite": "3.0.1",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-mmkv": "^4.3.2",
     "react-native-nitro-image": "0.15.2",
     "react-native-nitro-modules": "0.37.0",
     "react-native-purchases": "^10.9.0",
@@ -61,8 +64,9 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
+    "ios": "npm run prebuild:ios && expo run:ios",
+    "web": "expo start --web",
+    "prebuild:ios": "expo prebuild --platform ios && node scripts/fix-extensionkit.js"
   },
   "private": true
 }

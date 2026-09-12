@@ -13,8 +13,8 @@
     "ios": {
       "bundleIdentifier": "com.abhay.byre",
       "appleTeamId": "RG96N3U9GH",
-      "supportsTablet": true,
-      "buildNumber": "7",
+      "supportsTablet": false,
+      "buildNumber": "8",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
         "NSCameraUsageDescription": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone.",

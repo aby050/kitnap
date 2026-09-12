@@ -102,7 +102,7 @@ export default function Medal({
           </SvgGradient>
 
           <SvgGradient id={`${gid}-mint`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#8FC4FF" />
+            <Stop offset="0%" stopColor="#6E8CF5" />
             <Stop offset="100%" stopColor="#0F3B73" />
           </SvgGradient>
 

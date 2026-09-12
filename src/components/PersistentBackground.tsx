@@ -9,6 +9,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { gradients } from '../design/tokens';
 
 /**
  * Rendered once at the app root and never unmounted while onboarding runs,
@@ -80,17 +81,30 @@ export default function PersistentBackground() {
       {/* Secondary wandering side-glow — adds depth without symmetry */}
       <Animated.View style={[styles.sideGlow, glow2Style]}>
         <LinearGradient
-          colors={['rgba(76,158,255,0.07)', 'rgba(0,0,0,0)']}
+          colors={['rgba(71,107,235,0.07)', 'rgba(0,0,0,0)']}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={StyleSheet.absoluteFill}
         />
       </Animated.View>
 
-      {/* Bottom vignette — keeps text readable as content scrolls under it */}
+      {/* Brand rise — the same saturated ombre the rest of the app sits on
+          (gradients.ground), layered here as `groundRise` so onboarding keeps
+          its own animated black underneath instead of double-painting it.
+          This replaced a flat black bottom vignette, which fought the rise. */}
       <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
-        start={{ x: 0.5, y: 0.5 }}
+        colors={[...gradients.groundRise]}
+        locations={[...gradients.groundRiseLocations]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Scrim over the rise — the saturated bottom is bright enough that
+          white body copy scrolling across it needs the contrast held back. */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.28)']}
+        start={{ x: 0.5, y: 0.6 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
       />

@@ -18,7 +18,7 @@ import { Donut, AppGlyphTile } from './profile/viz';
 /** Fixed, high-contrast segment colours — assigned by rank so the donut, its
  *  legend and the breakdown rows all speak the same colour for a given app.
  *  Everything past the top five collapses into one neutral "Other" wedge. */
-const SEG = ['#4C9EFF', '#8FA9FF', '#E9AE62', '#C79BFF', '#5FE0D6'];
+const SEG = ['#476BEB', '#7F92E0', '#E9AE62', '#C79BFF', '#5FE0D6'];
 const OTHER = 'rgba(255,255,255,0.22)';
 
 /** Package names aren't display names — UsageStatsManager exposes only the
