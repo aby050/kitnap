@@ -11,6 +11,7 @@ import SettingsScreen from './SettingsScreen';
 import TimerScreen from './TimerScreen';
 import EmergencyTokensScreen from './EmergencyTokensScreen';
 import DeleteAccountScreen from './DeleteAccountScreen';
+import AppearanceScreen from './AppearanceScreen';
 import EssentialsScreen from './EssentialsScreen';
 // World feature — deprioritized per product decision (Byre-style apps don't
 // have a "world" concept; focus is the core Shield/Gate/timer loop instead).
@@ -99,6 +100,7 @@ type Overlay =
   | 'guardianVerify'
   | 'waitingRoom'
   | 'blockScreens'
+  | 'appearance'
   | 'schedules'
   | 'account'
   | 'futureSelf'
@@ -551,6 +553,12 @@ export default function MainApp({
     onPatch({ activitySessions: next });
   }
 
+  /** Maps the onboarding answer ("Push-ups") onto the engine's ActivityKind
+   *  ("push-ups"). Kept here rather than in questions.ts so the user-facing
+   *  wording can change without touching the rep engine's union. */
+  const matchesChosenMovement = (activity: ActivityKind, picked?: string) =>
+    !!picked && picked.toLowerCase() === activity.toLowerCase();
+
   /** Adaptive rep target, resolved per movement when the gate picks one. */
   const repsFor = (activity: ActivityKind) =>
     computeRepTarget({
@@ -559,6 +567,12 @@ export default function MainApp({
       history: activitySessions,
       now: new Date(),
       lifeChange: parseLifeChange(persisted.onboardingAnswers?.lifeChange?.value),
+      // Only counts for the movement they actually picked — a push-up
+      // baseline says nothing about their squats.
+      baseline:
+        matchesChosenMovement(activity, persisted.onboardingAnswers?.movement?.value)
+          ? Number(persisted.onboardingAnswers?.repBaseline?.value)
+          : undefined,
     }).reps;
 
   useEffect(() => {
@@ -854,9 +868,7 @@ export default function MainApp({
           applyProgress([{ type: 'blocked' }]);
           setBlock(null);
         }}
-        onEmergency={() => {
-          openEmergencyAccess();
-        }}
+        onEmergency={openEmergencyAccess}
       />
     );
   }
@@ -903,6 +915,7 @@ export default function MainApp({
           onOpenGuardian={() => setOverlay('guardian')}
           onOpenWaitingRoom={() => setOverlay('waitingRoom')}
           onOpenBlockScreens={() => setOverlay('blockScreens')}
+          onOpenAppearance={() => setOverlay('appearance')}
           onOpenSchedules={() => setOverlay('schedules')}
           onOpenAccount={() => setOverlay('account')}
           accountLabel={account ? account.identifier : undefined}
@@ -928,6 +941,8 @@ export default function MainApp({
           }}
         />
       );
+    if (ov === 'appearance')
+      return <AppearanceScreen onBack={() => setOverlay('settings')} />;
     if (ov === 'deleteAccount')
       return (
         <DeleteAccountScreen
@@ -1230,6 +1245,7 @@ export default function MainApp({
                 onPatch({ emergencyTokens: next });
               }}
               onOpenShield={openUnlockFlow}
+              onEmergency={openEmergencyAccess}
               onOpenTokenInfo={() => setOverlay('emergencyTokens')}
             />
           )}

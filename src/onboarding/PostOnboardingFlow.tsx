@@ -12,10 +12,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import AnalyzingLoader from './AnalyzingLoader';
-import { palette } from '../design/tokens';
+import { fonts, palette } from '../design/tokens';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
-import { buildRecapPlan, formatYearsLabel } from '../data/setupPlan';
+import { buildRecapPlan } from '../data/setupPlan';
 import Icon from '../ui/Icon';
 
 type Answer = { value: string; label: string };
@@ -165,6 +165,20 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
   // strand the user on a blank screen.
   const next = () => setStep((s) => (Platform.OS === 'ios' && s + 1 === 4 ? 5 : s + 1));
 
+  /* The user's own words, lowercased to sit in the headline style. Both
+   * questions are skippable, so both need a fallback that is still true of
+   * everyone rather than a guess about this person. */
+  const reachAnswer = (answers.pickupReason?.label || 'not really thinking').toLowerCase();
+  const ratherAnswer = (() => {
+    const picked = (answers.interests?.label || '').split(',').map((x) => x.trim()).filter(Boolean);
+    if (picked.length === 0) return 'somewhere else';
+    // Two is the most that fits the headline size without wrapping to four
+    // lines; the rest are represented by the count rather than truncated
+    // silently.
+    if (picked.length <= 2) return picked.join(' and ').toLowerCase();
+    return `${picked.slice(0, 2).join(', ').toLowerCase()} +${picked.length - 2} more`;
+  })();
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.body}>
@@ -178,26 +192,49 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
           </Animated.View>
         )}
 
+        {/* These two beats used to be the "bad news / good news" pair every
+            app in this category ships: a projected N-years-of-your-life doom
+            figure, then a promise to hand N years back.
+            Both had to go, for two separate reasons.
+
+            1. The projection was an extrapolation from an onboarding answer
+               dressed as a fact about the user's life, and the "good news"
+               number was worse — `reclaimedYears = phoneYears ×
+               reductionPercent`, where reductionPercent is a figure this app
+               invented and floored at 30%. That is an unsubstantiated
+               efficacy claim, the same defect AUDIT.md flags as P6 on the
+               paywall chart, and it contradicts the project's own rule
+               against printing numbers it has not measured.
+            2. It is the single most recognisable beat in every competitor's
+               funnel, which is exactly the ground App Review cited in the
+               4.3(a) rejection of build 6.
+
+            What replaces them says only things that are true, and says them
+            back in the user's own words: their answer about why they reach
+            for the phone, and what they told us they would rather be doing.
+            Nothing is projected, nothing is promised. */}
         {step === 2 && (
-          <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
-            <Text style={styles.smallHeading}>The bad news is that you'll spend{' '}
-              <Text style={styles.accentInline}>{plan.badDaysThisYear} days</Text> on your phone this year.
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.reflectBlock}>
+            <Text style={styles.reflectLead}>you said you reach for it when you're</Text>
+            <Text style={styles.reflectAnswer}>{reachAnswer}</Text>
+            <Text style={styles.reflectTail}>
+              Not because you decided to. That's the moment Byre steps into.
             </Text>
-            <Text style={styles.smallHeading}>Meaning that you're on track to spend</Text>
-            <BigNumber value={formatYearsLabel(plan.phoneYears)} />
-            <Text style={styles.smallHeading}>of your life looking down at your phone.</Text>
-            <Text style={styles.sourceNote}>{plan.sourceNote}</Text>
-            <View style={{ height: 20 }} />
+            <View style={{ height: 28 }} />
             <GradientButton label="Continue" onPress={next} />
           </Animated.View>
         )}
 
         {step === 3 && (
-          <Animated.View entering={FadeInUp.duration(400)} style={styles.centerBlock}>
-            <Text style={styles.smallHeading}>The good news is that this app can help you get back</Text>
-            <BigNumber value={formatYearsLabel(plan.reclaimedYears)} />
-            <Text style={styles.smallHeading}>of your life.</Text>
-            <View style={{ height: 20 }} />
+          <Animated.View entering={FadeInUp.duration(400)} style={styles.reflectBlock}>
+            <Text style={styles.reflectLead}>and that you'd rather be</Text>
+            <Text style={styles.reflectAnswer}>{ratherAnswer}</Text>
+            <Text style={styles.reflectTail}>
+              Byre won't promise you that time back — nobody can measure that
+              honestly. It just puts a real lock between you and the app, so
+              the reach costs you something.
+            </Text>
+            <View style={{ height: 28 }} />
             <GradientButton label="Continue" onPress={next} />
           </Animated.View>
         )}
@@ -289,14 +326,14 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
                       <Path
                         d="M 95,160 Q 90,80 50,48"
                         fill="none"
-                        stroke="#4C9EFF"
+                        stroke="#476BEB"
                         strokeWidth={3.5}
                         strokeLinecap="round"
                       />
                       <Path
                         d="M 50,48 L 62,50 M 50,48 L 52,60"
                         fill="none"
-                        stroke="#4C9EFF"
+                        stroke="#476BEB"
                         strokeWidth={3.5}
                         strokeLinecap="round"
                       />
@@ -316,19 +353,24 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
 
         {step === 6 && (
             <Animated.View entering={FadeInUp.duration(400)} style={styles.recapBlock}>
+              {/* Was "Byre will get you back <N> years of your life" — the
+                  same invented reclaimedYears figure as the removed beats,
+                  in the strongest possible mood ("will"). The setup below it
+                  is real and already states itself; the headline now names
+                  what was actually configured instead of promising an
+                  outcome nothing here can measure. */}
               <Text style={styles.finalHeading}>
                 {name ? `${name},\n` : ''}
-                Byre will get you back{' '}
-                <Text style={{ color: palette.accent }}>{formatYearsLabel(plan.reclaimedYears)}</Text>
-                {'\n'}of your life
+                your setup is{' '}
+                <Text style={{ color: palette.accent }}>ready</Text>
               </Text>
 
               <SummaryRow
                 icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#4C9EFF" strokeWidth={2}>
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#476BEB" strokeWidth={2}>
                     <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <Circle cx={12} cy={11} r={2} fill="#4C9EFF" />
-                    <Path d="M12 13v3" stroke="#4C9EFF" strokeWidth={2} />
+                    <Circle cx={12} cy={11} r={2} fill="#476BEB" />
+                    <Path d="M12 13v3" stroke="#476BEB" strokeWidth={2} />
                   </Svg>
                 }
                 title={plan.extra.title}
@@ -338,7 +380,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
               {plan.sleep ? (
                 <SummaryRow
                   icon={
-                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="#4C9EFF">
+                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="#476BEB">
                       <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                     </Svg>
                   }
@@ -349,15 +391,15 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
 
               <SummaryRow
                 icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#4C9EFF" strokeWidth={2}>
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#476BEB" strokeWidth={2}>
                     <Rect x={3} y={4} width={18} height={18} rx={2} />
                     <Path d="M16 2v4M8 2v4M3 10h18" />
-                    <Circle cx={8} cy={14} r={1.2} fill="#4C9EFF" />
-                    <Circle cx={12} cy={14} r={1.2} fill="#4C9EFF" />
-                    <Circle cx={16} cy={14} r={1.2} fill="#4C9EFF" />
-                    <Circle cx={8} cy={18} r={1.2} fill="#4C9EFF" />
-                    <Circle cx={12} cy={18} r={1.2} fill="#4C9EFF" />
-                    <Circle cx={16} cy={18} r={1.2} fill="#4C9EFF" />
+                    <Circle cx={8} cy={14} r={1.2} fill="#476BEB" />
+                    <Circle cx={12} cy={14} r={1.2} fill="#476BEB" />
+                    <Circle cx={16} cy={14} r={1.2} fill="#476BEB" />
+                    <Circle cx={8} cy={18} r={1.2} fill="#476BEB" />
+                    <Circle cx={12} cy={18} r={1.2} fill="#476BEB" />
+                    <Circle cx={16} cy={18} r={1.2} fill="#476BEB" />
                   </Svg>
                 }
                 title={`${plan.reclaimedDaysThisYear} days back this year`}
@@ -406,6 +448,37 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   centerBlock: { alignItems: 'center', width: '100%', justifyContent: 'center' },
+  /* Left-aligned and heavy, matching the education slides and the question
+     flow, rather than the centred small-caption-plus-glowing-number stack
+     these two screens used to share with every other app in the category. */
+  reflectBlock: { alignItems: 'stretch', width: '100%', justifyContent: 'center', paddingHorizontal: 8 },
+  reflectLead: {
+    color: palette.textSecondary,
+    fontFamily: fonts.medium,
+    fontSize: 17,
+    fontWeight: '500',
+    textAlign: 'left',
+    lineHeight: 24,
+  },
+  reflectAnswer: {
+    color: palette.accent,
+    fontFamily: fonts.extrabold,
+    fontSize: 42,
+    fontWeight: '800',
+    textAlign: 'left',
+    lineHeight: 44,
+    letterSpacing: -1.8,
+    marginTop: 10,
+  },
+  reflectTail: {
+    color: palette.textTertiary,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    textAlign: 'left',
+    lineHeight: 22,
+    marginTop: 20,
+    maxWidth: 330,
+  },
   recapBlock: {
     alignItems: 'center',
     width: '100%',
@@ -423,7 +496,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     marginVertical: 14,
-    textShadowColor: 'rgba(76,158,255,0.5)',
+    textShadowColor: 'rgba(71,107,235,0.5)',
     textShadowRadius: 24,
     textShadowOffset: { width: 0, height: 0 },
   },

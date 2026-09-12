@@ -142,7 +142,7 @@ export default function MilestonesScreen({
                         <View style={styles.tierMeterRow}>
                           <GradientMeter
                             progress={earned ? 1 : pct}
-                            colors={earned ? ['#8FC4FF', '#1C5FB8'] : isNext ? ['#6FB3FF', palette.accent] : ['#5FE0D6', '#8FA9FF']}
+                            colors={earned ? ['#6E8CF5', '#1C3FA8'] : isNext ? ['#8B9CF2', palette.accent] : ['#5FE0D6', '#7F92E0']}
                             height={7}
                             style={{ flex: 1 }}
                           />
@@ -284,12 +284,12 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
   },
   tierEarned: { borderColor: palette.border, backgroundColor: palette.surfaceRaised },
-  tierNext: { borderColor: palette.accentBorder, backgroundColor: 'rgba(76,158,255,0.06)' },
+  tierNext: { borderColor: palette.accentBorder, backgroundColor: 'rgba(71,107,235,0.06)' },
   tierBody: { flex: 1, gap: 5 },
   tierEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tierEyebrow: { color: palette.textTertiary, fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
   tierEyebrowEarned: { color: palette.accent },
-  tierEyebrowNext: { color: '#6FB3FF' },
+  tierEyebrowNext: { color: '#8B9CF2' },
   tierName: { color: palette.text, fontSize: 16.5, fontWeight: '800', letterSpacing: -0.3 },
   tierDesc: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 17 },
   tierMeterRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 4 },
@@ -362,9 +362,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(76,158,255,0.14)',
+    backgroundColor: 'rgba(71,107,235,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(76,158,255,0.3)',
+    borderColor: 'rgba(71,107,235,0.3)',
   },
   unlockedBadgeText: {
     color: palette.accent,

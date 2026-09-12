@@ -94,7 +94,7 @@ export default function AnalyzingLoader({
               cx={75}
               cy={75}
               r={R - 12}
-              stroke="rgba(76,158,255,0.30)"
+              stroke="rgba(71,107,235,0.30)"
               strokeWidth={2}
               fill="none"
               strokeDasharray="16 250"

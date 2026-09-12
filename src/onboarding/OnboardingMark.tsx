@@ -6,8 +6,15 @@ import ByreOrb from '../components/ByreOrb';
 
 /** Header mark — small enough to sit above copy and the Screen Time card
  *  without covering them. Constant across every screen that shares a layout
- *  with body copy, so it never resizes underneath the reader. */
-export const ONBOARDING_MARK_SIZE = 52;
+ *  with body copy, so it never resizes underneath the reader.
+ *
+ *  NOTE: this is the box, not the drawn width. The mark's artwork is taller
+ *  than it is wide (aspect 0.908) and is rendered `contain` into a square, so
+ *  the visible width is ~0.91 of this number — at the old value of 52 the
+ *  mark drew only 47pt across and read as an afterthought once it shrank out
+ *  of the education slides. The slot height derives from this constant, so
+ *  raising it moves the layout with it and nothing needs adjusting by hand. */
+export const ONBOARDING_MARK_SIZE = 76;
 
 /** The education slides carry three short lines and nothing else, so the
  *  mark is the only thing with room to grow into — it reads as the brand

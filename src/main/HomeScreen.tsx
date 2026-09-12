@@ -29,6 +29,7 @@ import BailoutSheet from '../components/BailoutSheet';
 import Icon from '../ui/Icon';
 import { tapLight } from '../ui/haptics';
 import { dataRamp, motion, palette, radius, space, type } from '../design/tokens';
+import KnockoutLabel from '../components/KnockoutLabel';
 
 /** A commitment runs from half an hour up to a week. */
 const MIN_BLOCK_MINUTES = 30;
@@ -158,6 +159,13 @@ export default function HomeScreen({
   const [durationMinutes, setDurationMinutes] = useState(MIN_BLOCK_MINUTES);
   const [showBailout, setShowBailout] = useState(false);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Geometry for the knocked-out CTA label — see the Button in the render.
+   * `ctaY` is a WINDOW coordinate, so the gradient fill lines up with the
+   * real ground behind the pill rather than with the scroll content. */
+  const ctaRef = useRef<View>(null);
+  const [ctaSize, setCtaSize] = useState({ width: 0, height: 0 });
+  const [ctaY, setCtaY] = useState(0);
 
   // Spring-pop the hero ring whenever the duration changes.
   const heroScale = useSharedValue(1);
@@ -296,21 +304,55 @@ export default function HomeScreen({
               </Text>
             </View>
           )}
-          <Button
-            label={Platform.OS === 'ios' ? 'Start focus lock' : 'Start block'}
-            icon="lock"
-            variant="accent"
-            onPress={handleStart}
-          />
+          {/* The label is knocked out of the white pill: it is filled with the
+              ground's own colour at that point on screen, so it reads as a
+              hole. Green while the button sits low in the saturated zone,
+              black once it scrolls up into the black.
+              `measureInWindow` rather than onLayout's y, because the pill is
+              inside a ScrollView and onLayout reports a position inside the
+              content, not on the screen — the fill has to track where the
+              button actually IS, including as it scrolls. */}
+          <View
+            onLayout={(e) => {
+              const { width, height } = e.nativeEvent.layout;
+              setCtaSize({ width, height });
+              ctaRef.current?.measureInWindow((_x: number, y: number) => setCtaY(y));
+            }}
+            ref={ctaRef}
+            collapsable={false}
+          >
+            {/* No icon. Button lays out [icon][gap][label] as a centred row,
+                so the label's centre is offset from the pill's centre by half
+                the icon block — while the knockout layer above is centred on
+                the pill itself, which put the glyph through the first letter.
+                Reproducing that offset here would couple this screen to
+                Button's internal spacing and break the moment it changed.
+                The label already says "lock", and the references this
+                treatment came from use plain text buttons. */}
+            <Button
+              label={Platform.OS === 'ios' ? 'Start focus lock' : 'Start block'}
+              variant="primary"
+              labelHidden={ctaSize.width > 0}
+              onPress={handleStart}
+            />
+            {ctaSize.width > 0 && (
+              <KnockoutLabel
+                text={Platform.OS === 'ios' ? 'Start focus lock' : 'Start block'}
+                screenY={ctaY}
+                width={ctaSize.width}
+                height={ctaSize.height}
+              />
+            )}
+          </View>
           {Platform.OS === 'ios' && (
             <>
               <BlockedAppsPill running={sessionRunning} onUnlock={onTriggerShield} />
             </>
           )}
           <Pressable style={styles.manageRow} onPress={onOpenApps} hitSlop={6}>
-            <Icon name="lock" size={13} color={palette.textTertiary} />
+            <Icon name="lock" size={13} color={palette.onColorTextDim} />
             <Text style={[type.caption, styles.manageText]}>Manage blocked apps</Text>
-            <Icon name="chevronRight" size={13} color={palette.textQuaternary} />
+            <Icon name="chevronRight" size={13} color={palette.onColorTextDim} />
           </Pressable>
         </Animated.View>
 
@@ -449,7 +491,7 @@ const styles = StyleSheet.create({
   bailoutBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#020C09',
+    color: palette.onLight,
   },
 
   voice: { marginTop: space.base },
@@ -465,8 +507,8 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.glass,
+    borderColor: palette.onColorBorder,
+    backgroundColor: palette.onColor,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -485,7 +527,9 @@ const styles = StyleSheet.create({
   // `alignSelf: 'center'` to match BlockedAppsPill directly above it — the
   // row was left-aligned under a centred pill, so the two read as unrelated.
   manageRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: space.xs },
-  manageText: { color: palette.textTertiary },
+  // Sits on the saturated ground, where textTertiary (28% white on
+  // near-black) drops below a readable contrast ratio.
+  manageText: { color: palette.onColorTextDim },
   screenTime: { marginBottom: 4 },
   twinRow: { flexDirection: 'row', gap: 12, marginTop: space.lg },
   twinCard: {
@@ -506,7 +550,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 999,
-    backgroundColor: palette.accentSoft,
+    // Was accentSoft — a tinted accent wash, invisible once the ground below
+    // it became that same accent.
+    backgroundColor: palette.onColor,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.onColorBorder,
     alignSelf: 'center',
     marginBottom: 4,
   },

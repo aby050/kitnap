@@ -21,7 +21,7 @@ import BrandGlyph, { hasBrandGlyph } from './BrandGlyph';
 /** Six low-saturation tints pulled toward the app's azure/black world so the
  *  grid never turns into a bag of skittles. */
 const TILE_TINTS: [string, string][] = [
-  ['rgba(76,158,255,0.16)', 'rgba(76,158,255,0.9)'],
+  ['rgba(71,107,235,0.16)', 'rgba(71,107,235,0.9)'],
   ['rgba(233,174,98,0.16)', 'rgba(233,174,98,0.9)'],
   ['rgba(240,96,74,0.14)', 'rgba(240,96,74,0.85)'],
   ['rgba(122,162,247,0.16)', 'rgba(158,190,255,0.92)'],

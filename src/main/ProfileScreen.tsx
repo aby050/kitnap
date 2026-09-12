@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GateReflection } from '../data/store';
-import { palette, type as T, space, radius } from '../design/tokens';
+import { fonts, gradients, palette, type as T, space, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
 import {
   ACHIEVEMENTS,
@@ -69,13 +69,11 @@ function StatCol({
   icon,
   value,
   label,
-  color,
   onPress,
 }: {
   icon: React.ReactNode;
   value: string;
   label: string;
-  color: string;
   /** Makes the column tappable; without it the column is inert as before. */
   onPress?: () => void;
 }) {
@@ -87,7 +85,7 @@ function StatCol({
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityLabel={onPress ? `${label}, ${value}. Opens awards.` : undefined}
     >
-      <View style={[styles.statIcon, { backgroundColor: color + '22' }]}>{icon}</View>
+      <View style={styles.statIcon}>{icon}</View>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
       {!!onPress && <Icon name="chevronRight" size={11} color={palette.textQuaternary} strokeWidth={2} />}
@@ -275,23 +273,49 @@ export default function ProfileScreen({
 
   const rangeTitle = range === 'week' ? 'THIS WEEK' : range === 'month' ? 'THIS MONTH' : LONG_RANGE_MONTHS[range] ? `LAST ${LONG_RANGE_MONTHS[range]} MONTHS` : 'ALL TIME';
 
+
   return (
     <View style={styles.root}>
       {/* Ambient ground + gem bloom, so the screen has a light source. */}
-      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      {/* Was a hardcoded ['#050C16','#000000','#000000'] — the pre-theme blue,
+          which left Profile blue-black while every other screen followed the
+          chosen scheme. */}
+      <LinearGradient
+        colors={[...gradients.ground]}
+        locations={[...gradients.groundLocations]}
+        style={StyleSheet.absoluteFill}
+      />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
             <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.headerWordmark}>Byre</Text>
+          {/* The wordmark said "Byre" on a screen the user reached from inside
+              Byre — it named the app to someone who already knew. The highest
+              award actually earned is the one piece of identity this header
+              can carry that the user did not already have.
+              Falls back to the wordmark only while nothing is unlocked, so a
+              brand-new account never sees a locked award's name presented as
+              though it were theirs. */}
+          <View style={styles.headerTitleWrap}>
+            {heroAward.locked ? (
+              <Text style={styles.headerWordmark}>Byre</Text>
+            ) : (
+              <>
+                <Text style={styles.headerAward} numberOfLines={1}>
+                  {heroAward.def.name}
+                </Text>
+                <Text style={styles.headerAwardSub}>UNLOCKED</Text>
+              </>
+            )}
+          </View>
           <Pressable onPress={onOpenSettings} style={styles.circleBtn} hitSlop={10}>
             <Icon name="settings" size={19} color={palette.text} strokeWidth={1.8} />
           </Pressable>
         </View>
 
         <LinearGradient
-          colors={['#050C16', 'rgba(5,12,22,0.85)', 'rgba(0,0,0,0)']}
+          colors={[gradients.ground[0], 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0)']}
           locations={[0, 0.45, 1]}
           style={styles.topFade}
           pointerEvents="none"
@@ -307,26 +331,29 @@ export default function ProfileScreen({
 
           {/* THREE-UP STAT ROW */}
           <View style={styles.statRow}>
+            {/* One icon treatment across all three. They were an amber flame,
+                a green target and a periwinkle hourglass — three unrelated
+                hues in a row, which reads as three unrelated widgets rather
+                than one stat row, and none of the colours carried meaning.
+                Chromatic colour in this app is rationed to accent/warn/danger
+                and these are all the same kind of thing: a neutral count. */}
             <StatCol
-              icon={<Icon name="flame" size={17} color="#E9AE62" strokeWidth={2} />}
+              icon={<Icon name="flame" size={24} color={palette.accent} strokeWidth={1.8} />}
               value={String(progress.currentStreak)}
               label="DAY STREAK"
-              color="#E9AE62"
               onPress={onOpenMilestones}
             />
             <View style={styles.statDivider} />
             <StatCol
-              icon={<Icon name="target" size={17} color={palette.accent} strokeWidth={2} />}
+              icon={<Icon name="pulse" size={24} color={palette.accent} strokeWidth={1.8} />}
               value={`${rank.percent}%`}
               label="FOCUS SCORE"
-              color={palette.accent}
             />
             <View style={styles.statDivider} />
             <StatCol
-              icon={<Icon name="hourglass" size={17} color="#8FA9FF" strokeWidth={2} />}
+              icon={<Icon name="clock" size={24} color={palette.accent} strokeWidth={1.8} />}
               value={formatDuration(all.savedMinutes)}
               label="SAVED"
-              color="#8FA9FF"
             />
           </View>
 
@@ -409,7 +436,7 @@ export default function ProfileScreen({
               <Sparkline values={weekFocusSeries.length ? weekFocusSeries : [0, 0]} width={(CONTENT_W - space.md) / 2 - space.lg * 2} height={38} />
             </MetricCard>
             <MetricCard label="FOCUS SCORE" value={`${rank.percent}%`} sub="percentile">
-              <GradientMeter progress={rank.score} colors={['#8FA9FF', palette.accent]} height={8} />
+              <GradientMeter progress={rank.score} colors={['#7F92E0', palette.accent]} height={8} />
             </MetricCard>
             <MetricCard label="BEST STREAK" value={`${progress.bestStreak}d`} sub={`${streakGoal.next}d next milestone`}>
               <SegmentBar level={Math.min(3, streakTiers)} segments={3} color="#E9AE62" />
@@ -626,7 +653,23 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.base },
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.md },
-  headerWordmark: { color: palette.text, fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
+  headerTitleWrap: { flex: 1, alignItems: 'center', paddingHorizontal: space.sm },
+  headerWordmark: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 18, fontWeight: '800', letterSpacing: 0.5 },
+  headerAward: {
+    color: palette.text,
+    fontFamily: fonts.extrabold,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  headerAwardSub: {
+    color: palette.accent,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    marginTop: 1,
+  },
   circleBtn: {
     width: 40,
     height: 40,
@@ -642,9 +685,27 @@ const styles = StyleSheet.create({
 
   hero: { alignItems: 'center', marginTop: space.xl },
   username: { color: palette.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, marginTop: space.xs },
-  heroFigure: { flexDirection: 'row', alignItems: 'flex-start', marginTop: space.sm },
-  heroNum: { fontFamily: T.hero.fontFamily, fontSize: 74, lineHeight: 94, fontWeight: '200', letterSpacing: -3.5, fontVariant: ['tabular-nums'] },
-  heroUnit: { color: palette.textTertiary, fontSize: 20, fontWeight: '500', marginTop: 14, marginRight: 6, marginLeft: 2 },
+  /* Split numeral: a heavy figure with a small dim unit on the SAME baseline.
+     It was a 200-weight hairline with the unit floated near the cap height,
+     which reads as decoration — the number is the content of this screen and
+     should carry the most weight on it, not the least. */
+  heroFigure: { flexDirection: 'row', alignItems: 'baseline', marginTop: space.sm },
+  heroNum: {
+    fontFamily: fonts.extrabold,
+    fontSize: 68,
+    lineHeight: 78,
+    fontWeight: '800',
+    letterSpacing: -3,
+    fontVariant: ['tabular-nums'],
+  },
+  heroUnit: {
+    color: palette.textTertiary,
+    fontFamily: fonts.medium,
+    fontSize: 19,
+    fontWeight: '500',
+    marginRight: space.sm,
+    marginLeft: 3,
+  },
   heroCaption: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 1.6, marginTop: 2 },
 
   statRow: {
@@ -658,9 +719,28 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
   },
   statCol: { flex: 1, alignItems: 'center', gap: 6 },
-  statIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  statValue: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
-  statLabel: { color: palette.textTertiary, fontSize: 10, fontWeight: '700', letterSpacing: 0.8 },
+  statIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+  },
+  statValue: {
+    color: palette.text,
+    fontFamily: fonts.extrabold,
+    // 21 not 23: "197h 25m" is the widest value this row ever holds and was
+    // running into its neighbours' dividers.
+    fontSize: 21,
+    fontWeight: '800',
+    letterSpacing: -0.7,
+    fontVariant: ['tabular-nums'],
+    marginTop: space.sm,
+  },
+  statLabel: { color: palette.textTertiary, fontSize: 9.5, fontWeight: '600', letterSpacing: 0.9, marginTop: 3 },
   statDivider: { width: 1, height: 48, backgroundColor: palette.border },
 
   chartCard: {
@@ -672,7 +752,7 @@ const styles = StyleSheet.create({
     padding: space.lg,
   },
   chartHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: space.base },
-  chartHeadValue: { color: palette.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 4 },
+  chartHeadValue: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 28, fontWeight: '800', letterSpacing: -1, fontVariant: ['tabular-nums'], marginTop: 4 },
   chartHeadSub: { color: palette.textTertiary, fontSize: 12, marginTop: 1, textTransform: 'capitalize' },
   chartHeadSentence: { textTransform: 'none' },
   legend: { gap: 6, alignItems: 'flex-end' },
@@ -714,7 +794,7 @@ const styles = StyleSheet.create({
     minHeight: 128,
   },
   metricEyebrow: { color: palette.textTertiary, fontSize: 10.5, fontWeight: '700', letterSpacing: 1.2 },
-  metricValue: { color: palette.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 8 },
+  metricValue: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 28, fontWeight: '800', letterSpacing: -1, fontVariant: ['tabular-nums'], marginTop: 8 },
   metricSub: { color: palette.textTertiary, fontSize: 11.5, marginTop: 2 },
   metricViz: { marginTop: 'auto', paddingTop: space.base },
 

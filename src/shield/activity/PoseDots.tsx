@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    backgroundColor: '#4C9EFF',
+    backgroundColor: '#476BEB',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.9)',
     // Reads against a bright shirt and a dark room alike.

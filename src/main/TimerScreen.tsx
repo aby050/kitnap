@@ -20,6 +20,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
@@ -37,7 +38,7 @@ import EmergencyDialer from '../components/EmergencyDialer';
 import { ESSENTIALS, EssentialKey } from '../data/gateQuestions';
 import { hasBlockedSelection } from '../data/iosScreenTime';
 import { FocusSession } from '../data/store';
-import { motion, palette, radius, space, type } from '../design/tokens';
+import { fonts, gradients, motion, palette, radius, space, type } from '../design/tokens';
 import Toggle from '../design/Toggle';
 
 const { width } = Dimensions.get('window');
@@ -75,6 +76,7 @@ export default function TimerScreen({
   onFocusComplete,
   onOpenEssentials,
   onOpenShield,
+  onEmergency,
   tokenBalance = 0,
   onSpendTokenToCancel,
   onOpenTokenInfo,
@@ -95,6 +97,9 @@ export default function TimerScreen({
   label?: string;
   onOpenEssentials?: () => void;
   onOpenShield?: () => void;
+  /** Break-glass. Must be the SAME handler the Shield and the Gate use —
+   *  see the Emergency button below. */
+  onEmergency?: () => void;
   motivationLine?: string;
   onFocusComplete?: (minutes: number) => void;
   tokenBalance?: number;
@@ -392,39 +397,40 @@ export default function TimerScreen({
           onPress={() => setChromeVisible((v) => !v)}
           accessibilityLabel={chromeVisible ? 'Hide controls' : 'Show controls'}
         >
-        {hardMode ? (
-          <View style={styles.cornerLeft} />
-        ) : (
-          <View style={styles.cornerLeft}>
-            {/* A close button, not a "Bailout" button. Naming the currency up
-                front advertises the way out; this asks to leave first and only
-                then says what leaving costs. */}
-            <View style={!chromeVisible && styles.chromeHidden} pointerEvents={chromeVisible ? 'auto' : 'none'}>
-              <IconButton
-                name="close"
-                onPress={() => setShowCancelConfirm(true)}
-                bordered
-                accessibilityLabel="End session"
-              />
-            </View>
-          </View>
-        )}
 
-          <View style={[styles.cornerRight, !chromeVisible && styles.chromeHidden]} pointerEvents={chromeVisible ? 'auto' : 'none'}>
+          {/* Shield on the left, Emergency alone on the right. They answer
+              opposite questions — "what is being held" versus "let me out
+              right now" — and sat side by side in the same corner, which read
+              as one control group and put a calm informational button
+              immediately next to the red one. */}
+          <View style={[styles.cornerLeft, !chromeVisible && styles.chromeHidden]} pointerEvents={chromeVisible ? 'auto' : 'none'}>
             <IconButton
               name="shield"
               onPress={() => setShowLockedApps(true)}
               bordered
               accessibilityLabel="What's locked"
             />
+          </View>
+
+          <View style={[styles.cornerRight, !chromeVisible && styles.chromeHidden]} pointerEvents={chromeVisible ? 'auto' : 'none'}>
             {/* Straight to the dialer. Deliberately does not place a call —
                 the user types the number, so the app can never dial emergency
                 services by accident. */}
+            {/* Break-glass, not a list.
+                This used to open the local essentials sheet and nothing else:
+                it showed the always-allowed categories and a dialer, but never
+                lifted the block — while the identical red button on the Shield
+                and the Gate ran `openEmergencyAccess`, which checks the
+                lockdown window and the daily use, then actually unblocks for
+                five minutes. So the one screen where the user is most locked
+                in was the one where Emergency did least.
+                It now calls the same handler as everywhere else; the
+                essentials sheet stays reachable from inside the grant. */}
             <Pill
               label="Emergency"
               icon="phone"
               tone="danger"
-              onPress={() => setShowEssentials(true)}
+              onPress={() => (onEmergency ? onEmergency() : setShowEssentials(true))}
             />
           </View>
 
@@ -452,6 +458,24 @@ export default function TimerScreen({
               </Pressable>
             )}
           </View>
+
+          {/* A close button, not a "Bailout" button. Naming the currency up
+              front advertises the way out; this asks to leave first and only
+              then says what leaving costs.
+              Bottom centre rather than the top-left corner: it is the one
+              deliberate action on a screen whose whole point is that there is
+              no casual way out, so it belongs under the thumb and below the
+              timer — not sharing the top rail with Emergency, where it read as
+              a dismiss affordance for the screen itself. Hard mode has no
+              paid exit at all, so it simply has no button. */}
+          {!hardMode && (
+            <View
+              style={[styles.cornerBottom, !chromeVisible && styles.chromeHidden]}
+              pointerEvents={chromeVisible ? 'auto' : 'none'}
+            >
+              <UnlockControl onReveal={() => setShowCancelConfirm(true)} />
+            </View>
+          )}
         </Pressable>
 
 
@@ -577,9 +601,9 @@ export default function TimerScreen({
           <Animated.View style={[styles.slideFill, slideFillStyle]} pointerEvents="none">
             <LinearGradient
               colors={[
-                'rgba(76,158,255,0.04)',
-                'rgba(76,158,255,0.22)',
-                'rgba(76,158,255,0.55)',
+                'rgba(71,107,235,0.04)',
+                'rgba(71,107,235,0.22)',
+                'rgba(71,107,235,0.55)',
                 'rgba(150,255,205,0.95)',
               ]}
               locations={[0, 0.45, 0.82, 1]}
@@ -1058,6 +1082,149 @@ function CancelConfirm({
   );
 }
 
+/**
+ * The end-session control on a running timer.
+ *
+ * At rest it is a bare cross — the smallest possible acknowledgement that a
+ * way out exists. Touching it does not act: the circle grows smoothly into a
+ * pill that then has to be *held*, charging left to right, before the ways
+ * out are shown.
+ *
+ * It deliberately speaks the same language as `HoldButton` (fill from the
+ * left, accelerating haptic ticks, drain rather than snap on release) so this
+ * reads as the same commitment gesture used to loosen a block or delete an
+ * account, rather than a new one invented for this screen. It is not that
+ * component because that one is a fixed-width pill: the morph from a 44pt
+ * circle is the whole point here, and animating a shared CTA's width would
+ * complicate every other caller.
+ *
+ * HOLD_MS sits at the top of the app's scale (loosening is 2600, delete is
+ * 2600): ending a locked session early is the heaviest thing this screen can
+ * do, so it asks for the longest hold.
+ */
+function UnlockControl({ onReveal }: { onReveal: () => void }) {
+  // 0 = resting circle, 1 = fully formed pill. Drives width and both
+  // cross-fades from one value so they can never disagree.
+  const open = useSharedValue(0);
+  const progress = useSharedValue(0);
+  const [expanded, setExpanded] = useState(false);
+
+  const tickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startedAt = useRef(0);
+
+  const stopTicks = useCallback(() => {
+    if (tickTimer.current) {
+      clearTimeout(tickTimer.current);
+      tickTimer.current = null;
+    }
+  }, []);
+
+  // Same accelerating ramp as HoldButton: a self-rescheduling timeout, so each
+  // gap can be shorter than the last. An interval can only tick evenly, which
+  // reads as a metronome rather than a charge.
+  const scheduleTick = useCallback(() => {
+    const t = Math.min(1, (Date.now() - startedAt.current) / HOLD_MS);
+    tickTimer.current = setTimeout(
+      () => {
+        Haptics.impactAsync(
+          t > 0.75
+            ? Haptics.ImpactFeedbackStyle.Medium
+            : t > 0.4
+              ? Haptics.ImpactFeedbackStyle.Light
+              : Haptics.ImpactFeedbackStyle.Soft,
+        ).catch(() => {});
+        scheduleTick();
+      },
+      TICK_START_MS + (TICK_END_MS - TICK_START_MS) * t,
+    );
+  }, []);
+
+  const finish = useCallback(() => {
+    stopTicks();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    onReveal();
+  }, [onReveal, stopTicks]);
+
+  const onPressIn = () => {
+    setExpanded(true);
+    startedAt.current = Date.now();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(() => {});
+    scheduleTick();
+    open.value = withTiming(1, { duration: MORPH_MS, easing: Easing.out(Easing.cubic) });
+    // Delayed by the morph so the charge starts from a formed pill rather than
+    // filling a circle that is still growing underneath it.
+    progress.value = withDelay(
+      MORPH_MS,
+      withTiming(1, { duration: HOLD_MS, easing: Easing.linear }, (done) => {
+        if (done) runOnJS(finish)();
+      }),
+    );
+  };
+
+  const onPressOut = () => {
+    stopTicks();
+    // Drain rather than snap: an instant reset reads as a glitch, a drain
+    // reads as the charge you just gave up on.
+    progress.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.quad) });
+    open.value = withTiming(0, { duration: MORPH_MS, easing: Easing.out(Easing.cubic) }, (done) => {
+      if (done) runOnJS(setExpanded)(false);
+    });
+  };
+
+  useEffect(() => stopTicks, [stopTicks]);
+
+  const shell = useAnimatedStyle(() => ({
+    width: COLLAPSED_W + (EXPANDED_W - COLLAPSED_W) * open.value,
+  }));
+  const crossStyle = useAnimatedStyle(() => ({ opacity: 1 - open.value }));
+  const labelStyle = useAnimatedStyle(() => ({ opacity: open.value }));
+  const fillStyle = useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }));
+  const glowStyle = useAnimatedStyle(() => ({ opacity: open.value * (0.15 + progress.value * 0.6) }));
+
+  return (
+    <Pressable
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel="End session"
+      accessibilityHint="Press and hold for three seconds to see the ways out of this session"
+    >
+      <Animated.View style={[styles.unlockShell, shell]}>
+        {/* Clipped by the shell's overflow, so the pill itself charges rather
+            than carrying a progress bar drawn on top of it. */}
+        <Animated.View style={[styles.unlockFillClip, fillStyle]}>
+          <LinearGradient
+            colors={gradients.accent}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.unlockFill}
+          />
+        </Animated.View>
+        <Animated.View style={[styles.unlockGlow, glowStyle]} pointerEvents="none" />
+
+        <Animated.View style={[styles.unlockCentered, crossStyle]} pointerEvents="none">
+          <Icon name="close" size={20} color={palette.text} />
+        </Animated.View>
+        <Animated.View style={[styles.unlockCentered, labelStyle]} pointerEvents="none">
+          {/* Mounted only while expanded: a Text under an opacity-0 layer is
+              still read aloud by VoiceOver, which would announce it on a
+              resting cross. */}
+          {expanded && <Text style={styles.unlockLabel}>keep holding…</Text>}
+        </Animated.View>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+/** Resting diameter — matches IconButton so the control looks untouched. */
+const COLLAPSED_W = 44;
+const EXPANDED_W = 210;
+const MORPH_MS = 260;
+/** The app's longest hold. See the note above. */
+const HOLD_MS = 3000;
+const TICK_START_MS = 150;
+const TICK_END_MS = 40;
+
 const styles = StyleSheet.create({
   shrink: { flex: 1, minWidth: 0 },
   content: { flexGrow: 1, paddingHorizontal: space.gutter, paddingBottom: space.tabClearance },
@@ -1106,7 +1273,7 @@ const styles = StyleSheet.create({
     height: SLIDE_BTN + 22,
     top: (SLIDE_TRACK_H - (SLIDE_BTN + 22)) / 2,
     borderRadius: (SLIDE_BTN + 22) / 2,
-    backgroundColor: 'rgba(76,158,255,0.22)',
+    backgroundColor: 'rgba(71,107,235,0.22)',
     zIndex: 0,
   },
   slideTrack: {
@@ -1174,7 +1341,62 @@ const styles = StyleSheet.create({
 
   // ── Locked mode ──
   lockedRoot: { flex: 1 },
+  // Bottom-centre slot for the end-session control. Absolute so it stays put
+  // regardless of how tall the ring and its caption end up on a given device.
   cornerLeft: { position: 'absolute', top: space.sm, left: space.gutter, zIndex: 5 },
+  unlockShell: {
+    height: 44,
+    overflow: 'hidden',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Anchored left explicitly: a centred absolute fill would grow from the
+  // middle rather than charging across.
+  unlockFillClip: { position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' },
+  // Fixed width inside a growing clip, so the gradient stays put instead of
+  // squashing as the fill advances.
+  unlockFill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: EXPANDED_W },
+  unlockGlow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: palette.accent,
+  },
+  // Both faces occupy the same box so the cross-fade happens in place rather
+  // than sliding; absolute keeps the pill's width driven by the animation
+  // alone, not by whichever label is currently mounted.
+  unlockCentered: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unlockLabel: {
+    color: palette.text,
+    fontFamily: fonts.semibold,
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  cornerBottom: {
+    position: 'absolute',
+    bottom: space.xxxl,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 5,
+  },
   cornerRight: { position: 'absolute', top: space.sm, right: space.gutter, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   lockedBody: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingHorizontal: space.xxl },
   lockedLabel: { color: palette.textTertiary },

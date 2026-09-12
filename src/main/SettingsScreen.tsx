@@ -2,9 +2,13 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingRow } from '../components/ui';
-import { palette, space } from '../design/tokens';
+import { fonts, palette, radius, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 import { DEMO_DAYS } from '../data/demoData';
+import { APPEARANCES, appearance } from '../design/appearance';
+
+/** Shown as the row's current value, so the setting states itself. */
+const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'Midnight';
 
 /** Derived rather than written out, so the copy can't drift from the seed the
  *  way it did when DEMO_DAYS went from 60 to 183. */
@@ -34,6 +38,7 @@ export default function SettingsScreen({
   onOpenGuardian,
   onOpenWaitingRoom,
   onOpenBlockScreens,
+  onOpenAppearance,
   onOpenSubscription,
   onOpenSchedules,
   onOpenAccount,
@@ -51,6 +56,7 @@ export default function SettingsScreen({
   onOpenGuardian?: () => void;
   onOpenWaitingRoom?: () => void;
   onOpenBlockScreens?: () => void;
+  onOpenAppearance?: () => void;
   onOpenSubscription?: () => void;
   onOpenSchedules?: () => void;
   onOpenAccount?: () => void;
@@ -72,11 +78,14 @@ export default function SettingsScreen({
         <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
           <Icon name="chevronLeft" size={20} color={palette.text} />
         </Pressable>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* A page title in the app's headline voice rather than a centred nav
+            bar caption. Every other screen in the flow opens on heavy
+            lowercase type; Settings was the one place still wearing a 19pt
+            centred label between two chrome buttons. */}
+        <Text style={styles.pageTitle}>settings</Text>
         <GroupLabel>Blocking</GroupLabel>
         <Group>
           <SettingRow
@@ -97,6 +106,13 @@ export default function SettingsScreen({
             title="Subscription"
             subtitle="Plan, bailouts, restore purchases"
             onPress={onOpenSubscription}
+          />
+          <SettingRow
+            icon={<RowIcon name="image" />}
+            title="Appearance"
+            value={appearanceName}
+            subtitle="Colour scheme for the whole app"
+            onPress={onOpenAppearance}
           />
           <SettingRow
             icon={<RowIcon name="eye" />}
@@ -195,6 +211,7 @@ export default function SettingsScreen({
             </Group>
           </>
         )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -211,8 +228,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
-  scroll: { paddingHorizontal: 18, paddingBottom: 110 },
-  groupLabel: { color: palette.text, fontSize: 19, fontWeight: '800', marginTop: 30, marginBottom: 12 },
-  group: { backgroundColor: palette.surface, borderRadius: 22, overflow: 'hidden' },
+  scroll: { paddingHorizontal: 18, paddingBottom: space.tabClearance },
+  pageTitle: {
+    color: palette.text,
+    fontFamily: fonts.extrabold,
+    fontSize: 44,
+    lineHeight: 46,
+    fontWeight: '800',
+    letterSpacing: -2,
+    marginTop: space.xs,
+    marginBottom: space.sm,
+  },
+  /* Section labels are eyebrows, not headings. At 19/800 they were the same
+     weight as the page title and read as five competing titles down the
+     page; small and dim, they let the cards below them be the content. */
+  groupLabel: {
+    color: palette.textTertiary,
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    marginTop: space.xl,
+    marginBottom: space.sm,
+    marginLeft: space.xs,
+  },
+  group: { backgroundColor: palette.surface, borderRadius: radius.xxl, overflow: 'hidden' },
+
 });

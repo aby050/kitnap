@@ -28,6 +28,7 @@ import { tapLight } from '../ui/haptics';
 import {
   control,
   fieldStyle,
+  fonts,
   gradients,
   motion,
   palette,
@@ -144,8 +145,8 @@ export function Screen({
   return (
     <View style={styles.screenRoot}>
       <LinearGradient
-        colors={gradients.ground}
-        locations={[0, 0.45, 1]}
+        colors={[...gradients.ground]}
+        locations={[...gradients.groundLocations]}
         style={StyleSheet.absoluteFill}
       />
       {bloom && <GlowField size={520} style={styles.screenBloom} intensity={0.16} />}
@@ -173,7 +174,7 @@ export function Card({
   onPress,
 }: {
   children: React.ReactNode;
-  tone?: 'neutral' | 'accent' | 'warn' | 'danger';
+  tone?: 'neutral' | 'accent' | 'warn' | 'danger' | 'savings';
   /** Lifts the fill a step — use when a card sits *inside* another card. */
   raised?: boolean;
   padded?: boolean;
@@ -213,7 +214,15 @@ export function Divider({ inset = 0 }: { inset?: number }) {
  * ACTIONS
  * ───────────────────────────────────────────────────────────── */
 
-export type ButtonVariant = 'primary' | 'accent' | 'outline' | 'ghost' | 'danger';
+export type ButtonVariant =
+  | 'primary'
+  | 'accent'
+  /** Lavender fill, indigo label — the reference's "Redeem". Use for the
+   *  second-choice action beside a white primary, never as the only button. */
+  | 'secondary'
+  | 'outline'
+  | 'ghost'
+  | 'danger';
 
 /**
  * Variants, and when to use which:
@@ -234,6 +243,7 @@ export function Button({
   loading = false,
   full = true,
   haptic = true,
+  labelHidden = false,
   style,
 }: {
   label: string;
@@ -246,6 +256,10 @@ export function Button({
   loading?: boolean;
   full?: boolean;
   haptic?: boolean;
+  /** Keeps the label in the layout (so the pill keeps its size and the
+   *  accessibility label still reads) but stops painting it — for a caller
+   *  drawing its own treated label on top, e.g. the knocked-out CTA on Home. */
+  labelHidden?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const press = usePress();
@@ -254,9 +268,15 @@ export function Button({
   const filled = variant === 'primary' || variant === 'accent';
 
   const fg =
-    variant === 'primary' || variant === 'accent'
-      ? palette.textInverse
-      : variant === 'danger'
+    // The reference's white pill carries deep indigo text, never black —
+    // black on white above a blue ground reads as a system alert.
+    variant === 'primary'
+      ? palette.onLight
+      : variant === 'accent'
+        ? palette.textInverse
+        : variant === 'secondary'
+          ? palette.onSecondary
+          : variant === 'danger'
         ? palette.danger
         : variant === 'ghost'
           ? palette.textSecondary
@@ -265,11 +285,13 @@ export function Button({
   const shell: ViewStyle =
     variant === 'outline'
       ? { borderWidth: 1, borderColor: palette.borderStrong, backgroundColor: 'transparent' }
-      : variant === 'danger'
-        ? { borderWidth: 1, borderColor: palette.dangerBorder, backgroundColor: palette.dangerSoft }
-        : variant === 'ghost'
-          ? { backgroundColor: 'transparent' }
-          : {};
+      : variant === 'secondary'
+        ? { backgroundColor: palette.secondary }
+        : variant === 'danger'
+          ? { borderWidth: 1, borderColor: palette.dangerBorder, backgroundColor: palette.dangerSoft }
+          : variant === 'ghost'
+            ? { backgroundColor: 'transparent' }
+            : {};
 
   const labelStyle: TextStyle = {
     ...(size === 'sm' ? type.caption : type.bodyStrong),
@@ -311,7 +333,10 @@ export function Button({
           style={[
             StyleSheet.absoluteFill,
             styles.btnOverlay,
-            { backgroundColor: filled ? 'rgba(0,0,0,0.16)' : palette.glass },
+            {
+              backgroundColor:
+                filled || variant === 'secondary' ? 'rgba(0,0,0,0.16)' : palette.glass,
+            },
             press.overlay,
           ]}
           pointerEvents="none"
@@ -321,7 +346,15 @@ export function Button({
         ) : (
           <>
             {icon && <Icon name={icon} size={size === 'sm' ? 15 : 18} color={fg} />}
-            <Text style={[labelStyle, styles.btnLabel]} numberOfLines={1}>
+            <Text
+              style={[labelStyle, styles.btnLabel, labelHidden && { opacity: 0 }]}
+              numberOfLines={1}
+              // Poppins sets ~8% wider than San Francisco, so labels that fit
+              // before now truncate ("Start focus lo…"). Shrink to fit rather
+              // than losing the end of the sentence.
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
               {label}
             </Text>
             {iconRight && <Icon name={iconRight} size={size === 'sm' ? 15 : 18} color={fg} />}
@@ -394,25 +427,33 @@ export function Pill({
 }: {
   label: string;
   icon?: IconName;
-  tone?: 'neutral' | 'accent' | 'warn' | 'danger';
+  tone?: 'neutral' | 'accent' | 'warn' | 'danger' | 'savings';
   selected?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
+  // 'savings' is the only solid-filled pill: it is a promotional chip, not a
+  // state, so it reads as a sticker on top of the card rather than a tinted
+  // label inside it — the same job the amber "Save 40%" chip does in the
+  // reference.
   const restFg =
-    tone === 'accent'
-      ? palette.accent
-      : tone === 'warn'
-        ? palette.warn
-        : tone === 'danger'
-          ? palette.danger
-          : palette.textSecondary;
+    tone === 'savings'
+      ? palette.onSavings
+      : tone === 'accent'
+        ? palette.accent
+        : tone === 'warn'
+          ? palette.warn
+          : tone === 'danger'
+            ? palette.danger
+            : palette.textSecondary;
   // Only a neutral pill brightens on selection; a toned one already carries its
   // meaning in the colour, so selection is shown by the border instead.
   const fg = tone === 'neutral' && selected ? palette.text : restFg;
   const bd =
-    tone === 'accent'
-      ? palette.accentBorder
+    tone === 'savings'
+      ? palette.savings
+      : tone === 'accent'
+        ? palette.accentBorder
       : tone === 'warn'
         ? palette.warnBorder
         : tone === 'danger'
@@ -427,7 +468,15 @@ export function Pill({
     <View
       style={[
         styles.pill,
-        { borderColor: bd, backgroundColor: selected ? palette.glass : 'transparent' },
+        {
+          borderColor: bd,
+          backgroundColor:
+            tone === 'savings'
+              ? palette.savings
+              : selected
+                ? palette.glass
+                : 'transparent',
+        },
         style,
       ]}
     >
@@ -447,7 +496,16 @@ export function Pill({
             strokeWidth={1.9}
           />
         ))}
-      <Text style={[type.caption, { color: fg }]}>{label}</Text>
+      <Text
+        style={[
+          type.caption,
+          { color: fg },
+          // A promotional chip is shouted, not stated.
+          tone === 'savings' && { fontFamily: fonts.bold, fontWeight: '700', letterSpacing: 0 },
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 

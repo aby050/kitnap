@@ -305,9 +305,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 9,
     borderRadius: 999,
-    backgroundColor: palette.accent,
+    backgroundColor: palette.savings,
   },
-  bestPillText: { color: '#08120F', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.7 },
+  bestPillText: { color: palette.onSavings, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.7 },
 
   packHead: { flexDirection: 'row', alignItems: 'baseline', gap: 7 },
   packQty: { color: palette.text, fontSize: 30, fontWeight: '800', letterSpacing: -1 },
@@ -341,6 +341,6 @@ const styles = StyleSheet.create({
     backgroundColor: palette.glass,
   },
   buyText: { color: palette.text, fontSize: 14.5, fontWeight: '800' },
-  buyTextBest: { color: '#08120F' },
+  buyTextBest: { color: palette.onLight },
   purchaseNote: { color: palette.textTertiary, fontSize: 12, lineHeight: 17, textAlign: 'center', marginTop: 8 },
 });
