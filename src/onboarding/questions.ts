@@ -54,9 +54,9 @@ export const BLOCK_PLACES = ['At a desk', 'In bed', 'On the sofa', 'Out and abou
 export const RETURNING_NEW = 'I’m new here';
 export const RETURNING_EXISTING = 'I’ve used Byre before';
 
-/** All onboarding questions — permissions are asked upfront now
- *  (PermissionBoardingPassScreen, before this screen ever mounts), not
- *  interleaved with questions. */
+/** All onboarding questions. Permissions are NOT asked upfront — they are
+ *  interleaved, one small group after each chunk below, so every ask arrives
+ *  right after the question that explains why it is needed. */
 export const QUESTIONS: Question[] = [
   { id: 'intro', kind: 'static', prompt: "I'll help protect your focus." },
   /* Asked before anything else: a returning user should not be walked through
@@ -209,22 +209,40 @@ export function resolvePrompt(prompt: string, answers: Record<string, { value: s
  * before it has shown you anything. Split like this, each permission arrives
  * after the questions that explain why it is needed.
  */
+/**
+ * Questions in groups, each followed by the permissions that group just
+ * justified. Sliced by NAME rather than by index: the boundaries used to be
+ * `slice(0, 5)` / `slice(5, 9)`, so inserting the movement questions silently
+ * pushed the camera ask three places down the flow and left it being
+ * requested long after the screens that depend on it.
+ *
+ * The ordering principle is that no permission is ever requested before the
+ * user has been told, in their own answers, what it is for. Camera comes
+ * first now because the movement questions come first: someone who has just
+ * chosen push-ups and said how many they can do understands exactly why the
+ * camera is being asked for, which is the only moment that ask is easy.
+ */
+const at = (id: string) => QUESTIONS.findIndex((q) => q.id === id);
+
 export const QUESTION_CHUNKS: { questions: Question[]; permissions: string[] }[] = [
   {
-    // Who you are, and where the time goes.
-    questions: QUESTIONS.slice(0, 5),
-    // Screen time first: everything the next screens claim about your usage
-    // depends on it, so it is the one ask that pays for itself immediately.
+    // Who you are, and how you will earn your way back in.
+    questions: QUESTIONS.slice(0, at('whereBlocked') + 1),
+    // Asked here, immediately after they picked a movement and told us their
+    // rep count — the one moment in the whole flow where "we need the camera"
+    // needs no explaining.
+    permissions: ['camera'],
+  },
+  {
+    // What you are up against.
+    questions: QUESTIONS.slice(at('whereBlocked') + 1, at('controlScale') + 1),
+    // Everything the next screens claim about your usage depends on this, so
+    // it is the ask that pays for itself immediately.
     permissions: ['usage', 'screenTime'],
   },
   {
-    questions: QUESTIONS.slice(5, 9),
-    // The shield itself, once blocking has been described.
-    permissions: ['overlay', 'accessibility'],
-  },
-  {
-    questions: QUESTIONS.slice(9),
-    // Nudges and Strict-mode movement — the optional pair, asked last.
-    permissions: ['notification', 'battery', 'camera'],
+    questions: QUESTIONS.slice(at('controlScale') + 1),
+    // The shield itself and its nudges, once blocking has been described.
+    permissions: ['overlay', 'accessibility', 'notification', 'battery'],
   },
 ];
