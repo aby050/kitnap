@@ -23,6 +23,7 @@ import OnboardingMark from './src/onboarding/OnboardingMark';
 import AffirmationScreen from './src/onboarding/AffirmationScreen';
 import BenefitsScreen from './src/onboarding/BenefitsScreen';
 import TrialTimelineScreen from './src/onboarding/TrialTimelineScreen';
+import PlanCompareScreen from './src/onboarding/PlanCompareScreen';
 import PurchaseSuccessScreen, { PurchaseResult } from './src/onboarding/PurchaseSuccessScreen';
 import ThemePickerScreen from './src/onboarding/ThemePickerScreen';
 import IntensityScreen from './src/onboarding/IntensityScreen';
@@ -85,6 +86,7 @@ type Stage =
   | 'benefits'
   | 'paywall'
   | 'trial'
+  | 'compare'
   | 'purchased'
   | 'referral'
   | 'welcome'
@@ -432,6 +434,27 @@ export default function App() {
               hoursBack={Math.max(1, Math.round(dailyHours))}
               personalLine={goal.line || undefined}
               onContinue={() => setStage('trial')}
+              onDecline={() => setStage('compare')}
+            />
+          )}
+
+          {/* The decline route. Was "Too Expensive? Here is 50% OFF" — a
+              last-chance discount fired the moment someone said no, which is
+              both the most copied screen in this category and an implicit
+              admission that the price just quoted was never the real price.
+              Same offer, honest framing: what the free plan actually keeps,
+              what Pro adds, and the annual price beside it with the saving
+              computed from the store rather than written down. */}
+          {stage === 'compare' && (
+            <PlanCompareScreen
+              offering={purchases.discountOffering ?? purchases.offering}
+              fullPriceOffering={purchases.offering}
+              onPurchased={grantBailouts}
+              onStart={(result) => {
+                setPurchaseResult(result ?? null);
+                setStage(result ? 'purchased' : 'welcome');
+              }}
+              onClose={() => setStage('trial')}
             />
           )}
 

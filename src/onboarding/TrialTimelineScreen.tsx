@@ -3,7 +3,7 @@ import { Linking, ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, T
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { palette } from '../design/tokens';
+import { fonts, palette } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
 import { PurchasesPackage } from 'react-native-purchases';
@@ -37,7 +37,51 @@ type Plan = {
    *  name is the billing term now — parsing the length back out of display
    *  copy broke the moment that copy changed. */
   trialLabel?: string;
+  /** Trial length in days, for the real calendar dates below. */
+  trialDays?: number;
 };
+
+/** "Sat 20 Sep" — short, unambiguous, no year on a date days away. */
+function prettyDate(d: Date) {
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function addDays(days: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/**
+ * What actually happens, on real dates.
+ *
+ * This replaces a four-step illustrated rail reading "Today / Day 5: we
+ * remind you / Day 7: keep it going" — the same graphic, often the same
+ * wording, ships across this category and was part of why Byre's funnel read
+ * as a reskin.
+ *
+ * Real dates are the smarter version of the same promise: "we'll remind you
+ * on Thu 18 Sep" is checkable and "Day 5" is not, and a charge date someone
+ * can put in their calendar is the single best defence against the surprise
+ * -charge refund and the one-star review that follows it.
+ */
+function TrialTerms({ days, price }: { days: number; price: string }) {
+  const remindOn = prettyDate(addDays(Math.max(1, days - 2)));
+  const chargeOn = prettyDate(addDays(days));
+  return (
+    <View style={styles.terms}>
+      <Text style={styles.termsLine}>
+        <Text style={styles.termsStrong}>Free until {chargeOn}.</Text> Nothing is charged today.
+      </Text>
+      <Text style={styles.termsLine}>
+        We'll remind you on <Text style={styles.termsStrong}>{remindOn}</Text>, two days before it ends.
+      </Text>
+      <Text style={styles.termsLine}>
+        Then {price}. Cancel in two taps — nothing you set up is lost.
+      </Text>
+    </View>
+  );
+}
 
 /** Shown only until the store answers, and on the rare launch where it never
  *  does. These rows carry **no price at all** — deliberately. The previous
@@ -84,6 +128,11 @@ function toPlans(pkgs: PurchasesPackage[]): Plan[] {
         pkg,
         isTrial: true,
         trialLabel: `${intro.periodNumberOfUnits} ${plural}`,
+        trialDays: unit.startsWith('week')
+          ? intro.periodNumberOfUnits * 7
+          : unit.startsWith('month')
+            ? intro.periodNumberOfUnits * 30
+            : intro.periodNumberOfUnits,
       });
     }
     rows.push({
@@ -184,6 +233,10 @@ export default function TrialTimelineScreen({
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
           Choose how you want to keep it
         </Animated.Text>
+
+        {selected.isTrial && selected.trialDays ? (
+          <TrialTerms days={selected.trialDays} price={`${selected.price}${selected.per}`} />
+        ) : null}
 
         <View style={styles.plans}>
           {PLANS.map((p) => {
@@ -369,6 +422,9 @@ const styles = StyleSheet.create({
   badgeText: { color: palette.onSavings, fontSize: 11.5, fontWeight: '800' },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 12 },
   legal: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
+  terms: { marginTop: 18, marginBottom: 22, gap: 8 },
+  termsLine: { color: palette.textSecondary, fontSize: 14, lineHeight: 20 },
+  termsStrong: { color: palette.text, fontFamily: fonts.semibold, fontWeight: '600' },
   // Subordinate to the billed amount on the button above, per 3.1.2(c).
   trialSub: { color: palette.textSecondary, fontSize: 12.5, fontWeight: '600', textAlign: 'center', marginTop: 8 },
 });
