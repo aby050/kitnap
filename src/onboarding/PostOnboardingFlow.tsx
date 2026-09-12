@@ -326,14 +326,14 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
                       <Path
                         d="M 95,160 Q 90,80 50,48"
                         fill="none"
-                        stroke="#476BEB"
+                        stroke={palette.accent}
                         strokeWidth={3.5}
                         strokeLinecap="round"
                       />
                       <Path
                         d="M 50,48 L 62,50 M 50,48 L 52,60"
                         fill="none"
-                        stroke="#476BEB"
+                        stroke={palette.accent}
                         strokeWidth={3.5}
                         strokeLinecap="round"
                       />
@@ -367,10 +367,10 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
 
               <SummaryRow
                 icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#476BEB" strokeWidth={2}>
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={palette.accent} strokeWidth={2}>
                     <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    <Circle cx={12} cy={11} r={2} fill="#476BEB" />
-                    <Path d="M12 13v3" stroke="#476BEB" strokeWidth={2} />
+                    <Circle cx={12} cy={11} r={2} fill={palette.accent} />
+                    <Path d="M12 13v3" stroke={palette.accent} strokeWidth={2} />
                   </Svg>
                 }
                 title={plan.extra.title}
@@ -380,7 +380,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
               {plan.sleep ? (
                 <SummaryRow
                   icon={
-                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="#476BEB">
+                    <Svg width={22} height={22} viewBox="0 0 24 24" fill={palette.accent}>
                       <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                     </Svg>
                   }
@@ -391,15 +391,15 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
 
               <SummaryRow
                 icon={
-                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#476BEB" strokeWidth={2}>
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={palette.accent} strokeWidth={2}>
                     <Rect x={3} y={4} width={18} height={18} rx={2} />
                     <Path d="M16 2v4M8 2v4M3 10h18" />
-                    <Circle cx={8} cy={14} r={1.2} fill="#476BEB" />
-                    <Circle cx={12} cy={14} r={1.2} fill="#476BEB" />
-                    <Circle cx={16} cy={14} r={1.2} fill="#476BEB" />
-                    <Circle cx={8} cy={18} r={1.2} fill="#476BEB" />
-                    <Circle cx={12} cy={18} r={1.2} fill="#476BEB" />
-                    <Circle cx={16} cy={18} r={1.2} fill="#476BEB" />
+                    <Circle cx={8} cy={14} r={1.2} fill={palette.accent} />
+                    <Circle cx={12} cy={14} r={1.2} fill={palette.accent} />
+                    <Circle cx={16} cy={14} r={1.2} fill={palette.accent} />
+                    <Circle cx={8} cy={18} r={1.2} fill={palette.accent} />
+                    <Circle cx={12} cy={18} r={1.2} fill={palette.accent} />
+                    <Circle cx={16} cy={18} r={1.2} fill={palette.accent} />
                   </Svg>
                 }
                 title={`${plan.reclaimedDaysThisYear} days back this year`}

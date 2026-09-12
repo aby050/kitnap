@@ -62,7 +62,7 @@ export function GemHero({ size = 208, glow = palette.accent }: { size?: number; 
           {/* Play-of-colour: mint → teal → blue → violet → gold, the opal spectrum. */}
           <SvgGradient id={`${g}-body`} x1="0.12" y1="0.05" x2="0.9" y2="0.98">
             <Stop offset="0" stopColor="#D6FCEA" />
-            <Stop offset="0.24" stopColor="#6E8CF5" />
+            <Stop offset="0.24" stopColor={palette.accent} />
             <Stop offset="0.46" stopColor="#6FE3E8" />
             <Stop offset="0.66" stopColor="#7F92E0" />
             <Stop offset="0.84" stopColor="#C79BFF" />

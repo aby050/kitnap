@@ -435,7 +435,9 @@ export default function ProfileScreen({
             <MetricCard label="THIS WEEK" value={formatDuration(week.focusMinutes)} sub="focus time">
               <Sparkline values={weekFocusSeries.length ? weekFocusSeries : [0, 0]} width={(CONTENT_W - space.md) / 2 - space.lg * 2} height={38} />
             </MetricCard>
-            <MetricCard label="FOCUS SCORE" value={`${rank.percent}%`} sub="percentile">
+            {/* "percentile" claimed a ranking against other users. There is no
+                user base to rank against — see focusScore in progress.ts. */}
+            <MetricCard label="FOCUS SCORE" value={`${rank.percent}%`} sub="your own activity">
               <GradientMeter progress={rank.score} colors={['#7F92E0', palette.accent]} height={8} />
             </MetricCard>
             <MetricCard label="BEST STREAK" value={`${progress.bestStreak}d`} sub={`${streakGoal.next}d next milestone`}>

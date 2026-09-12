@@ -14,6 +14,7 @@ import Animated, {
 import { curves } from '../design/motion';
 import { tapMedium } from '../ui/haptics';
 import { brandMark } from '../ui/brandMark';
+import { palette } from '../design/tokens';
 
 const { width } = Dimensions.get('window');
 
@@ -21,7 +22,7 @@ const { width } = Dimensions.get('window');
  *  bloom has somewhere to come up from. */
 const NEAR_BLACK = '#08050A';
 const BLUE_DEEP = '#081B33';
-const BLUE = '#476BEB'; // brand mint — name kept to avoid churn
+const BLUE = palette.accent; // brand mint — name kept to avoid churn
 
 /**
  * Beats, in ms. Longer than a normal splash on purpose: this screen is shown

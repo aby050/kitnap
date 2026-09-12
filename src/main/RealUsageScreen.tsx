@@ -11,14 +11,14 @@ import {
   usageStatsAvailable,
 } from '../data/androidUsage';
 import { Button } from '../design/primitives';
-import { palette, space, radius } from '../design/tokens';
+import { gradients, palette, space, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
 import { Donut, AppGlyphTile } from './profile/viz';
 
 /** Fixed, high-contrast segment colours — assigned by rank so the donut, its
  *  legend and the breakdown rows all speak the same colour for a given app.
  *  Everything past the top five collapses into one neutral "Other" wedge. */
-const SEG = ['#476BEB', '#7F92E0', '#E9AE62', '#C79BFF', '#5FE0D6'];
+const SEG = [palette.accent, '#7F92E0', '#E9AE62', '#C79BFF', '#5FE0D6'];
 const OTHER = 'rgba(255,255,255,0.22)';
 
 /** Package names aren't display names — UsageStatsManager exposes only the
@@ -86,7 +86,13 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      {/* Was the hardcoded pre-theme blue, which left this screen blue-black
+          while the rest of the app followed the chosen scheme. */}
+      <LinearGradient
+        colors={[...gradients.ground]}
+        locations={[...gradients.groundLocations]}
+        style={StyleSheet.absoluteFill}
+      />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>

@@ -145,7 +145,7 @@ export default function WeeklyInsight({
       title: 'Focus Time',
       icon: 'target',
       gradientColors: ['#065F46', '#04180E'] as const,
-      accentColor: '#476BEB',
+      accentColor: palette.accent,
       value: lastWeekFocus > 0 && focusPct !== 0 ? `${focusPct > 0 ? '+' : ''}${focusPct}%` : formatDuration(d.focusMinutes),
       arrow: focusPct >= 0 ? '↗' : '↘',
       descText: 'Your focus time was ',
@@ -156,7 +156,7 @@ export default function WeeklyInsight({
       tip: 'Every session you finish makes the next one easier to start.',
       graph: (
         <View style={styles.cardGraphWrap}>
-          <Sparkline values={focusVals.length ? focusVals : [15, 30, 45, 50, 65, 80, 95]} width={cardWidth - 44} height={46} color="#476BEB" />
+          <Sparkline values={focusVals.length ? focusVals : [15, 30, 45, 50, 65, 80, 95]} width={cardWidth - 44} height={46} color={palette.accent} />
         </View>
       ),
     },

@@ -142,7 +142,7 @@ export default function MilestonesScreen({
                         <View style={styles.tierMeterRow}>
                           <GradientMeter
                             progress={earned ? 1 : pct}
-                            colors={earned ? ['#6E8CF5', '#1C3FA8'] : isNext ? ['#8B9CF2', palette.accent] : ['#5FE0D6', '#7F92E0']}
+                            colors={earned ? [palette.accent, '#1C3FA8'] : isNext ? [palette.accent, palette.accent] : ['#5FE0D6', '#7F92E0']}
                             height={7}
                             style={{ flex: 1 }}
                           />
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   tierEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tierEyebrow: { color: palette.textTertiary, fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
   tierEyebrowEarned: { color: palette.accent },
-  tierEyebrowNext: { color: '#8B9CF2' },
+  tierEyebrowNext: { color: palette.accent },
   tierName: { color: palette.text, fontSize: 16.5, fontWeight: '800', letterSpacing: -0.3 },
   tierDesc: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 17 },
   tierMeterRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: 4 },
