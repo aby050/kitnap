@@ -36,13 +36,12 @@ type Card = {
 };
 
 /**
- * Boarding-pass style permission ask, all up front before onboarding's
- * questions — swipe/step through each one like a ticket, same idea as the
- * reference: a card with an icon, "AUTHORIZATION REQUIRED", a plain-English
- * reason, and a single Grant action, with progress dots below the card.
- * Every toggle here reads real OS permission state — checked on mount and
- * again whenever the app regains focus, the only way to know if the user
- * granted something in Settings, since none of these fire a JS event.
+ * One-permission-per-card ask, stepped through before onboarding's questions:
+ * an icon, a step count, a plain-English reason, and a single Grant action,
+ * with progress dots below the card. Every toggle here reads real OS
+ * permission state — checked on mount and again whenever the app regains
+ * focus, the only way to know if the user granted something in Settings,
+ * since none of these fire a JS event.
  */
 export default function PermissionBoardingPassScreen({
   onContinue,
@@ -230,7 +229,7 @@ export default function PermissionBoardingPassScreen({
         </View>
 
         <Text style={styles.reqLabel}>
-          {String(index + 1).padStart(2, '0')} / {String(cards.length).padStart(2, '0')} · AUTHORIZATION REQUIRED
+          Step {String(index + 1).padStart(2, '0')} of {String(cards.length).padStart(2, '0')}
         </Text>
         <Text style={styles.title}>{card.title}</Text>
         <Text style={styles.desc}>{card.desc}</Text>

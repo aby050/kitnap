@@ -12,6 +12,8 @@ export type Question =
       default: number;
       /** One name per step, indexed from `min`. Shown while sliding instead of a bare number. */
       labels?: string[];
+      /** Render `max` as "N+" — the top step means "N or older", not exactly N. */
+      maxPlus?: boolean;
     }
   | { id: string; kind: 'review'; prompt: string };
 
@@ -53,7 +55,7 @@ export const QUESTIONS: Question[] = [
     prompt: "What's the **first thing** you do when you **wake up**?",
     options: ['Check my phone', 'Check the time', 'Talk to someone', 'Just lie there a bit'],
   },
-  { id: 'age', kind: 'slider', prompt: 'How **old** are you?', min: 8, max: 40, default: 25 },
+  { id: 'age', kind: 'slider', prompt: 'How **old** are you?', min: 8, max: 40, default: 25, maxPlus: true },
   // Self-reported "average screen time" and "which devices" removed —
   // both are answered for real once usage-access permission is granted
   // (real per-day average, real app names) instead of guessed here.

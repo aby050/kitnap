@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   labelOn: { left: 11 },
   labelOff: { right: 10 },
   label: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  // Mint is a light surface, so ON reads in near-black; OFF sits on the dark track.
+  // Azure is a light surface, so ON reads in near-black; OFF sits on the dark track.
   labelTextOn: { color: 'rgba(0,0,0,0.55)' },
   labelTextOff: { color: 'rgba(255,255,255,0.6)' },
   disabled: { opacity: 0.4 },

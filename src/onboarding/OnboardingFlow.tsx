@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     width: '100%',
-    backgroundColor: 'rgba(111,227,169,0.85)',
+    backgroundColor: 'rgba(76,158,255,0.85)',
     transformOrigin: 'left center',
   },
   // Fixed pixel height + explicit clipping — a percentage maxHeight here

@@ -41,7 +41,14 @@ export type PersistedState = {
   unlockNumber: number;
   dayNumber: number;
   firstOpenDate: string;
-  guardian: { enabled: boolean; name: string; contact: string } | null;
+  guardian: {
+    enabled: boolean;
+    name: string;
+    contact: string;
+    /** Salted hash of the unlock code — the code itself is never persisted. */
+    codeHash: string;
+    codeSalt: string;
+  } | null;
   account: Account | null;
   /** Raw onboarding answers, kept after onboarding completes so later
    *  screens (recommendation, personalization) can still read them. */
@@ -110,11 +117,16 @@ export type Schedule = {
   days: string;
 };
 
+/**
+ * A schedule is a lockdown window — while one is active the blocklist is
+ * unchanged but every way out closes (see `activeLockdown`). One default, not
+ * five: the old set shipped Sleep (22:00–07:00) *and* Work (09:00–17:00)
+ * *and* three more, which under lockdown semantics would mean a new install
+ * had no bailout, no emergency and no unlocks for most of the day. Sleep is
+ * the window almost everyone actually wants sealed; the rest are the user's
+ * to add.
+ */
 export const DEFAULT_SCHEDULES: Schedule[] = [
-  { id: 'morning', name: 'Morning Routine', start: '06:30', end: '08:00', days: 'Every day' },
-  { id: 'work', name: 'Work Time', start: '09:00', end: '17:00', days: 'Mon–Fri' },
-  { id: 'dinner', name: 'Family Dinner', start: '19:00', end: '20:00', days: 'Every day' },
-  { id: 'winddown', name: 'Wind Down', start: '21:00', end: '22:00', days: 'Every day' },
   { id: 'sleep', name: 'Sleep Mode', start: '22:00', end: '07:00', days: 'Every day' },
 ];
 
@@ -126,6 +138,27 @@ export type GateReflection = {
   /** Whether they went through with the unlock after writing this. */
   unlocked: boolean;
 };
+
+/** An immutable record of every token spend and purchase, for auditability.
+ *  Capped at 200 entries — oldest are dropped first. */
+export type TokenLedgerEntry = {
+  /** ISO timestamp of the transaction. */
+  date: string;
+  reason: 'gate-skip' | 'timer-cancel' | 'purchased';
+  /** Negative for spends, positive for purchases. */
+  delta: number;
+  /** Balance immediately after this transaction. */
+  balanceAfter: number;
+};
+
+const MAX_TOKEN_LEDGER = 200;
+
+export function appendTokenLedger(
+  existing: TokenLedgerEntry[],
+  entry: TokenLedgerEntry,
+): TokenLedgerEntry[] {
+  return [...existing, entry].slice(-MAX_TOKEN_LEDGER);
+}
 
 const MAX_GATE_REFLECTIONS = 100;
 

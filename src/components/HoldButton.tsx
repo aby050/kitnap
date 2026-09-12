@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -6,8 +6,11 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
+  withRepeat,
   withSpring,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { control, gradients, palette, radius, type } from '../design/tokens';
@@ -24,17 +27,72 @@ import { control, gradients, palette, radius, type } from '../design/tokens';
  */
 
 /** Long enough to be a decision, short enough not to be a chore. */
-const HOLD_MS = 950;
+const DEFAULT_HOLD_MS = 950;
+
 /** Tick spacing at the start and at the brink — the ramp between them is what
  *  makes the charge *feel* like it's accelerating rather than just repeating. */
 const TICK_START_MS = 150;
 const TICK_END_MS = 40;
+
+/** Embers rising through the charge. Drawn on a fixed-width layer inside the
+ *  fill clip, so they are revealed as the pill fills rather than floating on
+ *  top of it — the charge looks lit from within instead of painted on. */
+const PARTICLE_COUNT = 16;
+/** Matches `fill`: a fixed width means positions don't slide as the clip grows. */
+const PARTICLE_FIELD_W = 400;
+
+/** Deterministic per-particle jitter — a real RNG would reshuffle on every
+ *  render and make the field twitch. */
+const rand = (i: number, salt: number) => {
+  const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+function Ember({ index, holding }: { index: number; holding: SharedValue<number> }) {
+  const t = useSharedValue(0);
+  const left = rand(index, 1) * PARTICLE_FIELD_W;
+  const size = 2 + rand(index, 2) * 3;
+  const rise = 16 + rand(index, 3) * 18;
+  const drift = (rand(index, 4) - 0.5) * 10;
+  const duration = 900 + rand(index, 5) * 900;
+  const delay = rand(index, 6) * 900;
+
+  useEffect(() => {
+    // Free-running: gating the loop on press would restart every ember in
+    // lockstep and read as a pulse. Opacity does the gating instead.
+    t.value = withDelay(
+      delay,
+      withRepeat(withTiming(1, { duration, easing: Easing.linear }), -1, false),
+    );
+  }, []);
+
+  const style = useAnimatedStyle(() => {
+    // Fade in off the floor, out at the top — never a hard pop at either end.
+    const life = t.value < 0.2 ? t.value / 0.2 : 1 - (t.value - 0.2) / 0.8;
+    return {
+      opacity: holding.value * life * 0.85,
+      transform: [
+        { translateY: -t.value * rise },
+        { translateX: drift * t.value },
+        { scale: 0.5 + life * 0.6 },
+      ],
+    };
+  });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[styles.ember, { left, width: size, height: size, borderRadius: size / 2 }, style]}
+    />
+  );
+}
 
 export default function HoldButton({
   label,
   holdLabel = 'Keep holding…',
   onComplete,
   disabled = false,
+  holdMs = DEFAULT_HOLD_MS,
   style,
 }: {
   label: string;
@@ -42,6 +100,8 @@ export default function HoldButton({
   holdLabel?: string;
   onComplete: () => void;
   disabled?: boolean;
+  /** How long the hold takes. Longer where the decision is heavier. */
+  holdMs?: number;
   style?: ViewStyle;
 }) {
   const progress = useSharedValue(0);
@@ -62,7 +122,7 @@ export default function HoldButton({
 
   const scheduleTick = useCallback(() => {
     const elapsed = Date.now() - startedAt.current;
-    const t = Math.min(1, elapsed / HOLD_MS);
+    const t = Math.min(1, elapsed / holdMs);
     const delay = TICK_START_MS + (TICK_END_MS - TICK_START_MS) * t;
     tickTimer.current = setTimeout(() => {
       // The pulses get heavier as well as faster — a light tap early, a solid
@@ -76,7 +136,7 @@ export default function HoldButton({
       Haptics.impactAsync(style).catch(() => {});
       scheduleTick();
     }, delay);
-  }, []);
+  }, [holdMs]);
 
   const finish = useCallback(() => {
     stopTicks();
@@ -93,7 +153,7 @@ export default function HoldButton({
     scale.value = withSpring(0.98, { damping: 18, stiffness: 260 });
     progress.value = withTiming(
       1,
-      { duration: HOLD_MS, easing: Easing.linear },
+      { duration: holdMs, easing: Easing.linear },
       (finished) => {
         if (finished) runOnJS(finish)();
       },
@@ -135,6 +195,11 @@ export default function HoldButton({
             end={{ x: 1, y: 1 }}
             style={styles.fill}
           />
+          <View style={styles.emberField} pointerEvents="none">
+            {Array.from({ length: PARTICLE_COUNT }, (_, i) => (
+              <Ember key={i} index={i} holding={holding} />
+            ))}
+          </View>
         </Animated.View>
         <Animated.View style={[styles.edgeGlow, glowStyle]} pointerEvents="none" />
 
@@ -169,6 +234,10 @@ const styles = StyleSheet.create({
   // Fixed-width gradient inside a growing clip: the colours stay put while the
   // pill fills, instead of the gradient squashing as the width changes.
   fill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 400 },
+  // Fixed-width layer, same reasoning as `fill`: the embers keep their places
+  // while the clip grows over them.
+  emberField: { position: 'absolute', left: 0, top: 0, bottom: 0, width: PARTICLE_FIELD_W },
+  ember: { position: 'absolute', bottom: 6, backgroundColor: '#FFFFFF' },
   edgeGlow: {
     position: 'absolute',
     left: 0,

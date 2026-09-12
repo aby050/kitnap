@@ -12,6 +12,7 @@ import {
 } from '../data/remoteSounds';
 import { Card, Editorial, Screen, ScreenHeader, SectionHeader } from '../design/primitives';
 import Icon from '../ui/Icon';
+import AnimatedIcon from '../ui/AnimatedIcon';
 import { motion, palette, radius, space, type } from '../design/tokens';
 import { tapLight } from '../ui/haptics';
 
@@ -40,14 +41,26 @@ function SoundTile({ def, activeKey, onSetActive }: { def: SoundDef; activeKey: 
       <Card tone={isActive ? 'accent' : 'neutral'}>
         <Pressable onPress={toggle} style={styles.tileRow}>
           <View style={[styles.iconTile, isActive && styles.iconTileActive]}>
-            <Icon name={def.mark} size={22} color={isActive ? palette.accent : palette.textSecondary} strokeWidth={1.6} />
+            <AnimatedIcon
+              name={def.mark}
+              size={22}
+              color={palette.textSecondary}
+              activeColor={palette.accent}
+              active={isActive}
+              strokeWidth={1.6}
+            />
           </View>
           <View style={styles.shrink}>
             <Text style={type.bodyStrong}>{def.name}</Text>
             <Text style={[type.sub, styles.desc]}>{def.description}</Text>
           </View>
           <View style={[styles.playBtn, isActive && styles.playBtnActive]}>
-            <Icon name={isActive && status.playing ? 'pause' : 'play'} size={16} color={isActive ? palette.accent : palette.text} />
+            <AnimatedIcon
+              name={isActive && status.playing ? 'pause' : 'play'}
+              size={16}
+              color={isActive ? palette.accent : palette.text}
+              pop={isActive && status.playing}
+            />
           </View>
         </Pressable>
         {isActive && (
@@ -106,14 +119,26 @@ function RemoteSoundPlayerTile({
       <Card tone={isActive ? 'accent' : 'neutral'}>
         <Pressable onPress={toggle} style={styles.tileRow}>
           <View style={[styles.iconTile, isActive && styles.iconTileActive]}>
-            <Icon name="headphones" size={22} color={isActive ? palette.accent : palette.textSecondary} strokeWidth={1.6} />
+            <AnimatedIcon
+              name="headphones"
+              size={22}
+              color={palette.textSecondary}
+              activeColor={palette.accent}
+              active={isActive}
+              strokeWidth={1.6}
+            />
           </View>
           <View style={styles.shrink}>
             <Text style={type.bodyStrong}>{clip.name}</Text>
             <Text style={[type.sub, styles.desc]}>{clip.description}</Text>
           </View>
           <View style={[styles.playBtn, isActive && styles.playBtnActive]}>
-            <Icon name={isActive && status.playing ? 'pause' : 'play'} size={16} color={isActive ? palette.accent : palette.text} />
+            <AnimatedIcon
+              name={isActive && status.playing ? 'pause' : 'play'}
+              size={16}
+              color={isActive ? palette.accent : palette.text}
+              pop={isActive && status.playing}
+            />
           </View>
         </Pressable>
         {isActive && (

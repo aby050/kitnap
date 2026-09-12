@@ -18,11 +18,11 @@ function classify(log: ReturnType<typeof getDay>, avgSaved: number): DayType {
   return 'avg';
 }
 
-// Aligned to the app's intensity ramp: mint (best) → lime → amber → coral.
+// Aligned to the app's intensity ramp: azure (best) → gold → amber → crimson.
 const TYPE_COLOR: Record<DayType, string> = {
   none: palette.surfaceHigh,
   low: palette.accent,
-  avg: '#B9D97A',
+  avg: '#6FB3FF',
   high: palette.warn,
   challenge: palette.danger,
   goal: palette.accent,
@@ -88,7 +88,7 @@ export default function CalendarScreen({ progress, onBack }: { progress: Progres
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#04140D', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>

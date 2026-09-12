@@ -159,7 +159,7 @@ function ScreenTimeArt() {
             width={6}
             height={62 * h}
             rx={3}
-            fill={i === 2 ? MINT : 'rgba(111,227,169,0.34)'}
+            fill={i === 2 ? MINT : 'rgba(76,158,255,0.34)'}
           />
         ))}
         <Line x1={74} y1={142} x2={126} y2={142} stroke="rgba(255,255,255,0.18)" strokeWidth={2} strokeLinecap="round" />
@@ -186,7 +186,7 @@ function NotificationArt() {
         <Svg width={112} height={112} viewBox="0 0 24 24">
           <Path
             d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"
-            fill="rgba(111,227,169,0.16)"
+            fill="rgba(76,158,255,0.16)"
             stroke={MINT}
             strokeWidth={1.6}
             strokeLinejoin="round"
@@ -239,7 +239,7 @@ function CameraArt() {
             cx={100}
             cy={100}
             r={78}
-            stroke="rgba(111,227,169,0.34)"
+            stroke="rgba(76,158,255,0.34)"
             strokeWidth={3}
             fill="none"
             strokeDasharray="30 22"
@@ -251,7 +251,7 @@ function CameraArt() {
       <Animated.View style={[styles.centerLayer, irisStyle]}>
         <Svg width={132} height={132} viewBox="0 0 132 132">
           <Circle cx={66} cy={66} r={54} fill="#101014" stroke="rgba(255,255,255,0.14)" strokeWidth={2} />
-          <Circle cx={66} cy={66} r={38} stroke={MINT} strokeWidth={2} fill="rgba(111,227,169,0.08)" />
+          <Circle cx={66} cy={66} r={38} stroke={MINT} strokeWidth={2} fill="rgba(76,158,255,0.08)" />
           {/* A person mid-move: the only thing the camera is ever used for. */}
           <Circle cx={66} cy={48} r={7} fill={MINT} />
           <Path
@@ -280,7 +280,7 @@ function ShieldArt() {
         <Svg width={124} height={124} viewBox="0 0 24 24">
           <Path
             d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-            fill="rgba(111,227,169,0.14)"
+            fill="rgba(76,158,255,0.14)"
             stroke={MINT}
             strokeWidth={1.5}
             strokeLinejoin="round"

@@ -577,9 +577,9 @@ export default function TimerScreen({
           <Animated.View style={[styles.slideFill, slideFillStyle]} pointerEvents="none">
             <LinearGradient
               colors={[
-                'rgba(111,227,169,0.04)',
-                'rgba(111,227,169,0.22)',
-                'rgba(111,227,169,0.55)',
+                'rgba(76,158,255,0.04)',
+                'rgba(76,158,255,0.22)',
+                'rgba(76,158,255,0.55)',
                 'rgba(150,255,205,0.95)',
               ]}
               locations={[0, 0.45, 0.82, 1]}
@@ -1106,7 +1106,7 @@ const styles = StyleSheet.create({
     height: SLIDE_BTN + 22,
     top: (SLIDE_TRACK_H - (SLIDE_BTN + 22)) / 2,
     borderRadius: (SLIDE_BTN + 22) / 2,
-    backgroundColor: 'rgba(111,227,169,0.22)',
+    backgroundColor: 'rgba(76,158,255,0.22)',
     zIndex: 0,
   },
   slideTrack: {

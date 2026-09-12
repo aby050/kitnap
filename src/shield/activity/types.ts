@@ -1,3 +1,4 @@
+import type { SharedValue } from 'react-native-reanimated';
 /**
  * Shared vocabulary for the Strict-mode physical unlock. Kept in its own file
  * so the pure engines (repEngine, motionEngine, tapGuard) never have to import
@@ -6,9 +7,29 @@
 
 /** The three movements Family G asks for. Narrow union rather than `string`
  *  so the rep engine's per-activity switches are exhaustive at compile time. */
-export type ActivityKind = 'squats' | 'jumping jacks' | 'push-ups';
+export type ActivityKind =
+  | 'squats'
+  | 'jumping jacks'
+  | 'push-ups'
+  | 'marching'
+  | 'arm raises'
+  | 'side raises'
+  | 'toe touches';
 
-export const ACTIVITY_KINDS: ActivityKind[] = ['squats', 'jumping jacks', 'push-ups'];
+export const ACTIVITY_KINDS: ActivityKind[] = [
+  'squats',
+  'jumping jacks',
+  'push-ups',
+  // The easy end of the ladder. Standing marches and overhead arm raises ask
+  // far less than a squat — they can be done in a doorway, in work clothes,
+  // in a quiet office, and arm raises work sitting down. Without them the
+  // only physical options were three that a lot of people will not do in
+  // front of anyone, which is its own way of pushing someone to the token.
+  'marching',
+  'arm raises',
+  'side raises',
+  'toe touches',
+];
 
 export function isActivityKind(v: string): v is ActivityKind {
   return v === 'squats' || v === 'jumping jacks' || v === 'push-ups';
@@ -37,6 +58,16 @@ export type RejectionReason = 'none' | 'tooFast' | 'shallow' | 'lowConfidence' |
  * they cannot drift apart.
  */
 export type PoseDetector = {
+  /**
+   * Live keypoints for the overlay: `[y, x, score] × 17`, normalized to the
+   * model's square input, newest frame wins.
+   *
+   * A shared value rather than React state on purpose — dots have to follow a
+   * body at frame rate, and pushing 51 floats through `setState` 20 times a
+   * second would re-render the whole challenge screen for a cosmetic layer.
+   * Empty while nothing is tracked.
+   */
+  keypoints: SharedValue<number[]>;
   /** True only when the native modules loaded *and* frames are arriving now. */
   available: boolean;
   /** Still starting up — distinct from `available: false`, which is final. */

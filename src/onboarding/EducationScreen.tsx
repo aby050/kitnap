@@ -64,7 +64,7 @@ export default function EducationScreen({
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <OnboardingMarkSlot />
+      <OnboardingMarkSlot large />
       <View style={styles.body}>
         <Animated.Text key={`title-${slideIndex}`} entering={FadeInDown.delay(120).duration(400)} style={styles.title}>
           {currentSlide.title}

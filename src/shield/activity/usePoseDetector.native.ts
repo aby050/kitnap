@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSharedValue } from 'react-native-reanimated';
 import { CommonResolutions, useFrameOutput, type Frame } from 'react-native-vision-camera';
 import { useResizer } from 'react-native-vision-camera-resizer';
 import { loadTensorflowModel, type TfliteModel } from 'react-native-fast-tflite';
@@ -169,14 +170,30 @@ export function usePoseDetector(
    *  once rather than up to `MIRROR_EVERY` frames later. */
   const mirrorTracked = useRef(false);
 
+  /** Latches the first frame, so promoting the tier is a one-off setState
+   *  rather than one per frame. */
+  const framesSeenRef = useRef(false);
+
+  /** Live joints for the dot overlay. See `PoseDetector.keypoints`. */
+  const keypoints = useSharedValue<number[]>([]);
+
   const onKeypoints = useCallback((kp: number[], rawTimestamp: number) => {
     const s = stateRef.current;
     const wall = Date.now();
     liveRef.current = wall;
+    // Straight to the shared value so the dot overlay can follow the body on
+    // the UI thread. Written every frame, unlike the throttled `setMirror`
+    // below — a dot that updates five times a second reads as broken.
+    keypoints.value = kp;
     // Through React state, not a ref: the *first* frame is what promotes the
-    // tier from "starting up" to "trustworthy". Setting it again every frame is
-    // free — React bails out when the value hasn't changed.
-    setFramesSeen(true);
+    // tier from "starting up" to "trustworthy". Guarded by a ref so it fires
+    // exactly once — React bails out on an unchanged value, but the call still
+    // schedules render work, and at camera frame rate that is thirty wasted
+    // scheduling passes a second on the thread the rep engine runs on.
+    if (!framesSeenRef.current) {
+      framesSeenRef.current = true;
+      setFramesSeen(true);
+    }
 
     const counted = feedPose(s, kp, frameNow(clockRef.current, rawTimestamp, wall));
     if (counted) onRepRef.current?.();
@@ -279,6 +296,7 @@ export function usePoseDetector(
   const usable = status === 'ready' && model != null && resizer != null;
 
   return {
+    keypoints,
     available: usable && framesSeen && !stalled,
     // Stays true across the gap between "model loaded" and "first frame
     // arrived". If it went false in that window the challenge would drop a tier

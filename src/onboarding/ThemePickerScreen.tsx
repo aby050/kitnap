@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   cardActive: { 
-    borderColor: palette.accent, // glowing green active border outline
+    borderColor: palette.accent, // active accent border outline
     shadowColor: palette.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.7,

@@ -1,14 +1,32 @@
 import React, { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoider } from '../components/KeyboardAware';
+import KeyboardAware from '../components/KeyboardAware';
 import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { ImageManipulator, FlipType, SaveFormat } from 'expo-image-manipulator';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { GoalData } from '../data/goal';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 import { tapLight } from '../ui/haptics';
+
+/** Deadlines are stored as "YYYY-MM-DD" strings; the native picker speaks
+ *  Date, so these two convert between them. Built from local parts, never
+ *  `toISOString()`, which would shift the day across a timezone. */
+const toYmd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const fromYmd = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)
+    ? new Date(y, m - 1, d)
+    : new Date();
+};
+
+const prettyYmd = (s: string) =>
+  fromYmd(s).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 /**
  * The progress photo.
@@ -27,6 +45,32 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [denied, setDenied] = useState(false);
+  // Android's date picker is a one-shot dialog that dismisses itself; iOS's
+  // is inline and needs its own Done. Same shape as ScheduleEditorScreen.
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  const onPickDate = (event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setDatePickerOpen(false);
+    if (event.type === 'dismissed' || !date) return;
+    setDeadlineDate(toYmd(date));
+  };
+
+  /** The front camera previews mirrored, and the file comes back that way
+   *  too — so the photo that lands on the shield has their face reversed,
+   *  which reads as a stranger. Flip it back once, here, rather than
+   *  transforming it at every render site (`ShieldScreen` shows it too).
+   *  A failure returns the original: a mirrored photo beats no photo. */
+  const unmirror = async (uri: string) => {
+    try {
+      const ref = await ImageManipulator.manipulate(uri)
+        .flip(FlipType.Horizontal)
+        .renderAsync();
+      const out = await ref.saveAsync({ compress: 0.7, format: SaveFormat.JPEG });
+      return out.uri;
+    } catch {
+      return uri;
+    }
+  };
 
   /** The camera, first. A denial isn't a dead end — the library link below
    *  stays, and the whole screen is skippable. */
@@ -44,7 +88,9 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
       aspect: [1, 1],
       quality: 0.7,
     });
-    if (!result.canceled && result.assets?.[0]) setPhotoUri(result.assets[0].uri);
+    if (!result.canceled && result.assets?.[0]) {
+      setPhotoUri(await unmirror(result.assets[0].uri));
+    }
   };
 
   const pickFromLibrary = async () => {
@@ -62,7 +108,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <KeyboardAvoider>
+      <KeyboardAware contentContainerStyle={styles.scrollBody}>
         <View style={styles.body}>
           <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
             Take your progress photo
@@ -134,14 +180,38 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
                   placeholderTextColor={palette.textTertiary}
                   style={[styles.input, styles.deadlineInput]}
                 />
-                <TextInput
-                  value={deadlineDate}
-                  onChangeText={setDeadlineDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={palette.textTertiary}
-                  style={[styles.input, styles.deadlineInput]}
-                />
+                <Pressable
+                  onPress={() => {
+                    tapLight();
+                    setDatePickerOpen((v) => !v);
+                  }}
+                  style={[styles.input, styles.deadlineInput, styles.dateField]}
+                  accessibilityRole="button"
+                  accessibilityLabel={deadlineDate ? `Deadline ${prettyYmd(deadlineDate)}` : 'Pick a deadline date'}
+                >
+                  <Text style={deadlineDate ? styles.dateValue : styles.datePlaceholder}>
+                    {deadlineDate ? prettyYmd(deadlineDate) : 'Pick a date'}
+                  </Text>
+                </Pressable>
               </View>
+
+              {datePickerOpen && (
+                <>
+                  <DateTimePicker
+                    value={deadlineDate ? fromYmd(deadlineDate) : new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    minimumDate={new Date()}
+                    onChange={onPickDate}
+                    themeVariant="dark"
+                  />
+                  {Platform.OS === 'ios' && (
+                    <Pressable onPress={() => setDatePickerOpen(false)} style={styles.pickerDone}>
+                      <Text style={styles.pickerDoneText}>Done</Text>
+                    </Pressable>
+                  )}
+                </>
+              )}
               {deadlineName.trim() && deadlineDate.trim() ? (
                 <Text style={styles.deadlinePreview}>
                   The shield will say things like “{deadlineName.trim()} in 12 days.”
@@ -164,7 +234,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
             }
           />
         </View>
-      </KeyboardAvoider>
+      </KeyboardAware>
     </SafeAreaView>
   );
 }
@@ -214,6 +284,12 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 16,
   },
+  scrollBody: { flexGrow: 1, justifyContent: 'center' },
+  dateField: { justifyContent: 'center' },
+  dateValue: { color: palette.text, fontSize: 14.5 },
+  datePlaceholder: { color: palette.textTertiary, fontSize: 14.5 },
+  pickerDone: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 6 },
+  pickerDoneText: { color: palette.accent, fontSize: 15, fontWeight: '700' },
   deadlineRow: { flexDirection: 'row', gap: 8 },
   deadlineInput: { flex: 1, fontSize: 14.5, paddingVertical: 13 },
   deadlinePreview: { color: palette.accent, fontSize: 13, lineHeight: 19 },

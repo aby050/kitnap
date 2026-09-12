@@ -20,20 +20,25 @@ import { Platform, TextStyle, ViewStyle } from 'react-native';
  *
  * Chromatic colour is rationed to three hues with one meaning each, so a
  * colour on screen always carries information instead of decoration:
- *   accent (mint)  → active, on, positive, "you held the line"
- *   warn  (amber)  → caution, bedtime, approaching a limit
- *   danger (coral) → cost, overuse, break-glass
+ *   accent (azure)   → active, on, positive, "you held the line"
+ *   warn   (amber)   → caution, bedtime, approaching a limit
+ *   danger (crimson) → cost, overuse, break-glass
  *
  * Primary actions are white-on-black rather than accent-coloured. High
- * contrast, never garish, and it keeps mint meaningful as a *state* colour.
- * ───────────────────────────────────────────────────────────── */
+ * contrast, never garish, and it keeps azure meaningful as a *state* colour.
+ *
+ * Azure was chosen deliberately over both the cool mint/green that most
+ * focus-and-blocking apps default to (that similarity is what got Byre's
+ * last submission rejected under App Review 4.3(a)) and over warm
+ * red/orange, so the brand doesn't drift into either a competitor's
+ * territory or a "warning" register. ──────────────────────────────────── */
 
 export const palette = {
   /* Surfaces, darkest → lightest */
   base: '#000000',
-  surface: '#0B0B0D',
-  surfaceRaised: '#131317',
-  surfaceHigh: '#1C1C21',
+  surface: '#090C10',
+  surfaceRaised: '#101620',
+  surfaceHigh: '#182030',
   surfaceInverse: '#FFFFFF',
 
   /* Text, most → least prominent. Alpha-based so it composes over any surface. */
@@ -49,21 +54,21 @@ export const palette = {
   border: 'rgba(255,255,255,0.11)',
   borderStrong: 'rgba(255,255,255,0.18)',
 
-  /* Accent — mint. Active states, positive data, brand moments. */
-  accent: '#6FE3A9',
-  accentPressed: '#5AD095',
-  accentSoft: 'rgba(111,227,169,0.12)',
-  accentBorder: 'rgba(111,227,169,0.26)',
+  /* Accent — azure. Active states, positive data, brand moments. */
+  accent: '#4C9EFF',
+  accentPressed: '#2F7FE0',
+  accentSoft: 'rgba(76,158,255,0.12)',
+  accentBorder: 'rgba(76,158,255,0.26)',
 
-  /* Warn — amber. Caution, bedtime, nearing a limit. */
-  warn: '#E9AE62',
-  warnSoft: 'rgba(233,174,98,0.12)',
-  warnBorder: 'rgba(233,174,98,0.26)',
+  /* Warn — amber/gold. Caution, bedtime, nearing a limit. */
+  warn: '#E9B23E',
+  warnSoft: 'rgba(233,178,62,0.12)',
+  warnBorder: 'rgba(233,178,62,0.26)',
 
-  /* Danger — coral. Cost, overuse, break-glass. Never used decoratively. */
-  danger: '#F0604A',
-  dangerSoft: 'rgba(240,96,74,0.12)',
-  dangerBorder: 'rgba(240,96,74,0.26)',
+  /* Danger — deep crimson. Cost, overuse, break-glass. Never used decoratively. */
+  danger: '#E23A4E',
+  dangerSoft: 'rgba(226,58,78,0.12)',
+  dangerBorder: 'rgba(226,58,78,0.26)',
 
   /* Translucent fills for controls sitting on unknown backgrounds (e.g. the
    * themed Shield gradient), where a fixed surface colour would clash. */
@@ -74,13 +79,13 @@ export const palette = {
 
 /**
  * Sequential ramp for usage/intensity data, low → high. Semantically ordered
- * (calm mint at low usage, coral at high) so the colour itself reads as
+ * (calm azure at low usage, crimson at high) so the colour itself reads as
  * "this is getting worse" without needing a legend.
  */
 export const dataRamp = [
-  'rgba(111,227,169,0.38)',
+  'rgba(76,158,255,0.38)',
   palette.accent,
-  '#B9D97A',
+  '#6FB3FF',
   palette.warn,
   palette.danger,
 ] as const;
@@ -317,7 +322,7 @@ export const fieldStyle: TextStyle = {
 /* ─────────────────────────────────────────────────────────────
  * LIGHT
  *
- * The background is not flat black — a mint bloom bleeds up from behind the
+ * The background is not flat black — an azure bloom bleeds up from behind the
  * content, so the screen has a light source. This is the difference between
  * "dark mode" and a designed dark surface. Rendered with a radial gradient
  * (see GlowField in primitives), never with a shadow: shadowColor is ignored
@@ -325,14 +330,14 @@ export const fieldStyle: TextStyle = {
  * ───────────────────────────────────────────────────────────── */
 
 export const gradients = {
-  /** App ground. Faintest possible mint lift at the top, true black below. */
-  ground: ['#04140D', '#000000', '#000000'] as readonly [string, string, string],
+  /** App ground. Faintest possible azure lift at the top, true black below. */
+  ground: ['#050C16', '#000000', '#000000'] as readonly [string, string, string],
   /** Behind a hero figure or the Shield's line — a stronger centred bloom. */
-  bloom: ['rgba(111,227,169,0.22)', 'rgba(111,227,169,0.05)', 'rgba(0,0,0,0)'] as readonly [string, string, string],
+  bloom: ['rgba(76,158,255,0.22)', 'rgba(76,158,255,0.05)', 'rgba(0,0,0,0)'] as readonly [string, string, string],
   /** Fill for a primary white control, so it isn't a dead flat rectangle. */
   light: ['#FFFFFF', '#E8ECEA'] as readonly [string, string],
   /** Fill for an accent-filled control. */
-  accent: ['#8BEFBC', '#4FCB92'] as readonly [string, string],
+  accent: ['#8FC4FF', '#2F7FE0'] as readonly [string, string],
   /** Top-down scrim so content can scroll under the status bar legibly. */
   scrimTop: ['rgba(0,0,0,0.9)', 'rgba(0,0,0,0)'] as readonly [string, string],
 } as const;
@@ -352,9 +357,11 @@ export const elevation = {
 /* ─────────────────────────────────────────────────────────────
  * MOTION
  *
- * Four durations, one spring. Byre's motion job is to make an interruption
- * feel deliberate rather than abrupt, so entrances are unhurried (320ms)
- * while feedback is near-instant (120ms).
+ * Five durations, three springs. Byre's motion job is to make an interruption
+ * feel deliberate rather than abrupt, so entrances are unhurried (320ms) while
+ * feedback is near-instant (120ms). The behaviours built from these — entrances,
+ * pops, ambient loops — live in `motion.ts`, so screens compose rather than
+ * invent.
  * ───────────────────────────────────────────────────────────── */
 
 export const motion = {
@@ -366,8 +373,23 @@ export const motion = {
   transition: 320,
   /** Hero moments — the Shield appearing, a session completing. */
   hero: 520,
+  /** Brand moments only: the splash mark's reveal. Long enough to be watched. */
+  brand: 900,
   /** The one spring, for anything that settles into place. */
   spring: { damping: 18, stiffness: 220, mass: 0.9 },
+  /**
+   * Tighter and quicker, for something small that must land *now*: a tab
+   * indicator sliding, a badge popping. The soft `spring` above reads as
+   * sluggish at this size.
+   */
+  snap: { damping: 20, stiffness: 340, mass: 0.7 },
+  /**
+   * Heavier and slower, for large elements finding their place — a sheet, the
+   * splash mark. Big things that move fast read as cheap.
+   */
+  settle: { damping: 22, stiffness: 130, mass: 1.1 },
+  /** Per-item delay when a group animates in one after another. */
+  stagger: 55,
   /** Scale a control drops to while held. */
   pressScale: 0.975,
 } as const;

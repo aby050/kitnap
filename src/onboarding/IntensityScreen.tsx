@@ -25,7 +25,7 @@ function HeaderGlow() {
       <Svg width={width} height={160} viewBox={`0 0 ${width} 160`}>
         <Defs>
           <RadialGradient id="topGlow" cx="50%" cy="0%" r="50%">
-            <Stop offset="0%" stopColor="#6FE3A9" stopOpacity="0.15" />
+            <Stop offset="0%" stopColor="#4C9EFF" stopOpacity="0.15" />
             <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
           </RadialGradient>
         </Defs>
@@ -93,7 +93,7 @@ export default function IntensityScreen({
                 <View style={styles.segInner}>
                   <Text style={[styles.segText, active && styles.segTextActive]}>{i.name}</Text>
                   {i.key === recommended && (
-                    <Icon name="check" size={13} color={active ? '#6FE3A9' : 'rgba(255,255,255,0.45)'} strokeWidth={2.6} />
+                    <Icon name="check" size={13} color={active ? '#4C9EFF' : 'rgba(255,255,255,0.45)'} strokeWidth={2.6} />
                   )}
                 </View>
               </Pressable>
@@ -141,8 +141,8 @@ export default function IntensityScreen({
         <View style={styles.note}>
           <View style={styles.noteHeader}>
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#6FE3A9" strokeWidth="2" fill="none" />
-              <Path d="M12 8v5M12 16h.01" stroke="#6FE3A9" strokeWidth="2" strokeLinecap="round" />
+              <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#4C9EFF" strokeWidth="2" fill="none" />
+              <Path d="M12 8v5M12 16h.01" stroke="#4C9EFF" strokeWidth="2" strokeLinecap="round" />
             </Svg>
             <Text style={styles.noteTitle}>Real Protection</Text>
           </View>
@@ -175,11 +175,11 @@ export default function IntensityScreen({
             one choice the whole product hangs off — the charge under the
             thumb is the screen asking whether you mean it. */}
         <HoldButton
-          label={willWait ? 'Hold to schedule for tomorrow' : 'Hold to continue'}
-          holdLabel={willWait ? 'Scheduling…' : 'Locking it in…'}
+          label={willWait ? 'Yes, schedule it' : 'Yes, I understand'}
+          holdLabel="Hold to continue"
+          holdMs={2000}
           onComplete={() => onContinue(selected)}
         />
-        <Text style={styles.holdHint}>Press and hold</Text>
       </View>
     </SafeAreaView>
   );
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   },
   segItemActive: { 
     backgroundColor: 'rgba(111, 227, 169, 0.08)',
-    borderColor: '#6FE3A9', // clean glowing green active border
+    borderColor: '#4C9EFF', // clean glowing accent border
   },
   segInner: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   segText: {
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   segTextActive: { 
-    color: '#6FE3A9', 
+    color: '#4C9EFF', 
     fontWeight: '800',
   },
   table: { 
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(111, 227, 169, 0.16)',
   },
   recommendTitle: {
-    color: '#6FE3A9',
+    color: '#4C9EFF',
     fontSize: 14.5,
     fontWeight: '700',
     marginBottom: 6,
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   noteTitle: {
-    color: '#6FE3A9',
+    color: '#4C9EFF',
     fontSize: 14.5,
     fontWeight: '700',
   },
@@ -335,14 +335,6 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     lineHeight: 21,
     fontWeight: '500',
-  },
-  holdHint: {
-    color: palette.textQuaternary,
-    fontSize: 11.5,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    textAlign: 'center',
-    marginTop: 10,
   },
   ctaWrap: { 
     paddingHorizontal: 22, 

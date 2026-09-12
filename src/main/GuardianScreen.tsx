@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -7,12 +7,21 @@ import { GradientButton } from '../components/ui';
 import { fieldStyle, palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 import Toggle from '../design/Toggle';
+import { generateGuardianCode, hashGuardianCode, newSalt } from '../data/guardianCode';
 
 /** Any user can disable this app in Settings in two taps — no third-party app
  *  on iOS can prevent that. Guardian is one of our two real defences (with the
- *  delayed-settings-change), because it's behavioural, not technical: loosening
- *  a rule means messaging a real human who holds the code, not fighting the OS. */
-type Guardian = { enabled: boolean; name: string; contact: string };
+ *  delayed-settings-change in intensityChange.ts), because it's behavioural,
+ *  not technical: loosening a rule means asking a real human for a code, not
+ *  fighting the OS.
+ *
+ *  There is no backend, so there is no way for Byre to deliver the code
+ *  itself. Instead the code is generated on-device and the user sends it to
+ *  their guardian themselves, through the OS share sheet — their own
+ *  messaging apps, not a service Byre runs. Only a salted hash is ever
+ *  persisted; the plaintext code exists only for the moment it's shown and
+ *  shared. */
+export type Guardian = { enabled: boolean; name: string; contact: string; codeHash: string; codeSalt: string };
 
 export default function GuardianScreen({
   initial,
@@ -24,14 +33,42 @@ export default function GuardianScreen({
   /** Drives the "this is all they'd see" preview. */
   hoursReclaimed?: number;
   onBack: () => void;
-  onSave: (g: Guardian) => void;
+  onSave: (g: Guardian | null) => void;
 }) {
   const [enabled, setEnabled] = useState(initial?.enabled ?? false);
   const [name, setName] = useState(initial?.name ?? '');
   const [contact, setContact] = useState(initial?.contact ?? '');
-  const [saved, setSaved] = useState(!!initial?.name);
+  const [hasCode, setHasCode] = useState(!!initial?.codeHash);
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const canSave = name.trim().length > 0 && contact.trim().length > 0;
+  const canGenerate = name.trim().length > 0;
+
+  const generate = async () => {
+    if (!canGenerate || busy) return;
+    setBusy(true);
+    const code = await generateGuardianCode();
+    setBusy(false);
+    setPendingCode(code);
+  };
+
+  const shareAndSave = async () => {
+    if (!pendingCode) return;
+    const trimmedName = name.trim();
+    try {
+      await Share.share({
+        message: `I've set you as my Guardian in Byre. If I ask you to unlock Strict mode, this is the code: ${pendingCode}\n\nOnly give it to me if you think I should really have it.`,
+      });
+    } catch {
+      // Share sheet dismissed or failed — the code is still valid and can be
+      // read out or retyped, so saving proceeds either way.
+    }
+    const salt = await newSalt();
+    const codeHash = await hashGuardianCode(pendingCode, salt);
+    setPendingCode(null);
+    setHasCode(true);
+    onSave({ enabled: true, name: trimmedName, contact: contact.trim(), codeHash, codeSalt: salt });
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -55,7 +92,8 @@ export default function GuardianScreen({
           <Text style={styles.heroTitle}>A friend holds the code</Text>
           <Text style={styles.heroBody}>
             We can't stop you disabling this in Settings — nobody can, on iOS. So instead, weakening Strict
-            mode or shortening your intensity delay requires a code that only your guardian has.
+            mode requires a code that only your guardian has. You send it to them yourself; Byre never sees
+            it and never delivers it.
           </Text>
         </Animated.View>
 
@@ -68,7 +106,11 @@ export default function GuardianScreen({
             value={enabled}
             onValueChange={(v) => {
               setEnabled(v);
-              onSave({ enabled: v, name, contact });
+              if (!v) {
+                onSave(null);
+                setHasCode(false);
+                setPendingCode(null);
+              }
             }}
           />
         </View>
@@ -78,10 +120,7 @@ export default function GuardianScreen({
             <Text style={styles.sectionLabel}>Who is it?</Text>
             <TextInput
               value={name}
-              onChangeText={(t) => {
-                setName(t);
-                setSaved(false);
-              }}
+              onChangeText={setName}
               placeholder="Their name"
               placeholderTextColor={palette.textTertiary}
               style={styles.input}
@@ -89,31 +128,39 @@ export default function GuardianScreen({
             <View style={{ height: 10 }} />
             <TextInput
               value={contact}
-              onChangeText={(t) => {
-                setContact(t);
-                setSaved(false);
-              }}
-              placeholder="Their phone or email"
+              onChangeText={setContact}
+              placeholder="Their phone or email (optional, just for your reference)"
               placeholderTextColor={palette.textTertiary}
               style={styles.input}
             />
 
             <View style={{ height: 20 }} />
-            <GradientButton
-              label={saved ? 'Saved' : 'Save guardian'}
-              onPress={() => {
-                if (!canSave) return;
-                setSaved(true);
-                onSave({ enabled, name: name.trim(), contact: contact.trim() });
-              }}
-            />
 
-            {saved && (
+            {pendingCode ? (
+              <Animated.View entering={FadeInDown.duration(300)} style={styles.codeCard}>
+                <Text style={styles.codeLabel}>Their code</Text>
+                <Text style={styles.codeValue}>{pendingCode}</Text>
+                <Text style={styles.codeHint}>
+                  Send this to {name.trim() || 'them'} now. Once you save, Byre only keeps a scrambled copy
+                  — if you lose this code you'll need to set a new guardian.
+                </Text>
+                <View style={{ height: 14 }} />
+                <GradientButton label={`Share with ${name.trim() || 'them'}`} onPress={shareAndSave} />
+              </Animated.View>
+            ) : (
+              <GradientButton
+                label={busy ? 'One moment…' : hasCode ? 'Generate a new code' : 'Generate their code'}
+                onPress={busy ? () => {} : generate}
+              />
+            )}
+            {busy && <ActivityIndicator color={palette.text} style={{ marginTop: 10 }} />}
+
+            {hasCode && !pendingCode && (
               <Animated.View entering={FadeInDown.duration(300)} style={styles.confirmCard}>
-                <Text style={styles.confirmTitle}>{name} can now unlock changes</Text>
+                <Text style={styles.confirmTitle}>{name.trim()} can unlock changes</Text>
                 <Text style={styles.confirmBody}>
-                  When you try to weaken Strict mode or shorten your delay, we'll text {name} a one-time code.
-                  Nothing changes until they send it back to you.
+                  When you try to weaken Strict mode, you'll be asked for the code you sent them. Nothing
+                  changes until it's entered correctly.
                 </Text>
               </Animated.View>
             )}
@@ -167,9 +214,9 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
-    backgroundColor: 'rgba(111,227,169,0.1)',
+    backgroundColor: 'rgba(76,158,255,0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(111,227,169,0.2)',
+    borderColor: 'rgba(76,158,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -190,7 +237,16 @@ const styles = StyleSheet.create({
     width: '100%',
     ...fieldStyle,
   },
-  confirmCard: { marginTop: 16, padding: 16, borderRadius: 18, backgroundColor: 'rgba(111,227,169,0.09)' },
+  codeCard: {
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: 'rgba(76,158,255,0.09)',
+    alignItems: 'center',
+  },
+  codeLabel: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  codeValue: { color: palette.text, fontSize: 34, fontWeight: '800', letterSpacing: 6, marginTop: 8 },
+  codeHint: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 18, marginTop: 10, textAlign: 'center' },
+  confirmCard: { marginTop: 16, padding: 16, borderRadius: 18, backgroundColor: 'rgba(76,158,255,0.09)' },
   confirmTitle: { color: palette.accent, fontSize: 15, fontWeight: '700' },
   confirmBody: { color: 'rgba(255,255,255,0.78)', fontSize: 13.5, lineHeight: 20, marginTop: 7 },
   note: { marginTop: 26, padding: 16, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)' },

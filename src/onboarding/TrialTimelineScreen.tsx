@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
@@ -7,7 +7,13 @@ import { palette } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
 import { PurchasesPackage } from 'react-native-purchases';
-import { purchaseSubscription, restorePurchases } from '../data/purchases';
+import {
+  PRIVACY_POLICY_URL,
+  TERMS_URL,
+  purchaseSubscription,
+  restorePurchases,
+} from '../data/purchases';
+import { FREE_EMERGENCY_TOKENS } from '../data/store';
 import { PurchaseResult } from './PurchaseSuccessScreen';
 
 const STEPS: { icon: IconName; title: string; body: string; done: boolean }[] = [
@@ -49,6 +55,11 @@ type Plan = {
   bailouts: number;
   badge?: string;
   pkg?: PurchasesPackage;
+  /** True for a row whose product carries a free-trial intro offer. The
+   *  billed amount (`price`/`per`) must still be what's rendered large and
+   *  bold — Apple 3.1.2(c) requires the billed amount to be the most
+   *  conspicuous pricing element, with the trial itself subordinate to it. */
+  isTrial?: boolean;
 };
 
 /** Shown only until the store answers, and on the rare launch where it never
@@ -58,11 +69,12 @@ const FALLBACK_PLANS: Plan[] = [
   {
     key: 'trial',
     name: '7-day free trial',
-    note: 'Then ₹499/yr. Cancel anytime.',
-    price: 'Free',
-    per: '',
+    note: 'Free for 7 days, then ₹499/yr. Cancel anytime.',
+    price: '₹499',
+    per: '/yr',
     bailouts: 1,
     badge: 'Start here',
+    isTrial: true,
   },
   { key: 'monthly', name: 'Monthly', note: 'Billed every month', price: '₹99', per: '/mo', bailouts: 2 },
   { key: 'yearly', name: 'Yearly', note: 'Only ₹41.58/mo — save 58%', price: '₹499', per: '/yr', bailouts: 10 },
@@ -83,15 +95,18 @@ function toPlans(pkgs: PurchasesPackage[]): Plan[] {
     const intro = p.introPrice;
     const bailouts = PLAN_BAILOUTS[pkg.identifier] ?? 2;
     if (intro && intro.price === 0) {
+      const unit = intro.periodUnit.toLowerCase();
+      const plural = intro.periodNumberOfUnits === 1 ? unit : `${unit}s`;
       rows.unshift({
         key: `trial:${pkg.identifier}`,
-        name: `${intro.periodNumberOfUnits}-${intro.periodUnit.toLowerCase()} free trial`,
-        note: `Then ${p.priceString}${annual ? '/yr' : '/mo'}. Cancel anytime.`,
-        price: 'Free',
-        per: '',
+        name: `${intro.periodNumberOfUnits}-${unit} free trial`,
+        note: `Free for ${intro.periodNumberOfUnits} ${plural}, then ${p.priceString}${annual ? '/yr' : '/mo'}. Cancel anytime.`,
+        price: p.priceString,
+        per: annual ? '/yr' : '/mo',
         bailouts: 1,
         badge: 'Start here',
         pkg,
+        isTrial: true,
       });
     }
     rows.push({
@@ -133,9 +148,19 @@ export default function TrialTimelineScreen({
   const selected = PLANS.find((p) => p.key === plan) ?? PLANS[0];
 
   const buy = async () => {
-    // No live product — don't strand the user behind a dead button.
+    // No live product — the store has nothing to sell right now (offerings
+    // failed to load, or the products aren't live yet). This used to call
+    // `onStart()` with no result, which skipped the confirmation entirely and
+    // dropped the user on the home screen: they had tapped Start, been
+    // charged nothing, and been told nothing. Confirm the free plan instead,
+    // so the outcome is always stated.
     if (!selected.pkg) {
-      onStart();
+      onStart({
+        planName: 'Free plan',
+        bailouts: FREE_EMERGENCY_TOKENS,
+        isTrial: false,
+        free: true,
+      });
       return;
     }
     setBusy(true);
@@ -146,7 +171,7 @@ export default function TrialTimelineScreen({
       onStart({
         planName: selected.name,
         bailouts: selected.bailouts,
-        isTrial: selected.key === 'trial' || !!selected.name.toLowerCase().includes('trial'),
+        isTrial: !!selected.isTrial,
         renewsAt: res.info?.latestExpirationDate ?? null,
       });
     } else if (res.status === 'error') {
@@ -231,27 +256,75 @@ export default function TrialTimelineScreen({
           label={
             busy
               ? 'One moment…'
-              : selected.price === 'Free'
+              : selected.isTrial
                 ? 'Start my free days'
                 : `Continue — ${selected.price}${selected.per}`
           }
           onPress={busy ? () => {} : buy}
         />
         {busy && <ActivityIndicator color={palette.text} style={{ marginTop: 10 }} />}
+        {/* Guideline 3.1.2 disclosure. The plan's title, length and price are
+            on the row above; this states the renewal terms, and the two links
+            below are required to be in the binary next to the purchase. */}
         <Text style={styles.legal}>
-          {selected.price === 'Free'
-            ? 'No payment due now. Cancel anytime — we remind you first.'
-            : 'Cancel anytime. Bailouts refill with each renewal.'}
+          {selected.isTrial
+            ? `Free for ${selected.name.split('-')[0]} days, then it renews at ${selected.price}${selected.per} unless you turn off auto-renew at least 24 hours before the trial ends. Manage or cancel any time in your Apple Account settings.`
+            : `Renews automatically ${selected.key === 'yearly' ? 'each year' : 'each month'} at the price shown unless you turn off auto-renew at least 24 hours before the period ends. Manage or cancel any time in your Apple Account settings.`}
         </Text>
-        <Pressable onPress={busy ? undefined : restore} hitSlop={10}>
-          <Text style={styles.restore}>Restore purchases</Text>
+        {/* A way past the paywall.
+            Without this, a purchase that fails — no network, a declined card,
+            a store outage, a sandbox hiccup — leaves the user on this screen
+            with no route into the app they just installed. That is an App
+            Review completeness risk (2.1) as well as a bad first run. The
+            free plan is a real state the app already supports. */}
+        <Pressable
+          onPress={busy ? undefined : () => onStart({
+            planName: 'Free plan',
+            bailouts: FREE_EMERGENCY_TOKENS,
+            isTrial: false,
+            free: true,
+          })}
+          hitSlop={10}
+          style={styles.freeWrap}
+        >
+          <Text style={styles.freeLink}>Continue with the free plan</Text>
         </Pressable>
+
+        <View style={styles.legalLinks}>
+          <Pressable onPress={() => Linking.openURL(TERMS_URL)} hitSlop={8}>
+            <Text style={styles.legalLink}>Terms of Use</Text>
+          </Pressable>
+          <Text style={styles.legalDot}>·</Text>
+          <Pressable onPress={() => Linking.openURL(PRIVACY_POLICY_URL)} hitSlop={8}>
+            <Text style={styles.legalLink}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={styles.legalDot}>·</Text>
+          <Pressable onPress={busy ? undefined : restore} hitSlop={8}>
+            <Text style={styles.legalLink}>Restore</Text>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  freeWrap: { alignSelf: 'center', paddingVertical: 12, paddingHorizontal: 16 },
+  freeLink: { color: palette.textSecondary, fontSize: 14, fontWeight: '700' },
+  legalLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  legalLink: {
+    color: palette.textTertiary,
+    fontSize: 12.5,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalDot: { color: palette.textQuaternary, fontSize: 12.5 },
   container: { flex: 1, backgroundColor: 'transparent' },
   restore: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', marginTop: 10, textDecorationLine: 'underline' },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 150 },

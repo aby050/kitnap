@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { control, palette, radius, space } from '../design/tokens';
 import Icon from '../ui/Icon';
+import HoldButton from '../components/HoldButton';
 
 const ERASED_ITEMS = [
   'Your goal, theme, and unlock-difficulty settings',
@@ -68,16 +69,19 @@ export default function DeleteAccountScreen({
             <Text style={styles.confirmBody}>
               This deletes everything listed above immediately. There is no recovery.
             </Text>
-            <Pressable
+            {/* A hold, not a second tap. Two taps in a row is one gesture with a
+                pause in it; this one has to survive being held. */}
+            <HoldButton
+              label={deleting ? 'Deleting…' : 'Hold to delete everything'}
+              holdLabel="Keep holding to delete…"
+              holdMs={2600}
               disabled={deleting}
-              style={[styles.deleteBtn, deleting && styles.deleteBtnDisabled]}
-              onPress={async () => {
+              onComplete={async () => {
                 setDeleting(true);
                 await onConfirmDelete();
               }}
-            >
-              <Text style={styles.deleteBtnText}>{deleting ? 'Deleting…' : 'Yes, delete everything'}</Text>
-            </Pressable>
+              style={styles.confirmHold}
+            />
             <Pressable disabled={deleting} style={styles.cancelBtn} onPress={() => setConfirming(false)}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </Pressable>
@@ -137,6 +141,7 @@ const styles = StyleSheet.create({
   confirmCard: { width: '100%', marginTop: 28, alignItems: 'center' },
   confirmTitle: { color: palette.text, fontSize: 17, fontWeight: '800', marginBottom: 8 },
   confirmBody: { color: palette.textSecondary, fontSize: 13.5, textAlign: 'center', lineHeight: 19, marginBottom: 4 },
+  confirmHold: { width: '100%', marginTop: 18 },
   cancelBtn: { paddingVertical: 16, alignItems: 'center' },
   cancelBtnText: { color: palette.textSecondary, fontSize: 15, fontWeight: '600' },
 });

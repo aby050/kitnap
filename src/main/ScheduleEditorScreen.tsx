@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
   },
-  dayChipActive: { backgroundColor: 'rgba(111,227,169,0.15)', borderColor: palette.accent },
+  dayChipActive: { backgroundColor: 'rgba(76,158,255,0.15)', borderColor: palette.accent },
   dayChipText: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
   dayChipTextActive: { color: palette.accent },
 });

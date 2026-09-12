@@ -364,6 +364,167 @@ function jackMetric(s: RepState, k: Keypoints): number {
   return 50 * legTerm + 50 * armTerm;
 }
 
+/**
+ * Marching in place: how high the knees come, in torso lengths above their
+ * standing position. Uses the higher of the two knees, since a march lifts one
+ * leg at a time — averaging them would halve every rep.
+ */
+function marchMetric(s: RepState, k: Keypoints): number {
+  'worklet';
+  // Hip midpoint, computed inline rather than by calling `hipMidY`.
+  //
+  // That helper is declared further down this file, and the worklets Babel
+  // plugin rewrites a `function foo() { 'worklet'; }` declaration into a
+  // binding that is *not* hoisted. A worklet defined above it therefore
+  // captures `undefined`, and the call dies at runtime with
+  // "undefined is not a function" — which is exactly what shipped: marching
+  // and arm raises crashed the app while jumping jacks and push-ups were
+  // fine, because those two compute their own midpoints inline. This follows
+  // that convention instead of depending on declaration order.
+  const hl = score(k, KP.leftHip) >= JOINT_MIN_SCORE;
+  const hr = score(k, KP.rightHip) >= JOINT_MIN_SCORE;
+  const hipY = hl && hr
+    ? (y(k, KP.leftHip) + y(k, KP.rightHip)) / 2
+    : hl
+      ? y(k, KP.leftHip)
+      : hr
+        ? y(k, KP.rightHip)
+        : -1;
+  if (hipY < 0) return -1;
+
+  const shMidY = (y(k, KP.leftShoulder) + y(k, KP.rightShoulder)) / 2;
+  const torsoLen = Math.abs(shMidY - hipY);
+  if (torsoLen < 1e-3) return -1;
+
+  let best = -1;
+  if (score(k, KP.leftKnee) >= JOINT_MIN_SCORE) best = Math.max(best, (hipY - y(k, KP.leftKnee)) / torsoLen);
+  if (score(k, KP.rightKnee) >= JOINT_MIN_SCORE) best = Math.max(best, (hipY - y(k, KP.rightKnee)) / torsoLen);
+  if (best === -1) return -1;
+
+  // Standing, a knee sits well below the hip (negative). A march brings it
+  // toward hip height (≈ 0). Mapped so a knee at mid-thigh already scores.
+  return 100 * clamp01((best + 0.75) / 0.75);
+}
+
+/**
+ * Overhead arm raises: the wrist-above-shoulder term from the jack metric on
+ * its own. Deliberately ignores the legs — this is the one movement in the set
+ * that works seated, which is the whole point of having it.
+ */
+function armRaiseMetric(s: RepState, k: Keypoints): number {
+  'worklet';
+  // Hip midpoint, computed inline rather than by calling `hipMidY`.
+  //
+  // That helper is declared further down this file, and the worklets Babel
+  // plugin rewrites a `function foo() { 'worklet'; }` declaration into a
+  // binding that is *not* hoisted. A worklet defined above it therefore
+  // captures `undefined`, and the call dies at runtime with
+  // "undefined is not a function" — which is exactly what shipped: marching
+  // and arm raises crashed the app while jumping jacks and push-ups were
+  // fine, because those two compute their own midpoints inline. This follows
+  // that convention instead of depending on declaration order.
+  const hl = score(k, KP.leftHip) >= JOINT_MIN_SCORE;
+  const hr = score(k, KP.rightHip) >= JOINT_MIN_SCORE;
+  const hipY = hl && hr
+    ? (y(k, KP.leftHip) + y(k, KP.rightHip)) / 2
+    : hl
+      ? y(k, KP.leftHip)
+      : hr
+        ? y(k, KP.rightHip)
+        : -1;
+  if (hipY < 0) return -1;
+
+  const shMidY = (y(k, KP.leftShoulder) + y(k, KP.rightShoulder)) / 2;
+  const torsoLen = Math.abs(shMidY - hipY);
+  if (torsoLen < 1e-3) return -1;
+
+  let seen = 0;
+  let sum = 0;
+  if (score(k, KP.leftWrist) >= JOINT_MIN_SCORE) { sum += (shMidY - y(k, KP.leftWrist)) / torsoLen; seen++; }
+  if (score(k, KP.rightWrist) >= JOINT_MIN_SCORE) { sum += (shMidY - y(k, KP.rightWrist)) / torsoLen; seen++; }
+  if (seen === 0) return -1;
+
+  return 100 * clamp01((sum / seen + 0.2) / 0.7);
+}
+
+/**
+ * Lateral arm raises: arms out to the sides until they reach shoulder height.
+ *
+ * Measured as how far the wrists sit from the shoulder line horizontally,
+ * scaled by shoulder width — arms hanging down is roughly 0.3, arms straight
+ * out is roughly 1.6. Height is not required: someone raising their arms only
+ * to chest level is still doing the movement, just not a textbook one, and the
+ * quality scale is where that belongs rather than the pass/fail gate.
+ *
+ * Everything is computed inline. See `marchMetric` for why nothing here calls
+ * a helper declared further down the file.
+ */
+function sideRaiseMetric(s: RepState, k: Keypoints): number {
+  'worklet';
+  const xs = s.xScale;
+  if (score(k, KP.leftShoulder) < JOINT_MIN_SCORE || score(k, KP.rightShoulder) < JOINT_MIN_SCORE) {
+    return -1;
+  }
+  const shLX = x(k, KP.leftShoulder) * xs;
+  const shRX = x(k, KP.rightShoulder) * xs;
+  const shoulderWidth = Math.abs(shLX - shRX);
+  if (shoulderWidth < 1e-3) return -1;
+  const shMidX = (shLX + shRX) / 2;
+
+  let seen = 0;
+  let sum = 0;
+  if (score(k, KP.leftWrist) >= JOINT_MIN_SCORE) {
+    sum += Math.abs(x(k, KP.leftWrist) * xs - shMidX) / shoulderWidth;
+    seen++;
+  }
+  if (score(k, KP.rightWrist) >= JOINT_MIN_SCORE) {
+    sum += Math.abs(x(k, KP.rightWrist) * xs - shMidX) / shoulderWidth;
+    seen++;
+  }
+  if (seen === 0) return -1;
+
+  return 100 * clamp01((sum / seen - 0.35) / 0.75);
+}
+
+/**
+ * Toe touches: bend forward and reach down toward the feet.
+ *
+ * Measured as how far the wrists have travelled down from the shoulders,
+ * in torso lengths. Standing upright the wrists hang around hip height
+ * (roughly 1 torso below the shoulders); folded forward they reach the shins.
+ * Knees are not checked — bent knees are the accessible version of this and
+ * refusing them would defeat the point of it being the easy option.
+ */
+function toeTouchMetric(s: RepState, k: Keypoints): number {
+  'worklet';
+  if (score(k, KP.leftShoulder) < JOINT_MIN_SCORE || score(k, KP.rightShoulder) < JOINT_MIN_SCORE) {
+    return -1;
+  }
+  const shMidY = (y(k, KP.leftShoulder) + y(k, KP.rightShoulder)) / 2;
+
+  const hl = score(k, KP.leftHip) >= JOINT_MIN_SCORE;
+  const hr = score(k, KP.rightHip) >= JOINT_MIN_SCORE;
+  const hipY = hl && hr
+    ? (y(k, KP.leftHip) + y(k, KP.rightHip)) / 2
+    : hl
+      ? y(k, KP.leftHip)
+      : hr
+        ? y(k, KP.rightHip)
+        : -1;
+  if (hipY < 0) return -1;
+
+  const torsoLen = Math.abs(hipY - shMidY);
+  if (torsoLen < 1e-3) return -1;
+
+  let seen = 0;
+  let sum = 0;
+  if (score(k, KP.leftWrist) >= JOINT_MIN_SCORE) { sum += (y(k, KP.leftWrist) - shMidY) / torsoLen; seen++; }
+  if (score(k, KP.rightWrist) >= JOINT_MIN_SCORE) { sum += (y(k, KP.rightWrist) - shMidY) / torsoLen; seen++; }
+  if (seen === 0) return -1;
+
+  return 100 * clamp01((sum / seen - 0.9) / 0.9);
+}
+
 /** Metric value at or below which the body is at rest. */
 function neutralBelow(activity: ActivityKind): number {
   'worklet';
@@ -377,6 +538,12 @@ function effortAbove(activity: ActivityKind): number {
   'worklet';
   if (activity === 'squats') return 78;
   if (activity === 'push-ups') return 82;
+  // Lower gates for the easy pair: a march that reaches mid-thigh and arms
+  // that clear the head are the whole movement, not a shallow version of one.
+  if (activity === 'marching') return 62;
+  if (activity === 'arm raises') return 66;
+  if (activity === 'side raises') return 64;
+  if (activity === 'toe touches') return 60;
   return 68;
 }
 
@@ -386,6 +553,10 @@ function fullDepth(activity: ActivityKind): number {
   'worklet';
   if (activity === 'squats') return 108;
   if (activity === 'push-ups') return 100;
+  if (activity === 'marching') return 88;
+  if (activity === 'arm raises') return 92;
+  if (activity === 'side raises') return 90;
+  if (activity === 'toe touches') return 86;
   return 94;
 }
 
@@ -398,6 +569,8 @@ function fullDepth(activity: ActivityKind): number {
 function minRepMs(activity: ActivityKind): number {
   'worklet';
   if (activity === 'jumping jacks') return 500;
+  // A march is a walking cadence — one knee up per beat, quicker than a squat.
+  if (activity === 'marching') return 450;
   return 700;
 }
 
@@ -455,6 +628,10 @@ export function feedPose(s: RepState, k: Keypoints, now: number): number {
   const raw =
     s.activity === 'squats' ? squatMetric(s, k)
     : s.activity === 'push-ups' ? pushupMetric(s, k)
+    : s.activity === 'marching' ? marchMetric(s, k)
+    : s.activity === 'arm raises' ? armRaiseMetric(s, k)
+    : s.activity === 'side raises' ? sideRaiseMetric(s, k)
+    : s.activity === 'toe touches' ? toeTouchMetric(s, k)
     : jackMetric(s, k);
 
   if (raw < 0) {
@@ -599,6 +776,10 @@ export function rejectionHint(reason: RejectionReason, activity: ActivityKind): 
   if (reason === 'shallow') {
     if (activity === 'squats') return "Didn't go deep enough — sit lower.";
     if (activity === 'push-ups') return 'Chest lower, and keep your body flat.';
+    if (activity === 'marching') return 'Lift the knee higher — up toward your hip.';
+    if (activity === 'arm raises') return 'All the way up — hands above your head.';
+    if (activity === 'side raises') return 'Arms further out — level with your shoulders.';
+    if (activity === 'toe touches') return 'Reach lower — down toward your shins.';
     return 'Arms all the way overhead, feet all the way out.';
   }
   if (reason === 'lowConfidence') return "Can't see enough of you — step back a little.";

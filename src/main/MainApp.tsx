@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { AppState, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, AppState, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import Svg, { Circle, Rect, Path } from 'react-native-svg';
 import HomeScreen from './HomeScreen';
 import MyAppsScreen from './MyAppsScreen';
@@ -33,11 +33,13 @@ import GateScreen from '../shield/GateScreen';
 import GrantScreen from '../shield/GrantScreen';
 import { alertGrantEnded, cancelGrantEndedNotification, scheduleGrantEndedNotification } from '../data/grantNotify';
 import LiveActivityBar from '../shield/LiveActivityBar';
+import TabBar from './TabBar';
 import { getIntensity, getTheme, IntensityKey, ThemeKey } from '../data/themes';
 import { computeRepTarget, parseAge, parseLifeChange } from '../data/activityDifficulty';
 import { ActivityKind, ActivitySessionResult } from '../shield/activity/types';
 import { EMPTY_GOAL, GoalData } from '../data/goal';
 import { Account, DEFAULT_STATE, PersistedState, AppLimit, FocusSession, startingEmergencyTokens } from '../data/store';
+import { activeLockdown } from '../data/scheduleEnforcer';
 import { CustomerInfo, PurchasesStoreProduct } from 'react-native-purchases';
 import SubscriptionScreen from './SubscriptionScreen';
 import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, globalPercentile, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
@@ -54,6 +56,7 @@ import ScreenTimeDiagnostics from './ScreenTimeDiagnostics';
 import { EssentialKey } from '../data/gateQuestions';
 import { buildDemoState, clearDemoState } from '../data/demoData';
 import { recordGateReflection, recordActivitySession } from '../data/store';
+import { limitExceededPackages, newlyExceededLimits } from '../data/appLimitEnforcer';
 import { DEFAULT_BEDTIME, isWithinBedtime } from '../data/bedtime';
 import { shouldShowCheckIn } from '../data/checkin';
 import CheckInScreen from './CheckInScreen';
@@ -75,7 +78,9 @@ import {
   hasBlockedSelection,
 } from '../data/iosScreenTime';
 import { palette, space } from '../design/tokens';
-import { daysOnLevel, requestIntensityChange, settleIntensity } from '../data/intensityChange';
+import { useEntrance } from '../design/motion';
+import { daysOnLevel, isLoosening, requestIntensityChange, settleIntensity } from '../data/intensityChange';
+import GuardianVerifyScreen from './GuardianVerifyScreen';
 import { Screen, ScreenHeader } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';
 import { tapLight } from '../ui/haptics';
@@ -91,6 +96,7 @@ type Overlay =
   // | 'landmarks'
   // | 'seasons'
   | 'guardian'
+  | 'guardianVerify'
   | 'waitingRoom'
   | 'blockScreens'
   | 'schedules'
@@ -121,8 +127,10 @@ const DAILY_UNLOCK_LIMIT = 3;
 
 /** TESTING ONLY — shows a "set to 99" button on the Bailouts screen so the
  *  post-cap and out-of-Bailouts flows are reachable while in-app purchases
- *  aren't live. FLIP THIS TO false BEFORE SHIPPING. */
-const TEST_TOP_UP = true;
+ *  aren't live. MUST be false in anything that ships: it hands out the paid
+ *  currency for free, which both breaks the economy and reads to App Review
+ *  as test scaffolding left in a production build. */
+const TEST_TOP_UP = false;
 
 /** The only overlays reachable while a session is locked — each is a door the
  *  locked timer screen itself puts on screen (essentials/emergency access, the
@@ -203,18 +211,32 @@ export default function MainApp({
   const [emergencyUsedOn, setEmergencyUsedOn] = useState<string | null>(
     persisted.emergencyUsedOn ?? null,
   );
-  const [emergencyExhausted, setEmergencyExhausted] = useState(false);
+  // Why emergency access was refused, shown at the gate. This used to be a
+  // boolean nothing ever read: hitting the daily limit set a flag, no screen
+  // rendered it, and the button simply did nothing with no explanation.
+  const [emergencyRefusal, setEmergencyRefusal] = useState<string | null>(null);
   // Rolls over on a real calendar day, same as emergencyUsedOn.
   const [unlocksUsedToday, setUnlocksUsedToday] = useState(
     persisted.unlocksUsedOn === new Date().toDateString() ? (persisted.unlocksUsedToday ?? 0) : 0,
   );
   const unlocksLeftToday = Math.max(0, DAILY_UNLOCK_LIMIT - unlocksUsedToday);
 
+  /** The schedule sealing the exits right now, or null.
+   *
+   *  Read from `persisted` rather than the `schedules` state below because the
+   *  handlers that call this are declared above it — and because `persisted` is
+   *  the copy that actually gets written to disk. */
+  const currentLockdown = () => activeLockdown(persisted.schedules ?? []);
+
   /** Spends a Bailout and opens the door with no challenge. Used by the
    *  Gate's skip and by the Shield past the daily cap — past four, this is
    *  the only way through. */
   const unlockWithBailout = () => {
     if (emergencyTokens <= 0) return;
+    // A lockdown window has no bailout. The UI hides the button, so reaching
+    // here means something got through anyway — refuse rather than trust the
+    // screen to have been right.
+    if (currentLockdown()) return;
     const nextTokens = Math.max(0, emergencyTokens - 1);
     setEmergencyTokens(nextTokens);
     onPatch({ emergencyTokens: nextTokens });
@@ -228,8 +250,10 @@ export default function MainApp({
     setBlock('grant');
   };
 
-  /** Books one of the day's unlocks. Returns false when they're all spent. */
+  /** Books one of the day's unlocks. Returns false when they're all spent, or
+   *  when a lockdown window is in force and there are none to book. */
   const spendDailyUnlock = (): boolean => {
+    if (currentLockdown()) return false;
     const today = new Date().toDateString();
     const used = persisted.unlocksUsedOn === today ? (persisted.unlocksUsedToday ?? 0) : 0;
     if (used >= DAILY_UNLOCK_LIMIT) return false;
@@ -352,14 +376,21 @@ export default function MainApp({
     setBlock('shield');
   };
 
-  /** Emergency access: five minutes, once a day. Long enough to deal with
-   *  whatever it is, short enough that it can't quietly become the way in. */
+  /** Emergency access: five minutes, once a day, and never during a lockdown
+   *  window. Long enough to deal with whatever it is, short enough that it
+   *  can't quietly become the way in. */
   const openEmergencyAccess = () => {
-    const today = new Date().toDateString();
-    if (emergencyUsedOn === today) {
-      setEmergencyExhausted(true);
+    const lock = currentLockdown();
+    if (lock) {
+      setEmergencyRefusal(`${lock.name} is on until ${lock.end}. No emergency access inside it.`);
       return;
     }
+    const today = new Date().toDateString();
+    if (emergencyUsedOn === today) {
+      setEmergencyRefusal("You've already used today's emergency access. It comes back tomorrow.");
+      return;
+    }
+    setEmergencyRefusal(null);
     setEmergencyUsedOn(today);
     onPatch({ emergencyUsedOn: today });
     // Emergency is still a grant. It used to show the countdown without ever
@@ -420,6 +451,7 @@ export default function MainApp({
   const [accountName, setAccountName] = useState(persisted.account?.name ?? '');
   const [account, setAccount] = useState<Account | null>(persisted.account);
   const [guardian, setGuardian] = useState(persisted.guardian);
+  const [pendingGuardianTarget, setPendingGuardianTarget] = useState<IntensityKey | null>(null);
   const joinedDays = daysSinceJoin(persisted.firstOpenDate);
 
   // Demo data (__DEV__ only, see SettingsScreen): writes the persisted copy
@@ -433,6 +465,7 @@ export default function MainApp({
     if (next.unlockNumber !== undefined) setUnlockNumber(next.unlockNumber);
     if (next.gateReflections) setGateReflections(next.gateReflections);
     if (next.checkIns) setCheckIns(next.checkIns);
+    if (next.activitySessions) setActivitySessions(next.activitySessions);
     setOverlay(null);
     setTab('home');
   };
@@ -463,6 +496,41 @@ export default function MainApp({
   // went through with the unlock alongside what they wrote.
   const [pendingReflection, setPendingReflection] = useState<{ prompt: string; text: string } | null>(null);
   const usage = useTodayUsage();
+
+  // Track the previous usage snapshot so we can detect newly-crossed limits
+  // without alerting on every refresh.
+  const prevUsageAppsRef = useRef<typeof usage.apps>([]);
+
+  // App-limit enforcement: when a per-app limit is first crossed, add the
+  // package to the blocked set and show a one-time in-app alert. Android-only
+  // — useTodayUsage returns available:false on iOS.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    if (!usage.available || !usage.granted) return;
+    if (!appLimits || appLimits.length === 0) return;
+
+    const newly = newlyExceededLimits(appLimits, prevUsageAppsRef.current, usage.apps);
+    prevUsageAppsRef.current = usage.apps;
+
+    if (newly.length === 0) return;
+
+    // Add newly-exceeded packages to the blocked list if not already there.
+    const exceeded = limitExceededPackages(appLimits, usage.apps);
+    const toAdd = [...exceeded].filter((pkg) => !blockedPackages.includes(pkg));
+    if (toAdd.length > 0) {
+      const next = [...blockedPackages, ...toAdd];
+      setBlockedPackagesState(next);
+      onPatch({ blockedPackages: next });
+    }
+
+    // One-time alert per batch of newly-crossed limits.
+    const names = newly.map((l) => l.appName || l.packageName).join(', ');
+    Alert.alert(
+      'Daily limit reached',
+      `You've hit your limit for ${names}. ${names.includes(',') ? 'These apps are' : 'This app is'} now blocked for the rest of the day.`,
+      [{ text: 'Got it' }],
+    );
+  }, [usage.apps]);
 
   function commitReflection(unlocked: boolean) {
     if (!pendingReflection) return;
@@ -693,6 +761,11 @@ export default function MainApp({
     );
   }
 
+  // Recomputed on every render of the block flow rather than held in state: the
+  // shield and gate are transient screens, and a stale window here would either
+  // seal a door that has just opened or open one that has just sealed.
+  const lockdown = activeLockdown(schedules);
+
   // The block flow is a full-screen takeover, exactly as the real shield would be.
   if (block === 'shield') {
     return (
@@ -700,17 +773,38 @@ export default function MainApp({
         theme={theme}
         goal={goal}
         unlockNumber={unlocksUsedToday + 1}
+        dayNumber={persisted.dayNumber}
         unlocksLeftToday={unlocksLeftToday}
         bailoutBalance={emergencyTokens}
         onUseBailout={unlockWithBailout}
         isBedtime={isBedtime}
+        lockdown={lockdown}
         onNotNow={() => {
-          // Closing without unlocking is what actually credits the world.
-          setReclaimedToday((m) => m + 3);
-          applyProgress([
-            { type: 'saved', minutes: 3 },
-            { type: 'blocked' },
-          ]);
+          // Credit the time actually saved: on Android we can read the
+          // blocked app's real usage from UsageStatsManager; on iOS Apple
+          // gives no equivalent read access, so we record nothing rather
+          // than inventing a number.
+          const savedMinutes = (() => {
+            if (Platform.OS !== 'android') return 0;
+            if (!usage?.available || !usage?.granted) return 0;
+            // Find the pending package in today's usage and use its per-minute
+            // figure as a proxy for "time that would have been spent". If the
+            // package isn't in the list yet (first open of the day) we record
+            // nothing — a zero is honest, a fabricated constant is not.
+            const pkg = pendingShieldPackage;
+            if (!pkg) return 0;
+            const entry = usage.apps.find((a) => a.packageName === pkg);
+            return entry ? Math.max(0, entry.minutes) : 0;
+          })();
+          if (savedMinutes > 0) {
+            applyProgress([
+              { type: 'saved', minutes: savedMinutes },
+              { type: 'blocked' },
+            ]);
+          } else {
+            // Still credit the block even when we can't measure the time.
+            applyProgress([{ type: 'blocked' }]);
+          }
           setBlock(null);
         }}
         onNeedIt={() => setBlock('gate')}
@@ -726,11 +820,23 @@ export default function MainApp({
         futureSelfMessage={futureSelf}
         healthLimitRaw={persisted.onboardingAnswers?.healthLimit?.value}
         repsFor={repsFor}
+        activitySessions={activitySessions}
         onActivityComplete={commitActivitySession}
         tokenBalance={emergencyTokens}
+        lockdown={lockdown}
+        emergencyRefusal={emergencyRefusal}
         onSkipWithToken={unlockWithBailout}
+        onReflectionChange={(prompt, text) => setPendingReflection({ prompt, text })}
         onGranted={(m) => {
-          spendDailyUnlock();
+          commitReflection(true);
+          // The return value used to be discarded, so passing the challenge
+          // opened the door regardless of the daily cap — and would now also
+          // ignore a lockdown window that opened mid-challenge. Bounce back to
+          // the shield instead, which explains which limit was hit.
+          if (!spendDailyUnlock()) {
+            setBlock('shield');
+            return;
+          }
           startGrant(m);
           setGrantMinutes(m);
           setGrantIsEmergency(false);
@@ -740,8 +846,12 @@ export default function MainApp({
           setBlock('grant');
         }}
         onAbandoned={() => {
+          // Abandoning the gate is a distraction blocked, not a completed
+          // focus session — firing lockSession here inflated the "sessions"
+          // counter and made ReflectionScreen labels inaccurate.
+          commitReflection(false);
           setUnlockNumber((n) => n + 1);
-          applyProgress([{ type: 'lockSession' }, { type: 'blocked' }]);
+          applyProgress([{ type: 'blocked' }]);
           setBlock(null);
         }}
         onEmergency={() => {
@@ -881,6 +991,11 @@ export default function MainApp({
           daysOnLevel={daysOnLevel(intensitySince)}
           pending={pendingIntensity}
           onContinue={(k) => {
+            if (guardian?.enabled && isLoosening(activeIntensityKey, k)) {
+              setPendingGuardianTarget(k);
+              setOverlay('guardianVerify');
+              return;
+            }
             changeIntensity(k);
             setOverlay(difficultyOrigin);
           }}
@@ -895,6 +1010,21 @@ export default function MainApp({
           onSave={(g) => {
             setGuardian(g);
             onPatch({ guardian: g });
+          }}
+        />
+      );
+    if (ov === 'guardianVerify' && guardian)
+      return (
+        <GuardianVerifyScreen
+          guardian={guardian}
+          onVerified={() => {
+            if (pendingGuardianTarget) changeIntensity(pendingGuardianTarget);
+            setPendingGuardianTarget(null);
+            setOverlay(difficultyOrigin);
+          }}
+          onCancel={() => {
+            setPendingGuardianTarget(null);
+            setOverlay('difficulty');
           }}
         />
       );
@@ -1024,7 +1154,7 @@ export default function MainApp({
 
     return (
       <View style={{ flex: 1 }}>
-        <Animated.View key={tab} entering={FadeIn.duration(260)} style={{ flex: 1 }}>
+        <ScreenSwap key={tab}>
           {tab === 'home' && (
             <HomeScreen
               onOpenProfile={() => setOverlay('profile')}
@@ -1103,43 +1233,23 @@ export default function MainApp({
               onOpenTokenInfo={() => setOverlay('emergencyTokens')}
             />
           )}
-        </Animated.View>
+        </ScreenSwap>
 
         {/* A running session takes the whole screen — the point of a locked
             block is that there is nowhere else to go. */}
         {!timerRunning && (
-        <View style={styles.tabBarWrap}>
-          <View style={styles.tabBar}>
-            {TABS.map((t) => {
-              const active = t.key === tab;
-              return (
-                <Pressable
-                  key={t.key}
-                  onPress={() => {
-                    tapLight();
-                    if (t.key === 'timer' && tab !== 'timer') {
-                      // Opening the tab from elsewhere always lands on slide-to-start,
-                      // never the locked in-session screen.
-                      setTimerPreset({ minutes: 25, label: 'Focus Timer', autoStart: false });
-                    }
-                    setTab(t.key);
-                  }}
-                  style={styles.tabItem}
-                >
-                  <View style={[styles.tabIconPill, active && styles.tabIconPillActive]}>
-                    <Icon
-                      name={t.mark}
-                      size={21}
-                      color={active ? palette.accent : palette.textTertiary}
-                      strokeWidth={active ? 1.9 : 1.7}
-                    />
-                  </View>
-                  <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+          <TabBar
+            tabs={TABS}
+            active={tab}
+            onSelect={(key) => {
+              if (key === 'timer' && tab !== 'timer') {
+                // Opening the tab from elsewhere always lands on slide-to-start,
+                // never the locked in-session screen.
+                setTimerPreset({ minutes: 25, label: 'Focus Timer', autoStart: false });
+              }
+              setTab(key);
+            }}
+          />
         )}
       </View>
     );
@@ -1168,46 +1278,18 @@ export default function MainApp({
 
 const styles = StyleSheet.create({
   insightScroll: { paddingHorizontal: space.gutter, paddingTop: space.sm, paddingBottom: space.tabClearance },
-  tabBarWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'transparent' },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(6, 14, 11, 0.94)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-    paddingBottom: 28,
-    paddingTop: 10,
-    width: '100%',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-  },
-  tabIconPill: {
-    width: 60,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    backgroundColor: 'transparent',
-  },
-  tabIconPillActive: {
-    backgroundColor: 'rgba(111, 227, 169, 0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(111, 227, 169, 0.28)',
-  },
-  tabLabel: {
-    color: palette.textTertiary,
-    fontSize: 11.5,
-    fontWeight: '600',
-    letterSpacing: 0.1,
-  },
-  tabLabelActive: {
-    color: palette.accent,
-    fontWeight: '800',
-    letterSpacing: 0.1,
-  },
 });
+
+/**
+ * Tab content, arriving. Mounted with `key={tab}`, so switching tabs remounts
+ * this and replays the entrance.
+ *
+ * Deliberately entrance-only: an `exiting` animation here keeps the outgoing
+ * screen's box alive on React Native Web while the next one lays out, which is
+ * the cause of the onboarding text-overlap bug this codebase kept hitting. A
+ * fade up on the incoming screen alone reads as a transition anyway.
+ */
+function ScreenSwap({ children }: { children: React.ReactNode }) {
+  const style = useEntrance({ rise: 10 });
+  return <Animated.View style={[{ flex: 1 }, style]}>{children}</Animated.View>;
+}

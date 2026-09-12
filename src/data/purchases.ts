@@ -18,7 +18,16 @@ const API_KEYS = {
 
 /** The single entitlement that gates Strict mode, schedules and Autofocus.
  *  Must match the identifier created in the RevenueCat dashboard exactly. */
-export const ENTITLEMENT_ID = 'pro';
+export const ENTITLEMENT_ID = 'byre_pro';
+
+/** Legal pages, linked from the purchase screen.
+ *
+ *  App Review guideline 3.1.2 requires an auto-renewable subscription to show,
+ *  in the binary and next to the purchase: the title, the length, the price,
+ *  a link to the privacy policy and a link to the terms. Missing links is one
+ *  of the most common rejections there is, and it is entirely avoidable. */
+export const PRIVACY_POLICY_URL = 'https://byre.rvastudio.in/privacy';
+export const TERMS_URL = 'https://byre.rvastudio.in/terms';
 
 /** The retention offer shown only when someone declines the main paywall.
  *  A separate RevenueCat offering rather than a discounted price on the same
@@ -31,9 +40,13 @@ export const DISCOUNT_OFFERING_ID = 'discount';
  *  "permanently unlocked" rather than a balance we decrement ourselves.
  *  We read them out of nonSubscriptionTransactions instead. */
 export const BAILOUT_PRODUCTS: Record<string, number> = {
-  bailout_key1: 1,
+  // These must match the product IDs in App Store Connect exactly. They are
+  // `bailout_key` (not `bailout_key1`) and `bailout_key10` (not `_key5`) —
+  // a mismatch here doesn't error, it just means the product is never found
+  // and the pack silently never appears.
+  bailout_key: 1,
   bailout_key3: 3,
-  bailout_key5: 5,
+  bailout_key10: 10,
 };
 
 export const BAILOUT_PRODUCT_IDS = Object.keys(BAILOUT_PRODUCTS);

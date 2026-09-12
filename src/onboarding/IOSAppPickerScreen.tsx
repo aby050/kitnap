@@ -31,6 +31,8 @@ if (Platform.OS === 'ios') {
 const SELECTED_ROWS = 5;
 /** icon (34) + 10pt padding top and bottom, matching listRow in the Swift view. */
 const SELECTED_ROW_H = 54;
+/** The 1pt Divider the Swift view draws between rows (not before the first). */
+const SELECTED_DIVIDER_H = 1;
 
 type SelectionEvent = NativeSyntheticEvent<{ familyActivitySelection: string | null; applicationCount: number }>;
 
@@ -72,9 +74,18 @@ export default function IOSAppPickerScreen({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // The native list is a fixed-size host view — RN can't measure SwiftUI, so
-  // the height is derived from the row count it will draw.
-  const shownRows = Math.min(counts?.apps ?? 0, SELECTED_ROWS);
-  const listHeight = shownRows * SELECTED_ROW_H;
+  // the height is derived from the row count it will draw. That count is apps
+  // *and* categories: the Swift view caps each at maxCount separately and
+  // stacks both, so sizing from the app count alone left a picked category
+  // ("Social") drawn into a frame with no room for it — the list clipped at
+  // both ends with no way to scroll it into view.
+  const shownApps = Math.min(counts?.apps ?? 0, SELECTED_ROWS);
+  const shownCategories = Math.min(counts?.categories ?? 0, SELECTED_ROWS);
+  const shownRows = shownApps + shownCategories;
+  const hiddenRows =
+    (counts?.apps ?? 0) - shownApps + ((counts?.categories ?? 0) - shownCategories);
+  const listHeight =
+    shownRows * SELECTED_ROW_H + Math.max(0, shownRows - 1) * SELECTED_DIVIDER_H;
 
   const requestAccess = async () => {
     setAuthStatus('requesting');
@@ -162,7 +173,7 @@ export default function IOSAppPickerScreen({
           right things. The native view is the only thing allowed to see
           inside Apple's tokens, so it draws the real icon and real name per
           row — still without any of it crossing into JS. */}
-      {ScreenTimeLabels && screenTimeLabelsAvailable() && (counts?.apps ?? 0) > 0 && (
+      {ScreenTimeLabels && screenTimeLabelsAvailable() && shownRows > 0 && (
         <View style={styles.selectedCard}>
           <Text style={styles.selectedLabel}>Blocking</Text>
           <ScreenTimeLabels
@@ -173,11 +184,7 @@ export default function IOSAppPickerScreen({
             revision={revision}
             style={[styles.selectedList, { height: listHeight }]}
           />
-          {(counts?.apps ?? 0) > SELECTED_ROWS && (
-            <Text style={styles.selectedMore}>
-              + {(counts?.apps ?? 0) - SELECTED_ROWS} more
-            </Text>
-          )}
+          {hiddenRows > 0 && <Text style={styles.selectedMore}>+ {hiddenRows} more</Text>}
         </View>
       )}
       <SelectionSummary counts={counts} />

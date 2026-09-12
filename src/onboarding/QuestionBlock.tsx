@@ -265,16 +265,21 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
           {(() => {
             const rounded = Math.round(sliderVal);
             const named = question.labels?.[rounded - question.min];
+            // The top step of a `maxPlus` slider means "N or older", so it
+            // reads "40+" rather than claiming an exact age.
+            const atPlus = question.maxPlus && rounded >= question.max;
+            const shown = atPlus ? `${question.max}+` : String(rounded);
+            const maxLabel = question.maxPlus ? `${question.max}+` : String(question.max);
             return (
               <>
-                <Text style={named ? styles.levelName : styles.ageValue}>{named ?? rounded}</Text>
+                <Text style={named ? styles.levelName : styles.ageValue}>{named ?? shown}</Text>
                 {named ? (
                   <Text style={styles.levelMeta}>
                     Level {rounded} of {question.max}
                   </Text>
                 ) : (
                   <Text style={styles.levelMeta}>
-                    {question.min} – {question.max}
+                    {question.min} – {maxLabel}
                   </Text>
                 )}
               </>
@@ -297,7 +302,10 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             onPress={() => {
               const rounded = Math.round(sliderVal);
               const named = question.labels?.[rounded - question.min];
-              onAnswer(String(rounded), named ?? String(rounded));
+              const atPlus = question.maxPlus && rounded >= question.max;
+              // Value stays numeric so parseAge and the difficulty bands keep
+              // working; only the label carries the "+".
+              onAnswer(String(rounded), named ?? (atPlus ? `${question.max}+` : String(rounded)));
             }}
           />
         </Animated.View>
@@ -350,7 +358,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
   },
   optionBtnSelected: {
-    backgroundColor: 'rgba(111,227,169,0.15)',
+    backgroundColor: 'rgba(76,158,255,0.15)',
     borderColor: palette.accent,
   },
   optionText: {

@@ -17,6 +17,11 @@ export type PurchaseResult = {
   renewsAt?: string | null;
   /** True when this came from Restore Purchases rather than a fresh buy. */
   restored?: boolean;
+  /** No plan was bought — either the store had nothing to sell or the user
+   *  chose to carry on free. Confirming that is still confirmation: the old
+   *  behaviour dropped them on the home screen with no idea what had just
+   *  happened or what they were on. */
+  free?: boolean;
 };
 
 const formatDate = (iso?: string | null): string | null => {
@@ -41,18 +46,22 @@ export default function PurchaseSuccessScreen({
   result: PurchaseResult;
   onContinue: () => void;
 }) {
-  const { planName, bailouts, isTrial, restored } = result;
+  const { planName, bailouts, isTrial, restored, free } = result;
   const date = formatDate(result.renewsAt);
 
-  const title = restored
-    ? 'Restored.\nYou were already in.'
-    : isTrial
-      ? "You're in.\nSeven days on us."
-      : "You're in.\nWelcome to Byre.";
+  const title = free
+    ? "You're on\nthe free plan."
+    : restored
+      ? 'Restored.\nYou were already in.'
+      : isTrial
+        ? "You're in.\nSeven days on us."
+        : "You're in.\nWelcome to Byre.";
 
   // Every branch has to survive a missing date — the store does not always
   // return one, and "Free until null" is worse than saying nothing.
-  const sub = isTrial
+  const sub = free
+    ? `Everything that blocks apps is on, with ${bailouts} bailout${bailouts === 1 ? '' : 's'} to spend. You can pick a plan any time in Settings.`
+    : isTrial
     ? date
       ? `Free until ${date}. Cancel any time before then and you're never charged.`
       : "Free for seven days. Cancel any time before it ends and you're never charged."
@@ -65,7 +74,11 @@ export default function PurchaseSuccessScreen({
       <View style={styles.center}>
         <Animated.View entering={FadeIn.duration(420)} style={styles.cardShadow}>
           <LinearGradient
-            colors={['#08120F', '#0F2A22', '#1E6B4E', '#4FCB92']}
+            colors={
+              free
+                ? ['#08120F', '#101A17', '#1B2F28', '#2E4A3F']
+                : ['#080D14', '#0F1A26', '#153458', '#1C5FB8']
+            }
             locations={[0, 0.4, 0.76, 1]}
             start={{ x: 0.05, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -78,7 +91,7 @@ export default function PurchaseSuccessScreen({
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.sub}>{sub}</Text>
 
-            {bailouts > 0 && (
+            {bailouts > 0 && !free && (
               <View style={styles.bailoutPill}>
                 <BailoutGlyph size={15} />
                 <Text style={styles.bailoutText}>
@@ -90,7 +103,11 @@ export default function PurchaseSuccessScreen({
         </Animated.View>
 
         <Animated.Text entering={FadeInDown.delay(220).duration(420)} style={styles.footnote}>
-          {isTrial ? "We'll remind you two days before it ends." : 'Bailouts refill with each renewal.'}
+          {free
+            ? 'Nothing was charged.'
+            : isTrial
+              ? "We'll remind you two days before it ends."
+              : 'Bailouts refill with each renewal.'}
         </Animated.Text>
       </View>
 
@@ -104,7 +121,7 @@ export default function PurchaseSuccessScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   center: { flex: 1, justifyContent: 'center', paddingHorizontal: 22 },
-  // The card's green edge glows against the near-black page; the shadow is
+  // The card's azure edge glows against the near-black page; the shadow is
   // what stops it reading as a sticker pasted onto the background.
   cardShadow: {
     borderRadius: 28,

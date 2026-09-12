@@ -18,5 +18,5 @@ export default function HistoryItem({ prompt, label }: { prompt: string; label: 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', marginBottom: 18 },
   prompt: { color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: '500', maxWidth: 280, textAlign: 'center' },
-  label: { color: 'rgba(111,227,169,0.7)', fontSize: 14, fontWeight: '600', marginTop: 2 },
+  label: { color: 'rgba(76,158,255,0.7)', fontSize: 14, fontWeight: '600', marginTop: 2 },
 });

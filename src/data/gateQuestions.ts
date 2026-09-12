@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
  * carry the weight and the rest are pacing.
  */
 import { IconName } from '../ui/Icon';
-import { ActivityKind, ACTIVITY_KINDS } from '../shield/activity/types';
+import { ActivityKind, ACTIVITY_KINDS, ActivitySessionResult } from '../shield/activity/types';
 
 export type Family = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
@@ -174,6 +174,13 @@ export const FAMILY_G: GateQuestion[] = [
   { family: 'G', kind: 'activity', prompt: 'Do 10 squats to unlock.', reps: 10, activity: 'squats' },
   { family: 'G', kind: 'activity', prompt: 'Do 10 jumping jacks to unlock.', reps: 10, activity: 'jumping jacks' },
   { family: 'G', kind: 'activity', prompt: 'Do 8 push-ups to unlock.', reps: 8, activity: 'push-ups' },
+  // The approachable end: doable standing in a doorway or at a desk, and the
+  // arm raises work seated. Someone who won't drop and do push-ups in an
+  // office still has a real physical route through the gate.
+  { family: 'G', kind: 'activity', prompt: 'March in place, knees up, 20 times.', reps: 20, activity: 'marching' },
+  { family: 'G', kind: 'activity', prompt: 'Raise both arms overhead 50 times.', reps: 50, activity: 'arm raises' },
+  { family: 'G', kind: 'activity', prompt: 'Raise both arms out to your sides 40 times.', reps: 40, activity: 'side raises' },
+  { family: 'G', kind: 'activity', prompt: 'Bend and reach for your toes 15 times.', reps: 15, activity: 'toe touches' },
 ];
 
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
@@ -300,10 +307,39 @@ function pickQuizChallenge(): GateQuestion {
  * the number in the sentence is the number being counted. It takes the chosen
  * activity because a squat history says nothing about push-ups.
  */
+/** How long a finished movement stays out of the rotation. */
+export const ACTIVITY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * When each movement was last *completed*, within the cooldown window.
+ *
+ * Only completed sessions count. Abandoning a set, falling back to breathing
+ * or spending a Bailout all record `completed: false`, and none of them should
+ * buy a movement's retirement for a day — that would make quitting the
+ * cheapest way to get an easier challenge tomorrow.
+ */
+export function activityCooldowns(
+  sessions: ActivitySessionResult[] | undefined,
+  now: number = Date.now(),
+): Map<ActivityKind, number> {
+  const out = new Map<ActivityKind, number>();
+  for (const s of sessions ?? []) {
+    if (!s.completed) continue;
+    const at = Date.parse(s.date);
+    if (!Number.isFinite(at) || now - at >= ACTIVITY_COOLDOWN_MS) continue;
+    const prev = out.get(s.activity);
+    if (prev === undefined || at > prev) out.set(s.activity, at);
+  }
+  return out;
+}
+
 export function pickChallenge(
   intensityKey: 'steady' | 'strict',
   healthLimitRaw?: string | null,
   repsFor?: (activity: ActivityKind) => number,
+  /** Completed-session history, used to rest a movement for 24h after it is
+   *  finished so the next unlock asks for something else. */
+  activitySessions?: ActivitySessionResult[],
 ): GateQuestion {
   const filter = challengeFilterFromHealth(healthLimitRaw);
   if (intensityKey === 'steady' || filter.skipPhysical) return pickQuizChallenge();
@@ -312,12 +348,36 @@ export function pickChallenge(
       q.kind === 'activity' && !filter.banned.has(q.activity),
   );
   if (pool.length === 0) return pickQuizChallenge();
-  // One movement per day, not one per unlock. Rolling fresh every time meant
-  // squats, then push-ups, then jacks within an hour, which reads as the app
-  // making it up — and it robs you of the one thing that makes the reps get
-  // easier: doing the same movement repeatedly.
-  const day = Math.floor(Date.now() / 86_400_000);
-  const chosen = pool[day % pool.length];
+
+  /* Finish a movement and it rests for 24 hours.
+   *
+   * This replaces an earlier rule that pinned one movement per whole day. That
+   * rule existed to stop the gate rolling squats, then push-ups, then jacks
+   * within an hour, which read as the app making it up. Resting on completion
+   * keeps that steadiness — an unfinished set still offers the same movement
+   * next time, so nothing churns mid-effort — while making a finished set
+   * mean something: the next unlock costs a different kind of effort rather
+   * than a repeat of the one just paid.
+   */
+  const now = Date.now();
+  const cooldowns = activityCooldowns(activitySessions, now);
+  const fresh = pool.filter((q) => !cooldowns.has(q.activity));
+
+  let chosen: Extract<GateQuestion, { kind: 'activity' }>;
+  if (fresh.length > 0) {
+    // Stable within a day so an unfinished set isn't swapped underneath the
+    // user between attempts.
+    const day = Math.floor(now / 86_400_000);
+    chosen = fresh[day % fresh.length];
+  } else {
+    // Everything is resting: offer whichever was completed longest ago rather
+    // than dropping to a quiz. The cooldown is a rotation, not an escape —
+    // someone who has genuinely done every movement today has earned variety,
+    // not an easier gate.
+    chosen = pool.reduce((oldest, q) =>
+      (cooldowns.get(q.activity) ?? 0) < (cooldowns.get(oldest.activity) ?? 0) ? q : oldest,
+    );
+  }
   if (!repsFor) return chosen;
   const resolved = repsFor(chosen.activity);
   if (!Number.isFinite(resolved)) return chosen;

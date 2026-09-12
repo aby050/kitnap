@@ -1,6 +1,11 @@
 import { CheckIn } from './checkin';
 import { GateReflection, PersistedState } from './store';
 import {
+  ActivityKind,
+  ActivitySessionResult,
+  DetectorTier,
+} from '../shield/activity/types';
+import {
   addDays,
   dateKey,
   DailyLog,
@@ -10,19 +15,21 @@ import {
 } from './progress';
 
 /**
- * Two months of plausible history, for looking at populated screens during
+ * Six months of plausible history, for looking at populated screens during
  * development. Nothing here is ever shown to a real user: the Settings rows
  * that call it are __DEV__-only, because a screen-time app that can invent
  * its own numbers is exactly the thing this project refuses to ship.
  *
  * The shape is deliberately not flat — an app that improves in a smooth line
  * makes every chart look correct even when it isn't. This arc starts rough,
- * improves unevenly, takes two visible slumps, and misses days, so streaks
- * break, bestStreak differs from currentStreak, and the graphs have something
- * to actually render.
+ * improves fast and then *plateaus* rather than climbing forever, takes three
+ * visible slumps, and misses days, so streaks break, bestStreak differs from
+ * currentStreak, and the graphs have something to actually render.
  */
 
-export const DEMO_DAYS = 60;
+/** Half a year. Long enough that the month and season views have real range,
+ *  and that the plateau at the end is visibly a plateau. */
+export const DEMO_DAYS = 183;
 
 /** Deterministic, so reloading demo data twice gives the same screenshots. */
 function rand(seed: number): number {
@@ -30,11 +37,19 @@ function rand(seed: number): number {
   return x - Math.floor(x);
 }
 
-/** 0 → start of the two months, 1 → today. */
+/** 0 → six months ago, 1 → today. */
 function improvement(t: number): number {
-  // Two slumps, around a third and two-thirds of the way in.
-  const slump = Math.exp(-(((t - 0.32) / 0.07) ** 2)) + Math.exp(-(((t - 0.68) / 0.06) ** 2));
-  return Math.max(0, Math.min(1, t * 0.85 + 0.1 - slump * 0.45));
+  // Saturating rather than linear: most of the gain lands in the first two
+  // months and the rest holds. Over this long a window a straight line would
+  // read as a chart someone drew, not a habit someone kept.
+  const rise = Math.pow(t, 0.62) * 0.88 + 0.08;
+  // Three bad weeks, not three bad months — narrow enough in `t` that each is
+  // ~5 days, so they break streaks instead of flattening whole months.
+  const slump =
+    Math.exp(-(((t - 0.22) / 0.03) ** 2)) +
+    Math.exp(-(((t - 0.52) / 0.025) ** 2)) +
+    Math.exp(-(((t - 0.78) / 0.035) ** 2));
+  return Math.max(0, Math.min(1, rise - slump * 0.5));
 }
 
 function demoDay(date: string, i: number): DailyLog {
@@ -109,9 +124,13 @@ const REFLECTION_TEXTS = [
   'Avoiding the thing I said I would finish tonight.',
 ];
 
+/** Roughly one written reflection every five days, capped well under the
+ *  store's 100-entry ceiling so nothing is silently dropped. */
+const DEMO_REFLECTIONS = Math.min(90, Math.round(DEMO_DAYS / 5));
+
 function buildReflections(today: string): GateReflection[] {
   const out: GateReflection[] = [];
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < DEMO_REFLECTIONS; i++) {
     const dayBack = Math.floor(rand(i + 30) * (DEMO_DAYS - 1));
     const date = new Date(addDays(today, -dayBack));
     date.setHours(9 + Math.floor(rand(i + 60) * 13), Math.floor(rand(i + 90) * 60), 0, 0);
@@ -125,13 +144,22 @@ function buildReflections(today: string): GateReflection[] {
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-/** Control trends up over the two months; screen time trends down. */
+/**
+ * Control trends up over the six months; screen time trends down.
+ *
+ * On the real weekly cadence (`shouldShowCheckIn`) rather than a fixed four, so
+ * the check-in history is as dense as it would actually be by now — and the
+ * control score saturates near the end instead of marching to 10/10.
+ */
 function buildCheckIns(today: string): CheckIn[] {
   const out: CheckIn[] = [];
-  for (let i = 0; i < 4; i++) {
-    const t = i / 3;
-    const date = new Date(addDays(today, -Math.round((1 - t) * (DEMO_DAYS - 4))));
-    const control = String(Math.round(3 + t * 5));
+  const count = Math.floor((DEMO_DAYS - 4) / 7);
+  for (let i = 0; i < count; i++) {
+    const t = count <= 1 ? 1 : i / (count - 1);
+    const date = new Date(addDays(today, -((count - 1 - i) * 7 + 2)));
+    // 3 → ~8, easing off, with a little week-to-week wobble either way.
+    const raw = 3 + Math.pow(t, 0.7) * 5 + (rand(i + 500) - 0.5);
+    const control = String(Math.max(1, Math.min(10, Math.round(raw))));
     out.push({
       date: date.toISOString(),
       answers: {
@@ -140,6 +168,70 @@ function buildCheckIns(today: string): CheckIn[] {
     });
   }
   return out;
+}
+
+/**
+ * Finished Strict-mode physical unlocks.
+ *
+ * Seeded because `computeRepTarget` reads this list, not `progress` — without it
+ * a six-month demo install still shows a first-day rep target and the reason
+ * line "still learning what works for you", which is the one part of the app
+ * that is *supposed* to look experienced by now.
+ *
+ * Targets are written to sit inside `activityDifficulty`'s per-movement bands
+ * rather than importing them: that table is internal there, and a dev seed
+ * should not be the reason it becomes public API. `computeRepTarget` clamps its
+ * own output anyway, so a drift here can only ever soften the anchor.
+ */
+const DEMO_ACTIVITIES: { kind: ActivityKind; min: number; max: number }[] = [
+  { kind: 'squats', min: 8, max: 18 },
+  { kind: 'jumping jacks', min: 10, max: 19 },
+  { kind: 'marching', min: 16, max: 34 },
+  { kind: 'arm raises', min: 42, max: 66 },
+];
+
+/** Capped under the store's 100-entry ceiling — about one unlock every three
+ *  days, which is what the `hardUnlocks` counts above already imply. */
+const DEMO_SESSIONS = Math.min(96, Math.round(DEMO_DAYS / 3));
+
+function buildActivitySessions(today: string): ActivitySessionResult[] {
+  const out: ActivitySessionResult[] = [];
+
+  for (let i = 0; i < DEMO_SESSIONS; i++) {
+    const t = i / Math.max(1, DEMO_SESSIONS - 1);
+    const arc = improvement(t);
+    const spec = DEMO_ACTIVITIES[i % DEMO_ACTIVITIES.length];
+
+    const date = new Date(addDays(today, -Math.round((1 - t) * (DEMO_DAYS - 1))));
+    date.setHours(7 + Math.floor(rand(i + 1400) * 15), Math.floor(rand(i + 1600) * 60), 0, 0);
+
+    // The target climbs with the arc — the difficulty model raising its ask is
+    // the thing a long history is meant to demonstrate.
+    const target = Math.round(spec.min + (spec.max - spec.min) * (0.25 + arc * 0.7));
+
+    // Early attempts get walked away from; late ones rarely do.
+    const completed = rand(i + 1800) < 0.45 + arc * 0.5;
+    const repsCompleted = completed ? target : Math.floor(target * (0.2 + rand(i + 2000) * 0.5));
+
+    // Pose is the common tier, with motion and manual fallbacks mixed in so the
+    // list exercises all three. Form is only ever measured on pose.
+    const tierRoll = rand(i + 2200);
+    const tier: DetectorTier = tierRoll < 0.62 ? 'pose' : tierRoll < 0.85 ? 'motion' : 'manual';
+    const formQuality = tier === 'pose' ? Math.min(0.95, 0.52 + arc * 0.3 + rand(i + 2400) * 0.12) : 0;
+
+    out.push({
+      date: date.toISOString(),
+      activity: spec.kind,
+      target,
+      repsCompleted,
+      formQuality: Math.round(formQuality * 100) / 100,
+      tier,
+      durationMs: Math.round(repsCompleted * (2600 + rand(i + 2600) * 1800) + 4000),
+      completed,
+    });
+  }
+
+  return out.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**
@@ -168,6 +260,7 @@ export function buildDemoState(): Partial<PersistedState> {
     gateReflections: buildReflections(today),
     checkIns,
     lastCheckInDate: checkIns[checkIns.length - 1]?.date.slice(0, 10) ?? null,
+    activitySessions: buildActivitySessions(today),
   };
 }
 
@@ -186,5 +279,6 @@ export function clearDemoState(): Partial<PersistedState> {
     gateReflections: [],
     checkIns: [],
     lastCheckInDate: null,
+    activitySessions: [],
   };
 }
