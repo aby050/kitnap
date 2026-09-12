@@ -59,7 +59,10 @@ export default function DiscountPaywallScreen({
 
   const pkg = annualOf(offering);
   const fullPkg = annualOf(fullPriceOffering);
-  const price = pkg?.product.priceString ?? '₹579.00';
+  // No hardcoded fallback: a price we cannot read from the store is a price
+  // we do not print. The old '₹579.00' default rendered rupees to every
+  // storefront on earth whenever RevenueCat failed to answer.
+  const price = pkg?.product.priceString ?? null;
   const wasPrice = fullPkg?.product.priceString ?? null;
   const intro = pkg?.product.introPrice;
   const trialDays = intro && intro.price === 0 ? intro.periodNumberOfUnits : null;
@@ -120,8 +123,13 @@ export default function DiscountPaywallScreen({
           <Icon name="bolt" size={40} color={palette.accent} strokeWidth={1.8} />
         </Animated.View>
 
+        {/* Apple 3.1.2(c): "50% OFF" used to be the largest, brightest text
+            on the screen (27px/800 in accent) while the billed amount sat at
+            21px — the discount outranking the price is exactly what the
+            guideline prohibits. The saving is now stated plainly and the
+            billed amount is the hero below. */}
         <Animated.Text entering={FadeInDown.duration(450)} style={styles.heading}>
-          Too Expensive?{'\n'}Here is <Text style={styles.headingAccent}>50% OFF</Text>
+          Before you go —{'\n'}here's half off
         </Animated.Text>
 
         <View style={{ height: 34 }} />
@@ -150,22 +158,36 @@ export default function DiscountPaywallScreen({
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               {wasPrice ? <Text style={styles.planStrike}>{wasPrice}</Text> : null}
-              <Text style={styles.planPrice}>{price}/yr</Text>
+              {price ? (
+                <Text style={styles.planPrice}>
+                  {price}
+                  <Text style={styles.planPer}>/yr</Text>
+                </Text>
+              ) : (
+                <Text style={styles.planSub}>Unavailable</Text>
+              )}
             </View>
           </View>
         </View>
 
         <Text style={styles.terms}>
-          {trialDays ? `${trialDays} days free, then ` : ''}
-          {price}/year · Cancel anytime
+          {price
+            ? `${trialDays ? `${trialDays} days free, then ` : ''}${price} a year, renewing automatically until you cancel. Turn off auto-renew at least 24 hours before the period ends in your Apple Account settings.`
+            : 'Pricing is unavailable right now — the free plan still works.'}
         </Text>
       </ScrollView>
 
       <View style={styles.ctaWrap}>
+        {/* 3.1.2(c) — the largest control on the screen states the billed
+            amount. It previously read "Start My Free Trial" with no price
+            anywhere on it whenever an intro offer existed. */}
         <GradientButton
-          label={busy ? 'One moment…' : trialDays ? 'Start My Free Trial' : `Get ${price}/yr`}
+          label={busy ? 'One moment…' : price ? `Subscribe — ${price}/yr` : 'Continue'}
           onPress={busy ? () => {} : buy}
         />
+        {!!trialDays && !busy && (
+          <Text style={styles.trialSub}>{trialDays} days free first</Text>
+        )}
         {busy && <ActivityIndicator color={palette.text} style={{ marginTop: 10 }} />}
         <Text style={styles.expiry}>Offer expires when you leave this screen</Text>
         <View style={styles.legalRow}>
@@ -203,7 +225,7 @@ const styles = StyleSheet.create({
   reviewText: { color: palette.textSecondary, fontSize: 13.5 },
   offerBadgeWrap: { alignItems: 'center', zIndex: 5, marginBottom: -14 },
   offerBadge: { borderRadius: 16, paddingVertical: 7, paddingHorizontal: 18 },
-  offerBadgeText: { color: '#0b2a14', fontSize: 14, fontWeight: '800' },
+  offerBadgeText: { color: '#0b2a14', fontSize: 11.5, fontWeight: '700' },
   planCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,13 +236,16 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 20,
   },
-  planTitle: { color: palette.text, fontSize: 21, fontWeight: '800' },
+  planTitle: { color: palette.text, fontSize: 16, fontWeight: '700' },
   planSub: { color: palette.textSecondary, fontSize: 13.5, marginTop: 3 },
   planStrike: { color: palette.textTertiary, fontSize: 13, textDecorationLine: 'line-through' },
-  planPrice: { color: palette.text, fontSize: 21, fontWeight: '800', marginTop: 2 },
+  // 3.1.2(c) — the most conspicuous pricing element in the flow.
+  planPrice: { color: palette.text, fontSize: 30, fontWeight: '900', marginTop: 2 },
+  planPer: { color: palette.textSecondary, fontSize: 14, fontWeight: '600' },
   terms: { color: palette.textSecondary, fontSize: 12.5, textAlign: 'center', marginTop: 14 },
   ctaWrap: { paddingHorizontal: 24, paddingBottom: 12 },
   expiry: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center', marginTop: 12 },
+  trialSub: { color: palette.textSecondary, fontSize: 12.5, fontWeight: '600', textAlign: 'center', marginTop: 8 },
   legalRow: { flexDirection: 'row', justifyContent: 'center', gap: 26, marginTop: 10 },
   legalLink: { color: palette.textSecondary, fontSize: 13.5 },
 });
