@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { GradientButton } from '../components/ui';
 import AppleSignInButton from './AppleSignInButton';
 import { Account } from '../data/store';
-import { Field } from '../design/primitives';
 import { fonts, palette } from '../design/tokens';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '../data/purchases';
-import Icon from '../ui/Icon';
 
 /** Google requires a real OAuth client ID from Google Cloud Console before it
  *  can complete a real sign-in — there's nothing to fake here without lying
@@ -16,8 +13,6 @@ import Icon from '../ui/Icon';
  *  pretending to succeed. */
 const GOOGLE_CLIENT_ID_CONFIGURED = false;
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export default function LoginScreen({
   onSignedIn,
   onSkip,
@@ -25,8 +20,6 @@ export default function LoginScreen({
   onSignedIn: (account: Account) => void;
   onSkip?: () => void;
 }) {
-  const [showEmail, setShowEmail] = useState(false);
-  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
   const handleGoogle = () => {
@@ -37,15 +30,10 @@ export default function LoginScreen({
     }
   };
 
-  const submitEmail = () => {
-    const trimmed = email.trim();
-    if (!EMAIL_RE.test(trimmed)) {
-      setError("That doesn't look like a valid email.");
-      return;
-    }
-    setError('');
-    onSignedIn({ method: 'email', identifier: trimmed, name: '' });
-  };
+  /* One provider, chosen by platform: Apple on iOS, Google everywhere else.
+   * Offering both on a single OS asks the user to remember which one they
+   * used last — the platform account is the one they can't have forgotten. */
+  const isIOS = Platform.OS === 'ios';
 
   return (
     <View style={styles.wrap}>
@@ -60,39 +48,16 @@ export default function LoginScreen({
         Sign in with the same account and your setup comes with you.
       </Animated.Text>
 
-      {!showEmail ? (
-        <Animated.View entering={FadeIn.delay(180).duration(400)} style={styles.buttons}>
+      <Animated.View entering={FadeIn.delay(180).duration(400)} style={styles.buttons}>
+        {isIOS ? (
           <AppleSignInButton onSignedIn={onSignedIn} onError={setError} />
-
+        ) : (
           <Pressable style={[styles.providerBtn, styles.googleBtn]} onPress={handleGoogle}>
             <Text style={styles.googleG}>G</Text>
             <Text style={styles.googleText}>Continue with Google</Text>
           </Pressable>
-
-          <Pressable style={[styles.providerBtn, styles.emailBtn]} onPress={() => setShowEmail(true)}>
-            <Text style={styles.emailGlyph}>@</Text>
-            <Text style={styles.emailBtnText}>Continue with Email</Text>
-          </Pressable>
-        </Animated.View>
-      ) : (
-        <Animated.View entering={FadeIn.duration(300)} style={styles.emailForm}>
-          <Field
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            autoFocus
-          />
-          <View style={{ height: 12 }} />
-          <GradientButton label="Continue" onPress={submitEmail} />
-          <Pressable onPress={() => setShowEmail(false)} style={styles.backLink} hitSlop={10}>
-            <Icon name="chevronLeft" size={15} color={palette.textSecondary} strokeWidth={2} />
-            <Text style={styles.backLinkText}>Other ways to sign in</Text>
-          </Pressable>
-        </Animated.View>
-      )}
+        )}
+      </Animated.View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -150,19 +115,9 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 999,
   },
-  /* All three providers are the same white pill. The reference stacks
-   * identical buttons and lets the provider glyph do the distinguishing —
-   * giving one provider a different fill reads as a recommendation, which is
-   * not a claim this screen has any business making. */
   googleBtn: { backgroundColor: '#FFFFFF' },
   googleG: { fontSize: 18, fontWeight: '900', color: '#4285F4' },
   googleText: { color: '#1f1f1f', fontFamily: fonts.semibold, fontSize: 16, fontWeight: '600' },
-  emailBtn: { backgroundColor: '#FFFFFF' },
-  emailGlyph: { fontSize: 17, color: '#1f1f1f', fontWeight: '700' },
-  emailBtnText: { color: '#1f1f1f', fontFamily: fonts.semibold, fontSize: 16, fontWeight: '600' },
-  emailForm: { width: '100%', marginTop: 26 },
-  backLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 14 },
-  backLinkText: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
   error: { color: palette.danger, fontSize: 13, textAlign: 'center', marginTop: 14, maxWidth: 300 },
   skip: { marginTop: 22, paddingVertical: 8, alignSelf: 'center' },
   skipText: { color: palette.onColorTextDim, fontSize: 14, fontWeight: '600' },

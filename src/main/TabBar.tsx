@@ -148,8 +148,11 @@ function TabItem<K extends string>({
           <AnimatedIcon
             name={def.mark}
             size={21}
-            color={palette.textTertiary}
-            activeColor={palette.accent}
+            // White, not accent: the accent pill behind the active tab
+            // already carries the selection colour, and tinted glyphs on
+            // frosted glass lose contrast badly. Brightness does the work.
+            color={palette.onColorTextDim}
+            activeColor={palette.text}
             active={active}
             lift={1.5}
             // Changes from undefined → the key when this tab takes over, which
@@ -222,11 +225,11 @@ const styles = StyleSheet.create({
   itemInner: { alignItems: 'center', justifyContent: 'center' },
   iconSlot: { height: PILL_H, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   label: {
-    color: palette.textTertiary,
+    color: palette.onColorTextDim,
     fontSize: 11.5,
     fontWeight: '600',
     letterSpacing: 0.1,
     textAlign: 'center',
   },
-  labelActive: { color: palette.accent },
+  labelActive: { color: palette.text },
 });
