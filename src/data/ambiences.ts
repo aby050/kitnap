@@ -1,6 +1,6 @@
 import { IconName } from '../ui/Icon';
 import { ThemeKey } from './themes';
-import { AMBIENCE_MEDIA } from './ambienceMedia';
+export { mediaFor } from './ambienceMedia';
 
 /**
  * Focus rooms.
@@ -146,6 +146,4 @@ export const inBand = (band: Ambience['band']) => AMBIENCES.filter((a) => a.band
 export const getAmbience = (key: string) =>
   AMBIENCES.find((a) => a.key === key) ?? AMBIENCES[0];
 
-/** Media is looked up separately so a room renders — wash, title, countdown
- *  and all — before any footage exists for it. */
-export const mediaFor = (key: string) => AMBIENCE_MEDIA[key] ?? {};
+

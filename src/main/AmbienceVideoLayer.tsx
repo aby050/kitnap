@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { MediaSource } from '../data/ambienceMedia';
 
 /**
  * The looping clip, kept in its own module on purpose.
@@ -20,10 +21,13 @@ export default function AmbienceVideoLayer({
   source,
   onFirstFrame,
 }: {
-  source: number;
+  source: MediaSource;
   onFirstFrame: () => void;
 }) {
-  const player = useVideoPlayer(source, (p) => {
+  // expo-video takes a require id as-is and a remote clip as a bare URL
+  // string, so a streamed loop needs unwrapping from the {uri} the rest of
+  // the app passes around.
+  const player = useVideoPlayer(typeof source === 'number' ? source : source.uri, (p) => {
     p.loop = true;
     // Sound is the separate ambient track, never the clip's own audio.
     p.muted = true;

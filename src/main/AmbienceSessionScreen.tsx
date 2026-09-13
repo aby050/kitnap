@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ambience, mediaFor } from '../data/ambiences';
+import { MediaSource } from '../data/ambienceMedia';
 import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
 import { Editorial } from '../design/primitives';
@@ -36,7 +37,7 @@ const KEEP_AWAKE_TAG = 'byre-ambience';
  * with no footage does anyway.
  */
 let videoLayer: React.ComponentType<{
-  source: number;
+  source: MediaSource;
   onFirstFrame: () => void;
 }> | null | undefined;
 
@@ -171,7 +172,9 @@ export default function AmbienceSessionScreen({
   const hasVideo = !!media.video && !!VideoLayer;
 
   /* ── Ambient track ───────────────────────────────────────────────────── */
-  const audio = useAudioPlayer(media.audio ?? null);
+  const audio = useAudioPlayer(
+    media.audio == null ? null : typeof media.audio === 'number' ? media.audio : media.audio.uri,
+  );
 
   useEffect(() => {
     if (!media.audio) return;
