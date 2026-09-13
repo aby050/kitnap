@@ -43,6 +43,7 @@ import { clearState, DEFAULT_STATE, loadState, PersistedState, saveState } from 
 import { QUESTION_CHUNKS } from './src/onboarding/questions';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
 import { estimateDailyHours, recommendSetup, scheduleFromSlipWindow } from './src/data/setupPlan';
+import { hydrateAmbienceCache, prefetchAmbience } from './src/data/ambiencePrefetch';
 import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
 import { effectiveBlockedPackages } from './src/data/scheduleEnforcer';
 import { usePurchases } from './src/data/usePurchases';
@@ -132,6 +133,18 @@ export default function App() {
   const [chunk, setChunk] = useState(0);
   const [askingPermission, setAskingPermission] = useState(false);
   const [history, setHistory] = useState<{ id: string; prompt: string; label: string }[]>([]);
+
+  /* Room loops: read what is already on disk, then quietly pull the rest.
+   *
+   *  Hydration runs before the first render so a returning user plays from
+   *  the local copy immediately. The sweep starts here rather than on the
+   *  rooms screen because by the time someone opens a room it is already too
+   *  late — the download has to happen while they are reading questions. It
+   *  is fire-and-forget: nothing awaits it and every failure is swallowed. */
+  useEffect(() => {
+    hydrateAmbienceCache();
+    prefetchAmbience();
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'web') {

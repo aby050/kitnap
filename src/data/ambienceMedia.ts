@@ -25,7 +25,8 @@
 
 /** Cloudflare R2, public bucket `byre-ambience`. Zero egress cost, which is
  *  the entire cost of serving video anywhere else. */
-const REMOTE_BASE = 'https://pub-a0c8c1ef09be4cfa8fbe24f7014fb46c.r2.dev';
+import { REMOTE_KEYS, remoteVideoUrl } from './ambienceSource';
+import { localVideoUri } from './ambiencePrefetch';
 
 /** A bundled asset (a `require` id) or a URL the player streams. */
 export type MediaSource = number | { uri: string };
@@ -62,20 +63,18 @@ const POSTERS: Record<string, number> = {
   night: require('../../assets/ambience/night-poster.jpg'),
 };
 
-/** Keys with a loop published to R2. */
-const REMOTE = [
-  'breathe',
-  'meditate',
-  'morning',
-  'reading',
-  'think',
-  'family',
-  'study',
-  'night',
-];
-
 export function mediaFor(key: string): AmbienceMedia {
-  const video: MediaSource | undefined =
-    BUNDLED_VIDEO[key] ?? (REMOTE.includes(key) ? { uri: `${REMOTE_BASE}/${key}.mp4` } : undefined);
-  return { video, still: POSTERS[key] };
+  const bundled = BUNDLED_VIDEO[key];
+  if (bundled) return { video: bundled, still: POSTERS[key] };
+
+  if (!REMOTE_KEYS.includes(key)) return { still: POSTERS[key] };
+
+  /* Prefer the copy fetched during onboarding. A local file starts on the
+   * first frame; the CDN copy has to open a connection first, which is the
+   * black beat this whole cache exists to remove. */
+  const local = localVideoUri(key);
+  return {
+    video: { uri: local ?? remoteVideoUrl(key) },
+    still: POSTERS[key],
+  };
 }
