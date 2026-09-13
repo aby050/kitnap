@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
-import { useVideoPlayer, VideoView } from 'expo-video';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Ambience, mediaFor } from '../data/ambiences';
@@ -11,6 +10,33 @@ import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
 
 const KEEP_AWAKE_TAG = 'byre-ambience';
+
+/**
+ * The video layer, if this binary has one.
+ *
+ * `undefined` = not looked up yet, `null` = looked up and unavailable. The
+ * require is deliberately lazy and caught: expo-video resolves its native
+ * module at import time, so a binary built before the package was added
+ * throws there and would otherwise take the whole app down rather than this
+ * one layer. Without it a room simply shows its wash, which is what a room
+ * with no footage does anyway.
+ */
+let videoLayer: React.ComponentType<{
+  source: number;
+  paused: boolean;
+  onFirstFrame: () => void;
+}> | null | undefined;
+
+function getVideoLayer() {
+  if (videoLayer === undefined) {
+    try {
+      videoLayer = require('./AmbienceVideoLayer').default;
+    } catch {
+      videoLayer = null;
+    }
+  }
+  return videoLayer;
+}
 
 function clock(totalSeconds: number) {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -53,14 +79,11 @@ export default function AmbienceSessionScreen({
   const [remaining, setRemaining] = useState(() => (endsAt - Date.now()) / 1000);
   const [muted, setMuted] = useState(false);
   const [firstFrame, setFirstFrame] = useState(false);
+  const [paused, setPaused] = useState(false);
   const ended = useRef(false);
 
-  /* ── Video ───────────────────────────────────────────────────────────── */
-  const video = useVideoPlayer(media.video ?? null, (p) => {
-    p.loop = true;
-    p.muted = true; // sound lives in the separate track, never in the clip
-    if (media.video) p.play();
-  });
+  const VideoLayer = getVideoLayer();
+  const hasVideo = !!media.video && !!VideoLayer;
 
   /* ── Ambient track ───────────────────────────────────────────────────── */
   const audio = useAudioPlayer(media.audio ?? null);
@@ -98,6 +121,14 @@ export default function AmbienceSessionScreen({
     audio.muted = muted;
   }, [audio, muted]);
 
+  /* Pause is one control over the whole room, not just the picture — a
+   * paused loop under a track that keeps playing reads as a bug. */
+  useEffect(() => {
+    if (!media.audio) return;
+    if (paused) audio.pause();
+    else audio.play();
+  }, [audio, media.audio, paused]);
+
   /* ── Countdown ───────────────────────────────────────────────────────── */
   useEffect(() => {
     const tick = () => {
@@ -125,8 +156,6 @@ export default function AmbienceSessionScreen({
     };
   }, []);
 
-  const playing = video.playing;
-
   return (
     <Modal visible animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.root}>
@@ -144,17 +173,11 @@ export default function AmbienceSessionScreen({
             <Image source={media.still} style={StyleSheet.absoluteFill} resizeMode="cover" />
           </Animated.View>
         ) : null}
-        {media.video ? (
-          <VideoView
-            player={video}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            nativeControls={false}
-            // Picture-in-picture is what pulls `audio` into UIBackgroundModes
-            // on iOS. Never turn it on here.
-            allowsPictureInPicture={false}
-            onFirstFrameRender={() => setFirstFrame(true)}
-            {...(Platform.OS === 'android' ? { useExoShutter: false } : null)}
+        {hasVideo && VideoLayer && media.video ? (
+          <VideoLayer
+            source={media.video}
+            paused={paused}
+            onFirstFrame={() => setFirstFrame(true)}
           />
         ) : null}
 
@@ -215,15 +238,14 @@ export default function AmbienceSessionScreen({
           <Pressable
             onPress={() => {
               tapLight();
-              if (!media.video) return;
-              playing ? video.pause() : video.play();
+              setPaused((p) => !p);
             }}
-            style={[styles.playBtn, !media.video && styles.circleDisabled]}
-            disabled={!media.video}
+            style={[styles.playBtn, !hasVideo && !media.audio && styles.circleDisabled]}
+            disabled={!hasVideo && !media.audio}
             accessibilityRole="button"
-            accessibilityLabel={playing ? 'Pause the loop' : 'Play the loop'}
+            accessibilityLabel={paused ? 'Resume the room' : 'Pause the room'}
           >
-            <Icon name={playing ? 'pause' : 'play'} size={26} color="#FFFFFF" strokeWidth={2} />
+            <Icon name={paused ? 'play' : 'pause'} size={26} color="#FFFFFF" strokeWidth={2} />
           </Pressable>
 
           <Text style={styles.footnote}>
