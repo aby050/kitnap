@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
   useAnimatedStyle,
@@ -74,7 +74,6 @@ export default function PersistentBackground() {
 
   const VideoLayer = getVideoLayer();
   const backdrop = mediaFor(BACKDROP_ROOM);
-  const [firstFrame, setFirstFrame] = useState(false);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -88,32 +87,37 @@ export default function PersistentBackground() {
        *  moving to sit on. If expo-video is missing from the binary, or the
        *  room has no footage, the whole stack is skipped and onboarding looks
        *  exactly as it did before. */}
-      {backdrop.still ? (
-        <Image
-          source={backdrop.still}
-          style={[StyleSheet.absoluteFill, styles.backdrop]}
-          resizeMode="cover"
-        />
-      ) : null}
       {VideoLayer && backdrop.video ? (
-        <View style={[StyleSheet.absoluteFill, styles.backdrop, !firstFrame && styles.hidden]}>
-          <VideoLayer source={backdrop.video} onFirstFrame={() => setFirstFrame(true)} />
+        <View style={[StyleSheet.absoluteFill, styles.backdrop]}>
+          <VideoLayer source={backdrop.video} />
         </View>
       ) : null}
       {/* Blur first, then dark: blurring a already-darkened image just makes
        *  grey. `intensity` is capped low because a heavy blur on a moving
        *  clip costs a lot of GPU for pixels nobody is looking at. */}
-      {(backdrop.video || backdrop.still) && (
+      {VideoLayer && backdrop.video && (
         <>
-          <BlurView intensity={38} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={36} tint="dark" style={StyleSheet.absoluteFill} />
           <View style={styles.backdropScrim} />
+          {/* The top third goes back to true black. That band carries the
+              mark and the first line of every screen, and it is the part
+              that read as "dull" once footage lifted it off black — so the
+              loop is masked out of it entirely and only shows through the
+              middle, where there is nothing else to look at. */}
+          <LinearGradient
+            colors={['#000000', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0)']}
+            locations={[0, 0.22, 0.46]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
         </>
       )}
 
       {/* Primary top bloom — breathes up and down */}
       <Animated.View style={[styles.topGlow, glowStyle]}>
         <LinearGradient
-          colors={['rgba(20,60,44,0.55)', 'rgba(10,30,22,0.18)', 'rgba(0,0,0,0)']}
+          colors={['rgba(20,60,44,0.95)', 'rgba(10,30,22,0.3)', 'rgba(0,0,0,0)']}
           locations={[0, 0.5, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
@@ -158,15 +162,16 @@ export default function PersistentBackground() {
 const styles = StyleSheet.create({
   /* Far enough back that type stays the brightest thing on screen — the
    * backdrop is texture, not an image the user is meant to look at. */
-  backdrop: { opacity: 0.85 },
-  hidden: { opacity: 0 },
+  /* Motion, not a picture. The loop is only ever a texture under a black
+   * screen — if it tints the background it has gone too far. */
+  backdrop: { opacity: 0.78 },
   backdropScrim: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.34)',
   },
   topGlow: {
     position: 'absolute',
