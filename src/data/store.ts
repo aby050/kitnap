@@ -92,6 +92,12 @@ export type PersistedState = {
 /** Production starting grant. Do not raise this for shipping builds. */
 export const FREE_EMERGENCY_TOKENS = 2;
 
+/** Schedules the free plan keeps. PlanCompareScreen has advertised "free: 1,
+ *  Pro: Unlimited" since it was written; this is the number that makes that
+ *  true. Existing schedules above the limit are never deleted — the gate only
+ *  stops a new one being added. */
+export const FREE_SCHEDULE_LIMIT = 1;
+
 /** Dev-only floor so testers can skip gates and end locked timers. */
 export const DEV_EMERGENCY_TOKEN_FLOOR = 10;
 
