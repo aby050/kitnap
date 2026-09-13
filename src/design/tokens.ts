@@ -236,6 +236,11 @@ export const fonts = {
   extrabold: 'Poppins_800ExtraBold',
   /** OS font. Keep for tabular numerals — see above. */
   system: Platform.select({ ios: 'System', default: 'sans-serif' }) as string,
+  /* The voice face. Not a bundled webfont: Georgia ships with iOS and has a
+   * true italic cut, and Android's generic `serif` resolves to Noto Serif,
+   * which has one too. A downloaded serif would cost ~180 KB and two more
+   * font files to buy a difference nobody would name. */
+  serif: Platform.select({ ios: 'Georgia', default: 'serif' }) as string,
 } as const;
 
 /**
@@ -390,6 +395,35 @@ export const type = {
     fontWeight: '800',
     letterSpacing: -0.9,
     color: palette.textSecondary,
+  } as TextStyle,
+  /**
+   * The app speaking rather than labelling — block screens and focus rooms.
+   *
+   * Geometric sans is right for every functional surface in the app and wrong
+   * for this one: a sentence that is meant to land as a thought should not be
+   * set in the same face as the row labels. The serif italic reads as a
+   * remark, which is the one thing this text has to do.
+   *
+   * A real italic cut, not `fontStyle: 'italic'` over a sans — that gives a
+   * faux-slanted smear. Georgia and Noto Serif both have genuine italics,
+   * which is why they are the two named in `fonts.serif`.
+   */
+  voice: {
+    fontFamily: fonts.serif,
+    fontStyle: 'italic',
+    fontSize: 27,
+    lineHeight: 35,
+    letterSpacing: -0.2,
+    color: palette.textSecondary,
+  } as TextStyle,
+  voiceStrong: {
+    fontFamily: fonts.serif,
+    fontStyle: 'italic',
+    fontWeight: '700',
+    fontSize: 27,
+    lineHeight: 35,
+    letterSpacing: -0.2,
+    color: palette.accent,
   } as TextStyle,
   editorialStrong: {
     fontFamily: fonts.extrabold,

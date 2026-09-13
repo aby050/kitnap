@@ -293,6 +293,7 @@ export default function AmbienceSessionScreen({
                   lead={message.lead}
                   emphasis={message.emphasis}
                   align="center"
+                  voice
                   style={styles.message}
                 />
               </Animated.View>
