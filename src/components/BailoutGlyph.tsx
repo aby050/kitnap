@@ -1,15 +1,24 @@
 import React from 'react';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { palette } from '../design/tokens';
 
 /**
- * Padlock and key — the thing a Bailout actually is: the one key that opens a
- * lock you deliberately closed. Replaces the parachute, which read as
- * "emergency landing" rather than "way back in".
+ * A bailout, as a token.
  *
- * Stroked rather than filled so it sits on any surface without needing to
- * know the background colour behind the keyhole, and so it matches the
- * line-art weight of everything in Icon.tsx.
+ * This has been a parachute (which read as "emergency landing" rather than
+ * "way back in") and then a padlock standing next to a key. The padlock-plus-
+ * key had three problems: two separate objects turn to mush below about 28px,
+ * it needed a 34:24 aspect so it never sat properly in a square icon slot,
+ * and a lock beside a key is the most generic security mark there is.
+ *
+ * A bailout is not security. It is *currency* — a countable thing you spend
+ * to leave a lock you closed yourself, and the UI says "10 bailouts left", not
+ * "10 locks". So it is a coin with a keyhole struck through it: one object,
+ * square, legible at 13px where it is smallest, and it says spend rather than
+ * secure.
+ *
+ * Stroked, not filled, so it sits on any surface without needing to know the
+ * colour behind the keyhole and matches the line weight of Icon.tsx.
  */
 export default function BailoutGlyph({
   size = 56,
@@ -18,33 +27,25 @@ export default function BailoutGlyph({
   size?: number;
   color?: string;
 }) {
-  // Wider than tall: the key sits beside the lock rather than on its ring,
-  // which stays legible down to ~28px where an interlocked ring turns to mush.
-  const height = size;
-  const width = (size * 34) / 24;
+  // Stroke thins as the glyph grows: 1.8 is right at 24px and heavy at 56,
+  // which is the size the token store renders it at.
+  const w = size >= 40 ? 1.5 : 1.8;
 
   return (
-    <Svg width={width} height={height} viewBox="0 0 34 24" fill="none">
-      {/* Shackle */}
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      {/* The coin */}
+      <Circle cx={12} cy={12} r={9.2} stroke={color} strokeWidth={w} />
+      {/* Milled edge — a second, lighter ring. Reads as a struck coin rather
+          than a plain circle, and it is the detail that stops this being just
+          another outlined dot at small sizes. */}
+      <Circle cx={12} cy={12} r={6.9} stroke={color} strokeWidth={w * 0.62} opacity={0.55} />
+      {/* Keyhole: bore and ward, centred so the whole mark stays symmetrical
+          and therefore still reads when it is tiny. */}
+      <Circle cx={12} cy={10.4} r={1.75} stroke={color} strokeWidth={w * 0.9} />
       <Path
-        d="M6.8 10.2V7.6a4.4 4.4 0 0 1 8.8 0v2.6"
+        d="M12 12.2v3.1"
         stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      {/* Body */}
-      <Rect x={2.6} y={10.2} width={17.2} height={11.6} rx={2.6} stroke={color} strokeWidth={1.8} />
-      {/* Keyhole */}
-      <Circle cx={11.2} cy={15.1} r={1.7} stroke={color} strokeWidth={1.6} />
-      <Path d="M11.2 16.8v2.4" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-
-      {/* Key: bow, shaft, two teeth */}
-      <Circle cx={27.4} cy={8.4} r={4.1} stroke={color} strokeWidth={1.8} />
-      <Path d="M27.4 12.5v8.6" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
-      <Path
-        d="M27.4 16.6h3.1M27.4 19.2h2.4"
-        stroke={color}
-        strokeWidth={1.8}
+        strokeWidth={w * 0.9}
         strokeLinecap="round"
       />
     </Svg>
