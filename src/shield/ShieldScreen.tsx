@@ -184,7 +184,7 @@ export default function ShieldScreen({
           )}
 
           <Animated.View entering={FadeInUp.delay(160).duration(520)}>
-            <Editorial lead={lead} emphasis={emphasis} align="center" style={styles.line} />
+            <Editorial lead={lead} emphasis={emphasis} align="center" voice style={styles.line} />
           </Animated.View>
 
           {personal && (

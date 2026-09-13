@@ -742,20 +742,27 @@ export function Editorial({
   align = 'left',
   color = palette.accent,
   style,
+  voice = false,
 }: {
   lead: string;
   emphasis?: string;
   align?: 'left' | 'center';
   color?: string;
   style?: StyleProp<TextStyle>;
+  /** Sets the pair in the serif italic instead of the geometric sans.
+   *  For the app speaking — block screens, focus rooms — rather than the app
+   *  labelling. See `type.voice`. */
+  voice?: boolean;
 }) {
+  const base = voice ? type.voice : type.editorial;
+  const strong = voice ? type.voiceStrong : type.editorialStrong;
   return (
-    <Text style={[type.editorial, { textAlign: align }, style]}>
+    <Text style={[base, { textAlign: align }, style]}>
       {lead}
       {!!emphasis && (
         <>
           {' '}
-          <Text style={[type.editorialStrong, { color }]}>{emphasis}</Text>
+          <Text style={[strong, { color }]}>{emphasis}</Text>
         </>
       )}
     </Text>
