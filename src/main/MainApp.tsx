@@ -142,10 +142,23 @@ const TEST_TOP_UP = false;
 const SESSION_OVERLAYS: Overlay[] = ['essentials', 'blockedApps', 'emergencyTokens'];
 type TimerPreset = { minutes: number; label: string; autoStart: boolean; hardMode?: boolean; nonce?: number };
 
+/**
+ * The bar read Home / My apps / Timer — which is, word for word and in the
+ * same order, the tab bar of the app this one keeps getting compared to. Three
+ * matching labels is not a coincidence a reviewer has to think hard about.
+ *
+ * The names now describe what Byre actually has. `apps` is the blocklist, so
+ * it says Blocked — shorter, and the thing the app is for. `timer` stopped
+ * being a timer when the dial came out: it is ten rooms you pick between, so
+ * it says Rooms. Home / Blocked / Rooms also reads as one place rather than
+ * three features, which suits an app named after a shelter.
+ *
+ * Keys are untouched — they persist in saved state and in every `setTab` call.
+ */
 const TABS: { key: Tab; label: string; mark: IconName }[] = [
   { key: 'home', label: 'Home', mark: 'home' },
-  { key: 'apps', label: 'My apps', mark: 'grid' },
-  { key: 'timer', label: 'Timer', mark: 'timer' },
+  { key: 'apps', label: 'Blocked', mark: 'shield' },
+  { key: 'timer', label: 'Rooms', mark: 'leaf' },
 ];
 
 export default function MainApp({
