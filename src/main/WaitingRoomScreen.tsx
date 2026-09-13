@@ -5,15 +5,21 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { palette, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 
-/** What you actually see while the Gate is running. Not every family suits
- *  every person — someone recovering from a bad week may not want Family C
- *  (self-confrontation) turned all the way up. */
+/**
+ * What you actually see while the Gate is running.
+ *
+ * Only families the Gate can draw. It listed five for a long time — intent
+ * check-ins, cost reminders, typed prompts, your own history, physical holds —
+ * and three of them had no renderer at all, so switching them on or off
+ * changed nothing. A toggle that does nothing is worse than a missing one.
+ *
+ * A family earns a row here when GateScreen has a branch for its `kind`. The
+ * three that are gone (A, B, D) are still written in gateQuestions.ts and come
+ * back the day they can be shown.
+ */
 const CONTENT_TYPES: { id: string; name: string; desc: string; icon: IconName }[] = [
-  { id: 'A', name: 'Intent check-ins', desc: 'Quick taps — what are you actually about to do?', icon: 'target' },
-  { id: 'B', name: 'Cost reminders', desc: 'What this app has already taken today.', icon: 'clock' },
   { id: 'C', name: 'Self-confrontation', desc: 'Short typed prompts. The one that works hardest.', icon: 'edit' },
-  { id: 'D', name: 'Your own history', desc: 'Things you wrote before, played back.', icon: 'book' },
-  { id: 'E', name: 'Physical holds', desc: 'A slow hold or a breath. Deliberately boring.', icon: 'breathe' },
+  { id: 'F', name: 'Pause and answer', desc: 'A breath, a sum, or a question. Deliberately dull.', icon: 'breathe' },
 ];
 
 export default function WaitingRoomScreen({
@@ -29,7 +35,7 @@ export default function WaitingRoomScreen({
   onSave?: (families: Record<string, boolean>) => void;
 }) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>(
-    initial ?? { A: true, B: true, C: true, D: true, E: true },
+    initial ?? { C: true, F: true },
   );
 
   const toggle = (id: string) => {

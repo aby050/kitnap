@@ -306,10 +306,15 @@ export function isHealthLimited(raw: string | undefined | null): boolean {
 function pickQuizChallenge(enabled?: Record<string, boolean>): GateQuestion {
   const on = (f: string) => !enabled || enabled[f] !== false;
 
+  /* Only kinds GateScreen can actually draw.
+   *
+   * It renders activity, breathe, math, quiz and type — and nothing else. An
+   * earlier pass added families A (tap) and E (hold) here on the strength of
+   * the picker alone, which meant a third of gates rendered an empty screen.
+   * A family belongs in this list when the Gate has a branch for its `kind`,
+   * not when the questions exist. */
   const pools: { family: string; get: () => GateQuestion }[] = [
-    { family: 'A', get: () => pick(FAMILY_A) },
     { family: 'C', get: () => pick(FAMILY_C) },
-    { family: 'E', get: () => pick(FAMILY_E) },
     { family: 'F', get: () => pick(FAMILY_F_BREATHE) },
     { family: 'F', get: () => randomMathChallenge() },
     { family: 'F', get: () => pick(FAMILY_F_QUIZ) },
