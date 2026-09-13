@@ -570,8 +570,8 @@ export default function TimerScreen({
         </View>
         <Animated.View entering={FadeInDown.duration(motion.transition)}>
           <Editorial
-            lead="Pick somewhere to be,"
-            emphasis="then commit to it."
+            lead="How long can you"
+            emphasis="be somewhere else?"
             style={styles.voice}
           />
         </Animated.View>
@@ -609,34 +609,14 @@ export default function TimerScreen({
           </Card>
         )}
 
-        {onOpenTokenInfo && (
-          <Card onPress={onOpenTokenInfo} style={styles.accessCardTight}>
-            <View style={styles.accessRow}>
-              <View style={styles.tokenBadge}>
-                <Text style={styles.tokenBadgeText}>{tokenBalance}</Text>
-              </View>
-              <View style={styles.shrink}>
-                <Text style={type.bodyStrong}>Bailouts</Text>
-                <Text style={[type.sub, styles.accessSub]}>Use one to leave a locked timer early.</Text>
-              </View>
-              <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
-            </View>
-          </Card>
-        )}
+        {/* The Bailouts card and the "Open a blocked app" door used to sit
+            here. This screen is the focus module now — somewhere to choose
+            how long to be away and what to look at while you are — and a
+            shortcut into the thing you are trying not to do belongs on Home,
+            where it already is, not under the rooms. Bailouts live on Home and
+            in Settings; they are also quoted at the only moment they cost
+            anything, which is the sheet that leaves a room. */}
 
-        {/* Same door as on Home. A locked timer is exactly when someone
-            reaches for a blocked app, so the way through belongs here too. */}
-        {onOpenShield && (
-          <Card tone="accent" onPress={onOpenShield} style={styles.accessCardTight}>
-            <View style={styles.accessRow}>
-              <View style={styles.shrink}>
-                <Text style={type.bodyStrong}>Open a blocked app</Text>
-                <Text style={[type.sub, styles.accessSub]}>Earn your way in, or spend a Bailout.</Text>
-              </View>
-              <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
-            </View>
-          </Card>
-        )}
       </ScrollView>
 
       {pickPrompt}
@@ -1054,7 +1034,7 @@ const styles = StyleSheet.create({
   /* The shelf spans the full width, so it cancels the content gutter and
    * re-applies it inside the rail — a horizontal list that stops short of
    * the edge reads as clipped rather than as scrollable. */
-  roomShelf: { marginTop: space.lg, marginHorizontal: -space.gutter },
+  roomShelf: { marginTop: space.sm },
   slideTrack: {
     width: '100%',
     height: SLIDE_TRACK_H,

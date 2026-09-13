@@ -35,22 +35,44 @@ export type AmbienceMedia = {
 };
 
 export const AMBIENCE_MEDIA: Record<string, AmbienceMedia> = {
-  family: {
-    video: require('../../assets/ambience/family.mp4'),
-    still: require('../../assets/ambience/family-poster.jpg'),
+  breathe: {
+    video: require('../../assets/ambience/breathe.mp4'),
+    still: require('../../assets/ambience/breathe-poster.jpg'),
   },
   meditate: {
     video: require('../../assets/ambience/meditate.mp4'),
     still: require('../../assets/ambience/meditate-poster.jpg'),
   },
-  peace: {
-    video: require('../../assets/ambience/peace.mp4'),
-    still: require('../../assets/ambience/peace-poster.jpg'),
+  morning: {
+    video: require('../../assets/ambience/morning.mp4'),
+    still: require('../../assets/ambience/morning-poster.jpg'),
+  },
+  reading: {
+    video: require('../../assets/ambience/reading.mp4'),
+    still: require('../../assets/ambience/reading-poster.jpg'),
+  },
+  think: {
+    video: require('../../assets/ambience/think.mp4'),
+    still: require('../../assets/ambience/think-poster.jpg'),
   },
   winddown: {
     video: require('../../assets/ambience/winddown.mp4'),
     still: require('../../assets/ambience/winddown-poster.jpg'),
   },
-  // think: {},  ← still on its wash, waiting for footage
-  // study: {},
+  family: {
+    video: require('../../assets/ambience/family.mp4'),
+    still: require('../../assets/ambience/family-poster.jpg'),
+  },
+  study: {
+    video: require('../../assets/ambience/study.mp4'),
+    still: require('../../assets/ambience/study-poster.jpg'),
+  },
+  peace: {
+    video: require('../../assets/ambience/peace.mp4'),
+    still: require('../../assets/ambience/peace-poster.jpg'),
+  },
+  night: {
+    video: require('../../assets/ambience/night.mp4'),
+    still: require('../../assets/ambience/night-poster.jpg'),
+  },
 };

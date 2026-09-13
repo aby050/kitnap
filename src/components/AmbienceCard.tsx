@@ -1,14 +1,13 @@
 import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import { AMBIENCES, Ambience, mediaFor } from '../data/ambiences';
+import { Ambience, BANDS, inBand, mediaFor } from '../data/ambiences';
 import { motion, radius, space, type } from '../design/tokens';
 import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
 
-const CARD_W = 176;
-const CARD_H = 224;
+const CARD_H = 208;
 
 function label(minutes: number) {
   if (minutes < 60) return `${minutes}m`;
@@ -80,38 +79,44 @@ export function AmbienceCard({ item, onStart }: { item: Ambience; onStart: () =>
   );
 }
 
-/** The whole shelf. One row, one heading — not the two stacked carousels this
- *  category ships, which is half of what made the old Home read as a reskin. */
+/**
+ * The whole focus module: every room, banded by how long it runs.
+ *
+ * Banded by length rather than by mood, because the first thing a person
+ * knows is how much time they have — mood only narrows it afterwards. It is a
+ * grid rather than the two horizontal carousels this category ships, which
+ * hide most of what they offer one swipe off-screen.
+ */
 export function AmbienceShelf({ onStart }: { onStart: (a: Ambience) => void }) {
   return (
     <View>
-      <View style={styles.head}>
-        <Text style={type.overline}>Focus rooms</Text>
-        <Text style={[type.sub, styles.headSub]}>
-          Somewhere to look while your apps are locked.
-        </Text>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.rail}
-        decelerationRate="fast"
-        snapToInterval={CARD_W + space.md}
-        snapToAlignment="start"
-      >
-        {AMBIENCES.map((a) => (
-          <AmbienceCard key={a.key} item={a} onStart={() => onStart(a)} />
-        ))}
-      </ScrollView>
+      {BANDS.map((band) => {
+        const rooms = inBand(band.key);
+        if (rooms.length === 0) return null;
+        return (
+          <View key={band.key} style={styles.band}>
+            <Text style={type.overline}>{band.title}</Text>
+            <Text style={[type.sub, styles.bandSub]}>{band.sub}</Text>
+            <View style={styles.grid}>
+              {rooms.map((a) => (
+                <View key={a.key} style={styles.cell}>
+                  <AmbienceCard item={a} onStart={() => onStart(a)} />
+                </View>
+              ))}
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { paddingHorizontal: space.gutter, marginBottom: space.md },
-  headSub: { marginTop: space.xxs },
-  rail: { paddingLeft: space.gutter, paddingRight: space.md, gap: space.md },
-  wrap: { width: CARD_W, height: CARD_H },
+  band: { marginTop: space.xl },
+  bandSub: { marginTop: space.xxs },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: space.md, marginHorizontal: -5 },
+  cell: { width: '50%', paddingHorizontal: 5, paddingBottom: 10 },
+  wrap: { height: CARD_H },
   press: { flex: 1, borderRadius: radius.xl, overflow: 'hidden', justifyContent: 'flex-end' },
   markTile: {
     position: 'absolute',

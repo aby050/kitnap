@@ -22,6 +22,9 @@ export type Ambience = {
   /** Which block-screen voice this room speaks in while it runs. */
   theme: ThemeKey;
   mark: IconName;
+  /** Which band of the browse grid this sits in. Rooms are chosen by how much
+   *  time a person has before they are chosen by mood, so length leads. */
+  band: 'short' | 'medium' | 'long';
   /** Painted until (and behind) the loop: a three-stop wash sampled to sit in
    *  the same family as the room's footage, so a room with no media yet still
    *  reads as itself rather than as a missing asset. */
@@ -30,13 +33,14 @@ export type Ambience = {
 
 export const AMBIENCES: Ambience[] = [
   {
-    key: 'family',
-    title: 'Family time',
-    intent: 'They are in the room. Be in it too.',
-    minutes: 60,
-    theme: 'presence',
-    mark: 'home',
-    wash: ['#1E4A6E', '#3E86C0', '#8FC8E8'],
+    key: 'breathe',
+    title: 'Just breathe',
+    intent: 'Five minutes. Nothing asked of you.',
+    minutes: 5,
+    theme: 'quiet',
+    mark: 'breathe',
+    band: 'short',
+    wash: ['#16302E', '#2E5A56', '#7FA8A2'],
   },
   {
     key: 'meditate',
@@ -44,35 +48,39 @@ export const AMBIENCES: Ambience[] = [
     intent: 'Ten quiet minutes with nothing to check.',
     minutes: 10,
     theme: 'quiet',
-    mark: 'breathe',
+    mark: 'mist',
+    band: 'short',
     wash: ['#2C4A38', '#7A8A6E', '#E8B9AE'],
+  },
+  {
+    key: 'morning',
+    title: 'First light',
+    intent: 'Start the day before the phone does.',
+    minutes: 20,
+    theme: 'health',
+    mark: 'sunrise',
+    band: 'short',
+    wash: ['#3A2418', '#9A5A24', '#E8A55A'],
+  },
+  {
+    key: 'reading',
+    title: 'Reading',
+    intent: 'A chapter. Not a feed.',
+    minutes: 30,
+    theme: 'learning',
+    mark: 'book',
+    band: 'medium',
+    wash: ['#24331E', '#4E7038', '#A8C070'],
   },
   {
     key: 'think',
     title: 'Deep thinking',
     intent: 'One problem. No interruptions.',
-    minutes: 90,
+    minutes: 45,
     theme: 'deepWork',
     mark: 'tower',
-    wash: ['#0E1A22', '#1F4457', '#4F8CA8'],
-  },
-  {
-    key: 'peace',
-    title: 'Peace',
-    intent: 'A long reset. Nothing is waiting.',
-    minutes: 120,
-    theme: 'quiet',
-    mark: 'mist',
-    wash: ['#3E5E32', '#6E9456', '#AFCB8C'],
-  },
-  {
-    key: 'study',
-    title: 'Deep study',
-    intent: 'Chapter-sized. Phone in another room.',
-    minutes: 90,
-    theme: 'learning',
-    mark: 'book',
-    wash: ['#241B14', '#6B4A2A', '#C08F52'],
+    band: 'medium',
+    wash: ['#1A1A26', '#4A4458', '#C09A78'],
   },
   {
     key: 'winddown',
@@ -81,9 +89,59 @@ export const AMBIENCES: Ambience[] = [
     minutes: 45,
     theme: 'health',
     mark: 'moon',
+    band: 'medium',
     wash: ['#2A2140', '#5A4670', '#C79BB4'],
   },
+  {
+    key: 'family',
+    title: 'Family time',
+    intent: 'They are in the room. Be in it too.',
+    minutes: 60,
+    theme: 'presence',
+    mark: 'home',
+    band: 'medium',
+    wash: ['#1E4A6E', '#3E86C0', '#8FC8E8'],
+  },
+  {
+    key: 'study',
+    title: 'Deep study',
+    intent: 'Chapter-sized. Phone in another room.',
+    minutes: 90,
+    theme: 'learning',
+    mark: 'hourglass',
+    band: 'long',
+    wash: ['#1C2630', '#3A5468', '#8AA6B8'],
+  },
+  {
+    key: 'peace',
+    title: 'Peace',
+    intent: 'A long reset. Nothing is waiting.',
+    minutes: 120,
+    theme: 'quiet',
+    mark: 'leaf',
+    band: 'long',
+    wash: ['#3E5E32', '#6E9456', '#AFCB8C'],
+  },
+  {
+    key: 'night',
+    title: 'Night',
+    intent: 'Nothing good is happening after midnight.',
+    minutes: 480,
+    theme: 'health',
+    mark: 'sun',
+    band: 'long',
+    wash: ['#0E1626', '#1E3050', '#4A6A96'],
+  },
 ];
+
+/** Section headings for the browse grid, in order. */
+export const BANDS: { key: Ambience['band']; title: string; sub: string }[] = [
+  { key: 'short', title: 'A few minutes', sub: 'When you only have a gap.' },
+  { key: 'medium', title: 'An hour or so', sub: 'Long enough to get somewhere.' },
+  { key: 'long', title: 'A long stretch', sub: 'For a whole evening, or a night.' },
+];
+
+export const inBand = (band: Ambience['band']) => AMBIENCES.filter((a) => a.band === band);
 
 export const getAmbience = (key: string) =>
   AMBIENCES.find((a) => a.key === key) ?? AMBIENCES[0];
