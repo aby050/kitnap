@@ -22,7 +22,7 @@ import {
  * release build. Unlike the old TEST_TOP_UP button this has no UI: a switch
  * a user could find is a switch that eventually ships.
  */
-const DEV_FORCE_PRO = true;
+const DEV_FORCE_PRO = false;
 
 export type PurchasesState = {
   ready: boolean;

@@ -39,7 +39,16 @@ export default function KnockoutLabel({
   const screenH = Dimensions.get('window').height;
 
   return (
-    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+    <Svg
+      width={width}
+      height={height}
+      style={StyleSheet.absoluteFill}
+      /* Without this the label eats every tap on the button underneath it.
+         react-native-svg views take touches by default, and this one covers
+         the whole pill — so "Start focus lock" looked pressable and did
+         nothing at all. It is paint, never a target. */
+      pointerEvents="none"
+    >
       <Defs>
         <LinearGradient
           id="knockout"
