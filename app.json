@@ -67,7 +67,6 @@
         }
       ],
       "expo-notifications",
-      "./plugins/withNoBackgroundAudio.js",
       "./plugins/withUsageStatsPermission.js",
       "./plugins/withAndroidReleaseSigning.js",
       [
@@ -88,7 +87,15 @@
           "appGroup": "group.com.abhay.byre"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": false,
+          "supportsPictureInPicture": false
+        }
+      ],
+      "./plugins/withNoBackgroundAudio.js"
     ],
     "extra": {
       "eas": {
