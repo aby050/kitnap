@@ -40,6 +40,21 @@ export default function GuardianScreen({
   const [contact, setContact] = useState(initial?.contact ?? '');
   const [hasCode, setHasCode] = useState(!!initial?.codeHash);
   const [pendingCode, setPendingCode] = useState<string | null>(null);
+  /**
+   * How the guardian gets their code.
+   *
+   * `theirs` is the one that actually works. The app generating a code and
+   * showing it to you is self-defeating — you can simply remember it, and
+   * then the guardian guards nothing. Handing them the phone for ten seconds
+   * and letting them choose a code you never see is the only version of this
+   * that holds without a server, so it is the default.
+   *
+   * `sent` stays for the guardian who is not in the room. It is weaker and
+   * the screen says so rather than implying otherwise.
+   */
+  const [mode, setMode] = useState<'theirs' | 'sent'>('theirs');
+  const [typed, setTyped] = useState('');
+  const [typedAgain, setTypedAgain] = useState('');
   const [busy, setBusy] = useState(false);
 
   const canGenerate = name.trim().length > 0;
@@ -50,6 +65,23 @@ export default function GuardianScreen({
     const code = await generateGuardianCode();
     setBusy(false);
     setPendingCode(code);
+  };
+
+  const typedOk = /^\d{4,8}$/.test(typed) && typed === typedAgain;
+
+  /** Saves a code the guardian chose on this phone. The plaintext is hashed
+   *  and dropped; it is never rendered, so the owner has nothing to memorise
+   *  unless they watched over a shoulder. */
+  const saveTheirCode = async () => {
+    if (!typedOk || busy) return;
+    setBusy(true);
+    const salt = await newSalt();
+    const codeHash = await hashGuardianCode(typed, salt);
+    setBusy(false);
+    setTyped('');
+    setTypedAgain('');
+    setHasCode(true);
+    onSave({ enabled: true, name: name.trim(), contact: contact.trim(), codeHash, codeSalt: salt });
   };
 
   const shareAndSave = async () => {
@@ -136,13 +168,83 @@ export default function GuardianScreen({
 
             <View style={{ height: 20 }} />
 
-            {pendingCode ? (
+            {/* Which way the code gets set. Ordered deliberately: the strong
+                one first, and named for what actually happens rather than
+                for a feature. */}
+            <View style={styles.modeRow}>
+              {(
+                [
+                  { key: 'theirs', label: 'They’re with me', sub: 'They type it. You never see it.' },
+                  { key: 'sent', label: 'Send it to them', sub: 'You’ll see the code too.' },
+                ] as const
+              ).map((m) => (
+                <Pressable
+                  key={m.key}
+                  onPress={() => setMode(m.key)}
+                  style={[styles.modeTile, mode === m.key && styles.modeTileOn]}
+                >
+                  <Text style={[styles.modeLabel, mode === m.key && styles.modeLabelOn]}>
+                    {m.label}
+                  </Text>
+                  <Text style={[styles.modeSub, mode === m.key && styles.modeSubOn]}>{m.sub}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={{ height: 16 }} />
+
+            {mode === 'theirs' ? (
+              <Animated.View entering={FadeInDown.duration(300)}>
+                <Text style={styles.handoverNote}>
+                  Hand {name.trim() || 'them'} your phone. They pick 4–8 digits and type it twice.
+                  It is hidden as they type and never shown again — so you cannot memorise it, which
+                  is the whole point.
+                </Text>
+                <View style={{ height: 12 }} />
+                <TextInput
+                  value={typed}
+                  onChangeText={setTyped}
+                  placeholder="Their code"
+                  placeholderTextColor={palette.textTertiary}
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={8}
+                />
+                <View style={{ height: 10 }} />
+                <TextInput
+                  value={typedAgain}
+                  onChangeText={setTypedAgain}
+                  placeholder="Type it again"
+                  placeholderTextColor={palette.textTertiary}
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={8}
+                />
+                {typed.length > 0 && !typedOk && (
+                  <Text style={styles.mismatch}>
+                    {typed.length < 4
+                      ? 'At least four digits.'
+                      : typed !== typedAgain
+                        ? 'Those do not match.'
+                        : 'Digits only.'}
+                  </Text>
+                )}
+                <View style={{ height: 14 }} />
+                <GradientButton
+                  label={busy ? 'One moment…' : 'Save their code'}
+                  onPress={typedOk && !busy ? saveTheirCode : () => {}}
+                />
+              </Animated.View>
+            ) : pendingCode ? (
               <Animated.View entering={FadeInDown.duration(300)} style={styles.codeCard}>
                 <Text style={styles.codeLabel}>Their code</Text>
                 <Text style={styles.codeValue}>{pendingCode}</Text>
                 <Text style={styles.codeHint}>
-                  Send this to {name.trim() || 'them'} now. Once you save, Byre only keeps a scrambled copy
-                  — if you lose this code you'll need to set a new guardian.
+                  Send this to {name.trim() || 'them'} now. You can see it too, so this is the weaker
+                  of the two ways — if you think you will be tempted to remember it, hand them the
+                  phone instead.
                 </Text>
                 <View style={{ height: 14 }} />
                 <GradientButton label={`Share with ${name.trim() || 'them'}`} onPress={shareAndSave} />
@@ -188,6 +290,23 @@ export default function GuardianScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
+  modeRow: { flexDirection: 'row', gap: 10 },
+  modeTile: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.glass,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  modeTileOn: { borderColor: palette.accent, backgroundColor: palette.accentSoft },
+  modeLabel: { color: palette.text, fontSize: 14, fontWeight: '700' },
+  modeLabelOn: { color: palette.text },
+  modeSub: { color: palette.textTertiary, fontSize: 11.5, lineHeight: 15, marginTop: 3 },
+  modeSubOn: { color: palette.textSecondary },
+  handoverNote: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19.5 },
+  mismatch: { color: palette.danger, fontSize: 12.5, marginTop: 8, fontWeight: '600' },
   previewCard: {
     backgroundColor: 'rgba(255,255,255,0.045)',
     borderRadius: 20,
