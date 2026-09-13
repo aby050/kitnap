@@ -25,24 +25,30 @@ const BLUE_DEEP = '#081B33';
 const BLUE = palette.accent; // brand mint — name kept to avoid churn
 
 /**
- * Beats, in ms. Longer than a normal splash on purpose: this screen is shown
- * once, on first install only (`App.tsx` sends returning users straight to the
- * app), so it is the one place the brand gets to introduce itself rather than
- * get out of the way. Tapping skips the whole thing.
+ * Beats, in ms.
+ *
+ * Longer than a normal splash on purpose: this screen is shown once, on first
+ * install only (`App.tsx` sends returning users straight to the app), so it is
+ * the one place the brand gets to introduce itself rather than get out of the
+ * way. Tapping skips the whole thing.
+ *
+ * The earlier cut ran 2.9s and ended by simply unmounting on the frame after
+ * the last ring — no exit, just a hard switch to the next screen, which is
+ * what made an otherwise careful sequence feel cheap. There is now a held
+ * beat after ignition and a real hand-off: the mark lifts away and the light
+ * swells through it.
  */
-const BLOOM_IN = { at: 350, dur: 800 };
-const MARK_IN = { at: 850, dur: 900 };
+const BLOOM_IN = { at: 260, dur: 1150 };
+const MARK_IN = { at: 720, dur: 1200 };
 /** The mark has landed and the light catches it — the one punctuated moment. */
-const IGNITE = { at: 1620, dur: 620 };
-const WORD_IN = { at: 2040, dur: 520 };
-/** Just after the last ring dissipates (1780 + 1100), so nothing is cut off. */
-const HAND_OFF = 2900;
-
-/** Letters animate individually so the wordmark assembles rather than fades.
- *  Per-letter transforms only — animating `letterSpacing` would relayout the
- *  text on every frame. */
-const WORDMARK = ['B', 'Y', 'R', 'E'];
-const LETTER_STAGGER = 70;
+const IGNITE = { at: 2150, dur: 900 };
+/** Nothing new happens here. The mark simply sits, lit, and breathes — the
+ *  pause is what makes the ignition read as an arrival rather than a step in
+ *  a queue. */
+const HOLD_UNTIL = 4000;
+/** Hand-off: the mark lifts and dissolves as the light comes up through it. */
+const EXIT = { at: HOLD_UNTIL, dur: 760 };
+const HAND_OFF = EXIT.at + EXIT.dur;
 
 /**
  * Brand splash.
@@ -59,7 +65,9 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
   const flash = useSharedValue(0);
   const ring1 = useSharedValue(0);
   const ring2 = useSharedValue(0);
-  const word = useSharedValue(0);
+  const ring3 = useSharedValue(0);
+  /** Drives the hand-off: the mark leaving and the light coming up. */
+  const exit = useSharedValue(0);
   const done = useSharedValue(0);
   /** Ambient breath under everything, so the screen is never fully still. */
   const breath = useSharedValue(0);
@@ -104,18 +112,26 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
         withTiming(0, { duration: 700, easing: curves.standard }),
       ),
     );
-    ring1.value = withDelay(IGNITE.at, withTiming(1, { duration: 1000, easing: curves.standard }));
+    // Three rings, not two, and spaced unevenly: an even stagger reads as a
+    // loop, an uneven one as a single impact still spreading.
+    ring1.value = withDelay(IGNITE.at, withTiming(1, { duration: 1150, easing: curves.standard }));
     ring2.value = withDelay(
-      IGNITE.at + 160,
-      withTiming(1, { duration: 1100, easing: curves.standard }),
+      IGNITE.at + 150,
+      withTiming(1, { duration: 1300, easing: curves.standard }),
+    );
+    ring3.value = withDelay(
+      IGNITE.at + 420,
+      withTiming(1, { duration: 1500, easing: curves.standard }),
     );
 
-    word.value = withDelay(
-      WORD_IN.at,
-      withTiming(1, { duration: WORD_IN.dur, easing: curves.standard }),
+    exit.value = withDelay(
+      EXIT.at,
+      withTiming(1, { duration: EXIT.dur, easing: curves.emphasized }),
     );
 
-    breath.value = withRepeat(withTiming(1, { duration: 3200, easing: curves.cycle }), -1, true);
+    // Slower than before. At 3.2s the breath was fast enough to read as a
+    // pulse; the held beat needs something closer to actual breathing.
+    breath.value = withRepeat(withTiming(1, { duration: 4600, easing: curves.cycle }), -1, true);
 
     done.value = withDelay(
       HAND_OFF,
@@ -133,8 +149,13 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
   }, []);
 
   const bloomStyle = useAnimatedStyle(() => ({
-    opacity: bloom.value * (0.5 + breath.value * 0.08) + flare.value * 0.3,
-    transform: [{ scale: 0.55 + bloom.value * 0.45 + flare.value * 0.12 }],
+    // On the way out the halo swells and brightens rather than fading with
+    // everything else, so the screen hands over through light instead of
+    // going dark and cutting.
+    opacity: bloom.value * (0.5 + breath.value * 0.08) + flare.value * 0.3 + exit.value * 0.42,
+    transform: [
+      { scale: 0.55 + bloom.value * 0.45 + flare.value * 0.12 + exit.value * 0.6 },
+    ],
   }));
 
   // Scales *down* into place rather than up — it reads as settling rather than
@@ -142,15 +163,16 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
   // on top of that makes it feel lifted into position rather than dropped, and
   // the ignition adds one brief kick so the mark reacts to its own flash.
   const markStyle = useAnimatedStyle(() => ({
-    opacity: mark.value,
+    opacity: mark.value * (1 - exit.value),
     transform: [
-      { translateY: (1 - mark.value) * 14 },
+      { translateY: (1 - mark.value) * 14 - exit.value * 26 },
       {
         scale:
           1.16 -
           mark.value * 0.16 +
           breath.value * 0.008 * mark.value +
-          flash.value * 0.035,
+          flash.value * 0.035 +
+          exit.value * 0.14,
       },
     ],
   }));
@@ -173,6 +195,10 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
   const ring2Style = useAnimatedStyle(() => ({
     opacity: (1 - ring2.value) * 0.38 * Math.min(1, ring2.value * 6),
     transform: [{ scale: 0.7 + ring2.value * 2.2 }],
+  }));
+  const ring3Style = useAnimatedStyle(() => ({
+    opacity: (1 - ring3.value) * 0.24 * Math.min(1, ring3.value * 6),
+    transform: [{ scale: 0.7 + ring3.value * 3.1 }],
   }));
 
   return (
@@ -204,6 +230,7 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
         </Animated.View>
         <Animated.View style={[styles.ring, ring1Style]} />
         <Animated.View style={[styles.ring, ring2Style]} />
+        <Animated.View style={[styles.ring, ring3Style]} />
       </View>
 
       <View style={styles.center}>
@@ -215,12 +242,6 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
             accessibilityLabel="Byre"
           />
         </Animated.View>
-
-        <View style={styles.wordmark}>
-          {WORDMARK.map((letter, i) => (
-            <Letter key={letter} char={letter} progress={word} index={i} />
-          ))}
-        </View>
       </View>
     </Pressable>
   );
@@ -265,30 +286,11 @@ function Core({ size }: { size: number }) {
   );
 }
 
-/** One wordmark letter. Rises and fades on its own beat; the group reads as
- *  assembling left to right. */
-function Letter({
-  char,
-  progress,
-  index,
-}: {
-  char: string;
-  progress: { value: number };
-  index: number;
-}) {
-  const style = useAnimatedStyle(() => {
-    // Re-slice the shared 0–1 into a window per letter, so one clock drives
-    // all four rather than four delayed timers.
-    const offset = (index * LETTER_STAGGER) / WORD_IN.dur;
-    const t = Math.max(0, Math.min(1, (progress.value - offset) / (1 - offset)));
-    return { opacity: t, transform: [{ translateY: (1 - t) * 10 }] };
-  });
-  return <Animated.Text style={[styles.letter, style]}>{char}</Animated.Text>;
-}
-
-const LOGO = 104;
-const RING = 150;
-const CORE = 260;
+/* Bigger than it was. 104 read as a favicon dropped into the middle of a
+ * black screen; this is the one moment the mark is the whole subject. */
+const LOGO = 132;
+const RING = 176;
+const CORE = 300;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: NEAR_BLACK, alignItems: 'center', justifyContent: 'center' },
@@ -314,14 +316,4 @@ const styles = StyleSheet.create({
     borderColor: BLUE,
   },
   logo: { width: LOGO, height: LOGO },
-  wordmark: { flexDirection: 'row', marginTop: 26 },
-  letter: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-    // Positive tracking is reserved for eyebrow labels elsewhere in the app;
-    // a four-letter wordmark is the other place it belongs.
-    letterSpacing: 7,
-    opacity: 0.92,
-  },
 });
