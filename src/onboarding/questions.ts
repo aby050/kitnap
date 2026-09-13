@@ -51,117 +51,75 @@ export const MOVEMENTS = [
  *  that gets the app deleted. */
 export const BLOCK_PLACES = ['At a desk', 'In bed', 'On the sofa', 'Out and about'] as const;
 
+/** When the phone actually wins. Each maps to a real clock window, so the
+ *  answer becomes a schedule rather than a stored string. */
+export const SLIP_WINDOWS = [
+  { label: 'First thing in the morning', start: '06:30', end: '09:00' },
+  { label: 'Through the working day', start: '09:00', end: '17:30' },
+  { label: 'The evening', start: '18:00', end: '22:00' },
+  { label: 'Late at night, in bed', start: '22:00', end: '01:00' },
+] as const;
+
 export const RETURNING_NEW = 'I’m new here';
 export const RETURNING_EXISTING = 'I’ve used Byre before';
+
+/**
+ * Whether to ask new-or-returning at all.
+ *
+ * Off while there is no sign-up to send a returning user to: the question
+ * offers a door, and a door that opens onto a provider button nobody can
+ * complete is worse than no question. The question, both answers and the
+ * branch in OnboardingFlow are all left intact — flip this back to `true`
+ * the day accounts are live and the whole path works again.
+ */
+export const ASK_RETURNING = false;
 
 /** All onboarding questions. Permissions are NOT asked upfront — they are
  *  interleaved, one small group after each chunk below, so every ask arrives
  *  right after the question that explains why it is needed. */
+/**
+ * All onboarding questions.
+ *
+ * Seven were cut: pickupReason, wakeHabit, triedBefore, whatStopped,
+ * obstacleFear, lifeChange and age. Every one of them existed to nudge a
+ * guessed "you probably use your phone N hours a day" — a guess that Screen
+ * Time permission, asked two screens later, replaces outright. They were a
+ * quiz that fed a number nobody ever saw, and a quiz of that shape is most of
+ * what made this funnel read as interchangeable under 4.3(a).
+ *
+ * What is left all configures something. The movement trio calibrates the
+ * unlock challenge, `matters` picks the block-screen voice, `interests`
+ * writes the lines shown back to you, `slipWindow` seeds a real schedule,
+ * `controlScale` sets the starting intensity. If an answer does not change
+ * the app, it should not be a question.
+ *
+ * Permissions are interleaved, one group after every three questions, so each
+ * ask arrives beside the answer that explains why it is needed.
+ */
 export const QUESTIONS: Question[] = [
   { id: 'intro', kind: 'static', prompt: "I'll help protect your focus." },
-  /* Asked before anything else: a returning user should not be walked through
-   * a setup they have already done. Answering "before" jumps straight to sign
-   * in (see OnboardingFlow.handleAnswer) rather than continuing the funnel.
-   * The exact string is matched there — keep them in step. */
-  {
-    id: 'returning',
-    kind: 'choice',
-    prompt: 'Have you used **Byre** before?',
-    options: [RETURNING_NEW, RETURNING_EXISTING],
-  },
-  { id: 'name', kind: 'text', prompt: "First, what's your **name**?", placeholder: 'John' },
-  /* ── The movement questions ────────────────────────────────────────────
-   * Asked in the first thirty seconds, immediately after the name, because
-   * they are the only questions in this flow that no other app in the
-   * category could ask. Everything below them — what matters to you, what
-   * stopped you last time, what you'd rather be doing — is asked by every
-   * screen-time app there is, and a setup that opens with those reads as
-   * interchangeable no matter how good the rest of the app is.
-   *
-   * They also do real work: the chosen movement and the honest rep baseline
-   * seed the Strict-mode target, so the first challenge is calibrated to this
-   * person instead of a fixed number. */
-  {
-    id: 'healthLimit',
-    kind: 'text',
-    prompt: 'Any **illness, injury, or physical limitation** we should know about? Some unlock challenges involve light movement.',
-    placeholder: 'e.g. bad knee — or leave blank',
-    optional: true,
-  },
-  {
-    id: 'movement',
-    kind: 'choice',
-    prompt: 'Pick your **key**. This is what gets you back into a blocked app.',
-    options: [...MOVEMENTS],
-  },
-  {
-    id: 'repBaseline',
-    kind: 'slider',
-    prompt: 'Honestly — how many can you do **right now**, in one go?',
-    min: 1,
-    max: 30,
-    default: 8,
-    maxPlus: true,
-  },
-  {
-    id: 'whereBlocked',
-    kind: 'choice',
-    prompt: 'Where are you usually **sitting** when you reach for the phone?',
-    options: [...BLOCK_PLACES],
-  },
+  ...(ASK_RETURNING
+    ? ([
+        {
+          id: 'returning',
+          kind: 'choice',
+          prompt: 'Have you used **Byre** before?',
+          options: [RETURNING_NEW, RETURNING_EXISTING],
+        },
+      ] as Question[])
+    : []),
+
+  /* ── 1. What this is for ───────────────────────────────────────────── */
   {
     id: 'matters',
     kind: 'choice',
-    prompt: 'What **matters most** to you?',
+    prompt: 'What are you **protecting**?',
     options: ['Focus better', 'Sleep better', 'Be more present', 'Improve mental health', 'Other'],
-  },
-  {
-    id: 'pickupReason',
-    kind: 'choice',
-    prompt: 'Be honest — when you pick up your phone without thinking, it\'s usually because you\'re...',
-    options: ['Bored, not sure why', 'Out of pure habit', 'Avoiding something', 'Craving connection'],
-  },
-  {
-    id: 'wakeHabit',
-    kind: 'choice',
-    prompt: "What's the **first thing** you do when you **wake up**?",
-    options: ['Check my phone', 'Check the time', 'Talk to someone', 'Just lie there a bit'],
-  },
-  { id: 'age', kind: 'slider', prompt: 'How **old** are you?', min: 8, max: 40, default: 25, maxPlus: true },
-  // Self-reported "average screen time" and "which devices" removed —
-  // both are answered for real once usage-access permission is granted
-  // (real per-day average, real app names) instead of guessed here.
-  {
-    id: 'controlScale',
-    kind: 'slider',
-    prompt: 'Right now, how much **control** do you feel you have over your phone?',
-    min: 1,
-    max: 10,
-    default: 5,
-    labels: CONTROL_LEVEL_NAMES,
-  },
-  {
-    id: 'triedBefore',
-    kind: 'choice',
-    prompt: 'Have you **tried to cut back** before?',
-    options: ['Yes, many times', 'Once or twice', 'Never seriously tried', "I've just decided today"],
-  },
-  {
-    id: 'whatStopped',
-    kind: 'choice',
-    prompt: 'What usually **gets in the way**?',
-    options: ['I forget my reasons why', 'Willpower runs out by evening', 'Other apps make it too easy', "I'm doing this alone"],
-  },
-  {
-    id: 'obstacleFear',
-    kind: 'choice',
-    prompt: "What **worries you most** about trying again?",
-    options: ["I'll fail again", "It'll feel restrictive", "I'll miss something important", "Nothing — I'm ready"],
   },
   {
     id: 'interests',
     kind: 'multi',
-    prompt: 'What would you **rather be spending** that time on? Pick as many as you like.',
+    prompt: 'What would you **rather be doing** with that time? Pick as many as you like.',
     options: [
       'Drawing / painting',
       'Reading',
@@ -178,12 +136,54 @@ export const QUESTIONS: Question[] = [
     optional: true,
   },
   {
-    id: 'lifeChange',
+    id: 'slipWindow',
     kind: 'choice',
-    prompt: "Optional — has anything major changed in your life recently, like a breakup or a big move? This helps us go easier on you if so.",
-    options: ['Yes, recently', 'No', "I'd rather not say"],
+    prompt: 'When does the phone usually **win**?',
+    options: SLIP_WINDOWS.map((w) => w.label),
+  },
+
+  /* ── 2. Who you are, and how you get back in ───────────────────────── */
+  { id: 'name', kind: 'text', prompt: "What should we **call you**?", placeholder: 'John' },
+  {
+    id: 'healthLimit',
+    kind: 'text',
+    prompt: 'Any **illness, injury, or physical limitation** we should know about? Some unlock challenges involve light movement.',
+    placeholder: 'e.g. bad knee — or leave blank',
     optional: true,
   },
+  {
+    id: 'movement',
+    kind: 'choice',
+    prompt: 'Pick your **key**. This is what gets you back into a blocked app.',
+    options: [...MOVEMENTS],
+  },
+
+  /* ── 3. Calibration ────────────────────────────────────────────────── */
+  {
+    id: 'repBaseline',
+    kind: 'slider',
+    prompt: 'Honestly — how many can you do **right now**, in one go?',
+    min: 1,
+    max: 30,
+    default: 8,
+    maxPlus: true,
+  },
+  {
+    id: 'whereBlocked',
+    kind: 'choice',
+    prompt: 'Where are you usually **sitting** when you reach for the phone?',
+    options: [...BLOCK_PLACES],
+  },
+  {
+    id: 'controlScale',
+    kind: 'slider',
+    prompt: 'Right now, how much **control** do you feel you have over your phone?',
+    min: 1,
+    max: 10,
+    default: 5,
+    labels: CONTROL_LEVEL_NAMES,
+  },
+
   { id: 'review', kind: 'review', prompt: 'Reviewing your responses…' },
 ];
 
@@ -226,22 +226,23 @@ const at = (id: string) => QUESTIONS.findIndex((q) => q.id === id);
 
 export const QUESTION_CHUNKS: { questions: Question[]; permissions: string[] }[] = [
   {
-    // Who you are, and how you will earn your way back in.
-    questions: QUESTIONS.slice(0, at('whereBlocked') + 1),
-    // Asked here, immediately after they picked a movement and told us their
-    // rep count — the one moment in the whole flow where "we need the camera"
-    // needs no explaining.
-    permissions: ['camera'],
-  },
-  {
-    // What you are up against.
-    questions: QUESTIONS.slice(at('whereBlocked') + 1, at('controlScale') + 1),
-    // Everything the next screens claim about your usage depends on this, so
-    // it is the ask that pays for itself immediately.
+    // Why you are here, and when you need it. `intro` rides along at the
+    // front; it is a statement, not a question.
+    questions: QUESTIONS.slice(0, at('slipWindow') + 1),
+    // Everything the next screens say about your usage rests on this, and the
+    // window they just picked is the thing it measures.
     permissions: ['usage', 'screenTime'],
   },
   {
-    questions: QUESTIONS.slice(at('controlScale') + 1),
+    // Who you are, and the key you will use.
+    questions: QUESTIONS.slice(at('slipWindow') + 1, at('movement') + 1),
+    // Immediately after they chose a movement — the one moment in the flow
+    // where "we need the camera" needs no explaining.
+    permissions: ['camera'],
+  },
+  {
+    // How hard it should be.
+    questions: QUESTIONS.slice(at('movement') + 1),
     // The shield itself and its nudges, once blocking has been described.
     permissions: ['overlay', 'accessibility', 'notification', 'battery'],
   },

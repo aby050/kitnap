@@ -1,5 +1,7 @@
 import { IntensityKey } from './themes';
 import { DEFAULT_BLOCKED_APPS } from './blockedApps';
+import { Schedule } from './store';
+import { SLIP_WINDOWS } from '../onboarding/questions';
 
 type Answer = { value: string; label: string };
 type Answers = Record<string, Answer>;
@@ -228,4 +230,25 @@ export function recommendSetup(
     fromUsagePkgs.length > 0 ? fromUsagePkgs.slice(0, 6) : DEFAULT_BLOCKED_APPS.slice(0, 4).map((a) => a.packageName);
 
   return { intensityKey, reasons: reasons.slice(0, 4), suggestedPackages };
+}
+
+/**
+ * The schedule the `slipWindow` answer buys.
+ *
+ * A question that only gets stored is a question not worth asking, so this
+ * one turns into a real lockdown window the user can see and edit in
+ * Settings the moment setup ends. Every day, because the answer is about a
+ * habit rather than a weekday.
+ */
+export function scheduleFromSlipWindow(answers: Answers): Schedule | null {
+  const picked = answers.slipWindow?.value ?? answers.slipWindow?.label;
+  const w = SLIP_WINDOWS.find((x) => x.label === picked);
+  if (!w) return null;
+  return {
+    id: 'slip-window',
+    name: w.label,
+    start: w.start,
+    end: w.end,
+    days: 'Every day',
+  };
 }
