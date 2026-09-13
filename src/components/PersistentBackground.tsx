@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Image, StyleSheet, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -10,6 +11,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { gradients } from '../design/tokens';
+import { mediaFor } from '../data/ambiences';
+import { getVideoLayer } from './videoLayer';
+
+/** One of the two loops that ship inside the binary, never one of the eight
+ *  that stream. Onboarding is the one place that must work on a plane, on a
+ *  first launch, before anything has been cached. Dusk reads best behind the
+ *  brand's blue rise; the meadow fights it. */
+const BACKDROP_ROOM = 'winddown';
 
 /**
  * Rendered once at the app root and never unmounted while onboarding runs,
@@ -63,14 +72,48 @@ export default function PersistentBackground() {
     ],
   }));
 
+  const VideoLayer = getVideoLayer();
+  const backdrop = mediaFor(BACKDROP_ROOM);
+  const [firstFrame, setFirstFrame] = useState(false);
+
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <LinearGradient colors={['#000000', '#000000']} style={StyleSheet.absoluteFill} />
 
+      {/* The loop, blurred and held well back.
+       *
+       *  The poster sits under it so the first frame is never black, and
+       *  everything above this is unchanged: the two drifting glows and the
+       *  brand rise still own the screen, this only gives them something
+       *  moving to sit on. If expo-video is missing from the binary, or the
+       *  room has no footage, the whole stack is skipped and onboarding looks
+       *  exactly as it did before. */}
+      {backdrop.still ? (
+        <Image
+          source={backdrop.still}
+          style={[StyleSheet.absoluteFill, styles.backdrop]}
+          resizeMode="cover"
+        />
+      ) : null}
+      {VideoLayer && backdrop.video ? (
+        <View style={[StyleSheet.absoluteFill, styles.backdrop, !firstFrame && styles.hidden]}>
+          <VideoLayer source={backdrop.video} onFirstFrame={() => setFirstFrame(true)} />
+        </View>
+      ) : null}
+      {/* Blur first, then dark: blurring a already-darkened image just makes
+       *  grey. `intensity` is capped low because a heavy blur on a moving
+       *  clip costs a lot of GPU for pixels nobody is looking at. */}
+      {(backdrop.video || backdrop.still) && (
+        <>
+          <BlurView intensity={38} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={styles.backdropScrim} />
+        </>
+      )}
+
       {/* Primary top bloom — breathes up and down */}
       <Animated.View style={[styles.topGlow, glowStyle]}>
         <LinearGradient
-          colors={['rgba(20,60,44,0.95)', 'rgba(10,30,22,0.3)', 'rgba(0,0,0,0)']}
+          colors={['rgba(20,60,44,0.55)', 'rgba(10,30,22,0.18)', 'rgba(0,0,0,0)']}
           locations={[0, 0.5, 1]}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
@@ -113,6 +156,18 @@ export default function PersistentBackground() {
 }
 
 const styles = StyleSheet.create({
+  /* Far enough back that type stays the brightest thing on screen — the
+   * backdrop is texture, not an image the user is meant to look at. */
+  backdrop: { opacity: 0.85 },
+  hidden: { opacity: 0 },
+  backdropScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
   topGlow: {
     position: 'absolute',
     top: -160,

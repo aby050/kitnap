@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeInDown,
   FadeIn,
@@ -27,11 +27,19 @@ import {
 import AppGlyph from '../ui/AppGlyph';
 import BailoutSheet from '../components/BailoutSheet';
 import Icon from '../ui/Icon';
+import { LinearGradient } from 'expo-linear-gradient';
+import { AMBIENCES, mediaFor } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
 import { dataRamp, motion, palette, radius, space, type } from '../design/tokens';
 import KnockoutLabel from '../components/KnockoutLabel';
 
 /** A commitment runs from half an hour up to a week. */
+/** The three whose posters read best at thumbnail size — a strip of muddy
+ *  crops would undersell the thing it is advertising. */
+const ROOM_PREVIEW = ['meditate', 'family', 'night']
+  .map((k) => AMBIENCES.find((a) => a.key === k))
+  .filter((a): a is (typeof AMBIENCES)[number] => !!a);
+
 const MIN_BLOCK_MINUTES = 30;
 const MAX_BLOCK_MINUTES = 7 * 24 * 60;
 
@@ -88,6 +96,7 @@ export default function HomeScreen({
   onOpenProfile,
   onOpenApps,
   onTriggerShield,
+  onOpenRooms,
   sessionRunning = false,
   onStartBlock,
   onStartRest,
@@ -113,6 +122,8 @@ export default function HomeScreen({
   onOpenProfile: () => void;
   onOpenApps: () => void;
   onTriggerShield: () => void;
+  /** Jumps to the Timer tab, where the rooms live. */
+  onOpenRooms?: () => void;
   /** A committed block is counting down — the blocked list freezes. */
   sessionRunning?: boolean;
   /** Starts the real timer at the chosen length and hands the screen over to
@@ -378,6 +389,44 @@ export default function HomeScreen({
           />
         </Card>
 
+        {/* Focus rooms.
+            The rooms themselves live on the Timer tab, which left Home with
+            no route to the one feature that is not a blocker. This is that
+            route: it says what a room is for, shows three of them so the
+            phrase means something, and hands over rather than duplicating
+            the shelf. */}
+        {onOpenRooms && (
+          <Card onPress={onOpenRooms} style={styles.section}>
+            <View style={styles.roomsHead}>
+              <View style={styles.roomsEyebrowRow}>
+                <View style={styles.roomsDot} />
+                <Text style={styles.roomsEyebrow}>FOCUS ROOMS</Text>
+              </View>
+              <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
+            </View>
+            <Text style={styles.roomsLine}>Somewhere to be while your apps are locked.</Text>
+            <View style={styles.roomsStrip}>
+              {ROOM_PREVIEW.map((a) => {
+                const still = mediaFor(a.key).still;
+                return (
+                  <View key={a.key} style={styles.roomsThumb}>
+                    <LinearGradient
+                      colors={a.wash}
+                      start={{ x: 0.1, y: 0 }}
+                      end={{ x: 0.9, y: 1 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    {still ? (
+                      <Image source={still} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    ) : null}
+                  </View>
+                );
+              })}
+              <Text style={styles.roomsMore}>+{AMBIENCES.length - ROOM_PREVIEW.length} more</Text>
+            </View>
+          </Card>
+        )}
+
         {/* Your week — replaces the "For you" / "Digital detox" preset
             shelves, which offered timers rather than telling you anything. */}
         {progress && (
@@ -597,6 +646,25 @@ const styles = StyleSheet.create({
   },
 
   section: { marginTop: space.xl },
+  roomsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  roomsEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  roomsDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: palette.accent },
+  roomsEyebrow: {
+    color: palette.textTertiary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+  },
+  roomsLine: { color: palette.text, fontSize: 16, fontWeight: '600', marginTop: 8, lineHeight: 22 },
+  roomsStrip: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
+  roomsThumb: {
+    width: 62,
+    height: 74,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: palette.surfaceHigh,
+  },
+  roomsMore: { color: palette.textTertiary, fontSize: 12.5, fontWeight: '600', marginLeft: 2 },
   stCardHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   appList: { marginTop: space.lg, gap: space.base },
   appRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },

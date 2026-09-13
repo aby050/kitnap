@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ambience, mediaFor } from '../data/ambiences';
-import { MediaSource } from '../data/ambienceMedia';
+import { getVideoLayer } from '../components/videoLayer';
 import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
 import { Editorial } from '../design/primitives';
@@ -26,32 +26,6 @@ import { pickShieldMessage, shieldMessageSeed } from '../data/shieldMessages';
 
 const KEEP_AWAKE_TAG = 'byre-ambience';
 
-/**
- * The video layer, if this binary has one.
- *
- * `undefined` = not looked up yet, `null` = looked up and unavailable. The
- * require is deliberately lazy and caught: expo-video resolves its native
- * module at import time, so a binary built before the package was added
- * throws there and would otherwise take the whole app down rather than this
- * one layer. Without it a room simply shows its wash, which is what a room
- * with no footage does anyway.
- */
-let videoLayer: React.ComponentType<{
-  source: MediaSource;
-  onFirstFrame: () => void;
-}> | null | undefined;
-
-function getVideoLayer() {
-  if (videoLayer === undefined) {
-    try {
-      videoLayer = require('./AmbienceVideoLayer').default;
-    } catch {
-      videoLayer = null;
-    }
-  }
-  return videoLayer;
-}
-
 function clock(totalSeconds: number) {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);
@@ -61,21 +35,6 @@ function clock(totalSeconds: number) {
   return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
 }
 
-/**
- * The immersive half of a focus room: the loop, the countdown, and nothing
- * else to touch.
- *
- * ── Foreground only, deliberately ─────────────────────────────────────────
- * Neither the loop nor the track survives backgrounding, and that is the
- * point. Byre was rejected under guideline 2.5.4 for declaring the `audio`
- * background mode without a feature that needed it; this feature still does
- * not need it, because a focus room is something you look at rather than
- * something you listen to with the screen off. Everything here is pinned to
- * that: expo-video's plugin is configured `supportsBackgroundPlayback: false`,
- * expo-audio's `enableBackgroundPlayback` is false, `shouldPlayInBackground`
- * is false below, and no lock-screen controls are bound. The screen is held
- * awake instead, which is the honest way to keep a visible timer visible.
- */
 export default function AmbienceSessionScreen({
   ambience,
   endsAt,
