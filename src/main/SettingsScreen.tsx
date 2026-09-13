@@ -1,9 +1,12 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingRow } from '../components/ui';
 import { fonts, palette, radius, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
+import { getSelectionCounts } from '../data/iosScreenTime';
+import Constants from 'expo-constants';
+import { brandMark } from '../ui/brandMark';
 import { DEMO_DAYS } from '../data/demoData';
 import { APPEARANCES, appearance } from '../design/appearance';
 
@@ -13,6 +16,46 @@ const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'M
 /** Derived rather than written out, so the copy can't drift from the seed the
  *  way it did when DEMO_DAYS went from 60 to 183. */
 const DEMO_SPAN = `${Math.round(DEMO_DAYS / 30.4)} months`;
+
+/**
+ * The two controls people actually open Settings for, lifted out of the list
+ * and given their current value as the headline.
+ *
+ * A settings screen that is nothing but grouped inset rows with a tinted icon
+ * chip on each one is the iOS system-settings pattern, and every app in this
+ * category ships it unchanged — which is most of why this screen read as
+ * borrowed. Leading with live state instead makes it a control panel for the
+ * block rather than a table of contents.
+ */
+function HeroTile({
+  value,
+  label,
+  mark,
+  onPress,
+}: {
+  value: string;
+  label: string;
+  mark: IconName;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      style={styles.heroTile}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${value}`}
+    >
+      <View style={styles.heroTop}>
+        <Icon name={mark} size={18} color={palette.textSecondary} strokeWidth={1.8} />
+        <Icon name="chevronRight" size={14} color={palette.textQuaternary} strokeWidth={2} />
+      </View>
+      <Text style={styles.heroValue} numberOfLines={1}>
+        {value}
+      </Text>
+      <Text style={styles.heroLabel}>{label}</Text>
+    </Pressable>
+  );
+}
 
 function Group({ children }: { children: React.ReactNode }) {
   return <View style={styles.group}>{children}</View>;
@@ -72,6 +115,20 @@ export default function SettingsScreen({
   onClearDemoData?: () => void;
   difficultyLabel?: string;
 }) {
+  /* Read on render rather than held in state: this screen is pushed over the
+   * app, so it mounts fresh every time it is opened and a selection changed
+   * on the picker behind it would otherwise show stale here. */
+  const counts = getSelectionCounts();
+  const blocked = (counts?.apps ?? 0) + (counts?.categories ?? 0);
+  const blockedLabel = blocked > 0 ? String(blocked) : 'None yet';
+
+  const version = Constants.expoConfig?.version ?? '1.0.0';
+  const build =
+    Platform.OS === 'ios'
+      ? Constants.expoConfig?.ios?.buildNumber
+      : String(Constants.expoConfig?.android?.versionCode ?? '');
+  const versionLine = build ? `Version ${version} (${build})` : `Version ${version}`;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -86,34 +143,24 @@ export default function SettingsScreen({
             lowercase type; Settings was the one place still wearing a 19pt
             centred label between two chrome buttons. */}
         <Text style={styles.pageTitle}>settings</Text>
-        <GroupLabel>Blocking</GroupLabel>
-        <Group>
-          <SettingRow
-            icon={<RowIcon name="shieldOff" />}
-            title="Blocked Apps"
-            subtitle="Which apps trigger the shield"
+
+        <View style={styles.heroRow}>
+          <HeroTile
+            value={blockedLabel}
+            label="BLOCKED"
+            mark="shield"
             onPress={onOpenBlockedApps}
           />
-          <SettingRow
-            icon={<RowIcon name="sliders" />}
-            title="Unlock difficulty"
-            value={difficultyLabel}
-            subtitle="Steady (quiz) or Strict (physical)"
+          <HeroTile
+            value={difficultyLabel ?? 'Steady'}
+            label="UNLOCK DIFFICULTY"
+            mark="sliders"
             onPress={onOpenDifficulty}
           />
-          <SettingRow
-            icon={<RowIcon name="card" />}
-            title="Subscription"
-            subtitle="Plan, bailouts, restore purchases"
-            onPress={onOpenSubscription}
-          />
-          <SettingRow
-            icon={<RowIcon name="image" />}
-            title="Appearance"
-            value={appearanceName}
-            subtitle="Colour scheme for the whole app"
-            onPress={onOpenAppearance}
-          />
+        </View>
+
+        <GroupLabel>The block</GroupLabel>
+        <Group>
           <SettingRow
             icon={<RowIcon name="eye" />}
             title="Block Screens"
@@ -123,14 +170,21 @@ export default function SettingsScreen({
           <SettingRow
             icon={<RowIcon name="clock" />}
             title="Waiting Room"
-            subtitle="Customize the content you see during Waiting Room"
+            subtitle="What you see while the gate counts down"
             onPress={onOpenWaitingRoom}
           />
           <SettingRow
             icon={<RowIcon name="calendar" />}
             title="Schedules"
-            subtitle="Add or edit recurring block windows"
+            subtitle="Recurring windows that block on their own"
             onPress={onOpenSchedules}
+          />
+          <SettingRow
+            icon={<RowIcon name="image" />}
+            title="Appearance"
+            value={appearanceName}
+            subtitle="Colour scheme for the whole app"
+            onPress={onOpenAppearance}
             last
           />
         </Group>
@@ -163,6 +217,12 @@ export default function SettingsScreen({
 
         <GroupLabel>Account</GroupLabel>
         <Group>
+          <SettingRow
+            icon={<RowIcon name="card" />}
+            title="Subscription"
+            subtitle="Plan, bailouts, restore purchases"
+            onPress={onOpenSubscription}
+          />
           <SettingRow
             icon={<RowIcon name="user" />}
             title="My Account"
@@ -212,6 +272,14 @@ export default function SettingsScreen({
           </>
         )}
 
+        {/* Sign-off. Reads from the manifest rather than a hardcoded string,
+            so it cannot drift from what was actually shipped — and it is the
+            first thing to ask for when someone reports a bug. */}
+        <View style={styles.footer}>
+          <Image source={brandMark} style={styles.footerMark} resizeMode="contain" />
+          <Text style={styles.footerName}>Byre</Text>
+          <Text style={styles.footerVersion}>{versionLine}</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -248,10 +316,57 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.4,
     textTransform: 'uppercase',
-    marginTop: space.xl,
+    marginTop: space.xxl,
     marginBottom: space.sm,
-    marginLeft: space.xs,
+    marginLeft: 2,
   },
-  group: { backgroundColor: palette.surface, borderRadius: radius.xxl, overflow: 'hidden' },
+  footer: { alignItems: 'center', paddingTop: space.xxxl, paddingBottom: space.xl, gap: 6 },
+  footerMark: { width: 34, height: 34, opacity: 0.45 },
+  footerName: {
+    color: palette.textTertiary,
+    fontFamily: fonts.extrabold,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    marginTop: 4,
+  },
+  footerVersion: { color: palette.textQuaternary, fontSize: 12, fontWeight: '600' },
+  heroRow: { flexDirection: 'row', gap: 10, marginTop: space.base },
+  heroTile: {
+    flex: 1,
+    minHeight: 108,
+    borderRadius: radius.xxl,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: 14,
+    justifyContent: 'space-between',
+  },
+  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroValue: {
+    color: palette.text,
+    fontFamily: fonts.extrabold,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.6,
+    marginTop: 14,
+  },
+  heroLabel: {
+    color: palette.textTertiary,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    marginTop: 3,
+  },
+  /* Open rows on the ground, not filled inset cards. The card-with-tinted-
+   * icon-chip is the iOS system-settings signature and the single most
+   * borrowed-looking thing on this screen; a hairline rule under the eyebrow
+   * and dividers between rows carries the same grouping with none of it. */
+  group: {
+    borderRadius: 0,
+    overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.hairline,
+  },
 
 });
