@@ -164,12 +164,11 @@ export default function EmergencyTokensScreen({
           </View>
           <Text style={styles.balanceValue}>{tokenBalance}</Text>
           <Text style={styles.balanceLabel}>{tokenBalance === 1 ? 'Bailout' : 'Bailouts'} available</Text>
-          {/* TESTING ONLY — see onTestTopUp. Must not ship. */}
-          {onTestTopUp && (
-            <Pressable onPress={onTestTopUp} style={styles.testBtn} hitSlop={8}>
-              <Text style={styles.testBtnText}>TESTING · set to 99</Text>
-            </Pressable>
-          )}
+          {/* The TESTING top-up button that used to sit here is gone. It set the
+              balance to 99 — paid consumables handed out free — and shipping a
+              gated-but-present giveaway inside a binary under IAP review is not
+              a risk worth the convenience. `onTestTopUp` stays on the props so
+              a dev build can pass one in. */}
         </Animated.View>
 
         {/* The store first. The explanation used to sit above it, so anyone

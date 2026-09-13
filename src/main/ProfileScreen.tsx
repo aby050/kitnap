@@ -21,7 +21,7 @@ import {
   formatSignedMinutes,
   getAchievement,
   getDay,
-  globalPercentile,
+  focusScore,
   nextStreakMilestone,
   shareMessage,
   sumRange,
@@ -226,7 +226,7 @@ export default function ProfileScreen({
   const lastWeek = sumRange(progress, windows.prevStart, windows.prevEnd);
   const month = sumRange(progress, windows.monthStart, today);
   const joinedDays = daysSinceJoin(firstOpenDate, today);
-  const rank = globalPercentile(progress);
+  const rank = focusScore(progress);
   const streakGoal = nextStreakMilestone(progress.currentStreak);
   const streakBroken = progress.currentStreak === 0 && progress.bestStreak > 0;
   const focusDelta = todayLog.focusMinutes - yesterdayLog.focusMinutes;

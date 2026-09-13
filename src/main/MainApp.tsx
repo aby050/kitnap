@@ -43,7 +43,7 @@ import { Account, DEFAULT_STATE, PersistedState, AppLimit, FocusSession, startin
 import { activeLockdown } from '../data/scheduleEnforcer';
 import { CustomerInfo, PurchasesStoreProduct } from 'react-native-purchases';
 import SubscriptionScreen from './SubscriptionScreen';
-import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, globalPercentile, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
+import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, focusScore, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
 import {
   endGrantNow as endAndroidGrantNow,
   grantTemporaryAccess as grantAndroidAccess,
@@ -639,7 +639,7 @@ export default function MainApp({
   const isBedtime = isWithinBedtime(new Date(), persisted.bedtime ?? DEFAULT_BEDTIME);
 
   // Real Home-screen figures, replacing what used to be hardcoded copy.
-  const rank = globalPercentile(progress);
+  const rank = focusScore(progress);
   const homeWindows = weeklyWindows(dateKey());
   const thisWeek = sumRange(progress, homeWindows.thisStart, dateKey());
   const priorWeek = sumRange(progress, homeWindows.prevStart, homeWindows.prevEnd);
