@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GateReflection } from '../data/store';
 import { fonts, gradients, palette, type as T, space, radius } from '../design/tokens';
-import Icon from '../ui/Icon';
+import Icon, { IconName } from '../ui/Icon';
 import {
   ACHIEVEMENTS,
   AchievementDef,
@@ -65,6 +65,58 @@ function HeroDuration({ minutes, color = palette.accent }: { minutes: number; co
 }
 
 /** One column of the three-up stat row under the hero. */
+/**
+ * One of the three headline numbers.
+ *
+ * The row used to be three flat glyphs in a single accent, on the reasoning
+ * that three hues read as three unrelated widgets. That holds for small line
+ * icons on a card; it stops holding once each glyph sits in its own bloom,
+ * because the glow is what makes it read as one object rather than as
+ * decoration. The hues carry meaning rather than decorating: heat for the
+ * streak, the app's own accent for the score it computes, cool for time that
+ * came back to you.
+ */
+const STAT_TINTS = {
+  streak: '#E9B23E',
+  score: palette.accent,
+  saved: '#6FE3A9',
+} as const;
+
+function GlowStat({
+  icon,
+  value,
+  label,
+  tint,
+  onPress,
+}: {
+  icon: IconName;
+  value: string;
+  label: string;
+  tint: string;
+  onPress?: () => void;
+}) {
+  const Container: React.ComponentType<any> = onPress ? Pressable : View;
+  return (
+    <Container
+      style={styles.glowStat}
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? `${label}, ${value}. Opens awards.` : undefined}
+    >
+      <View style={styles.glowWrap}>
+        {/* Drawn, not a shadow: iOS shadows do not render on a transparent
+            view, and Android has no coloured glow at all. A stack of fading
+            discs behaves the same everywhere. */}
+        <View style={[styles.glowRing, { backgroundColor: `${tint}14` }]} />
+        <View style={[styles.glowCore, { backgroundColor: `${tint}22` }]} />
+        <Icon name={icon} size={28} color={tint} strokeWidth={1.9} />
+      </View>
+      <Text style={[styles.glowValue, { color: tint }]}>{value}</Text>
+      <Text style={styles.glowLabel}>{label}</Text>
+    </Container>
+  );
+}
+
 function StatCol({
   icon,
   value,
@@ -337,25 +389,57 @@ export default function ProfileScreen({
                 than one stat row, and none of the colours carried meaning.
                 Chromatic colour in this app is rationed to accent/warn/danger
                 and these are all the same kind of thing: a neutral count. */}
-            <StatCol
-              icon={<Icon name="flame" size={24} color={palette.accent} strokeWidth={1.8} />}
+            <GlowStat
+              icon="flame"
+              tint={STAT_TINTS.streak}
               value={String(progress.currentStreak)}
               label="DAY STREAK"
               onPress={onOpenMilestones}
             />
-            <View style={styles.statDivider} />
-            <StatCol
-              icon={<Icon name="pulse" size={24} color={palette.accent} strokeWidth={1.8} />}
+            <GlowStat
+              icon="pulse"
+              tint={STAT_TINTS.score}
               value={`${rank.percent}%`}
               label="FOCUS SCORE"
             />
-            <View style={styles.statDivider} />
-            <StatCol
-              icon={<Icon name="clock" size={24} color={palette.accent} strokeWidth={1.8} />}
+            <GlowStat
+              icon="clock"
+              tint={STAT_TINTS.saved}
               value={formatDuration(all.savedMinutes)}
               label="SAVED"
             />
           </View>
+
+          {/* AWARDS RAIL */}
+          <Pressable onPress={onOpenMilestones} style={styles.sectionHead}>
+            <Text style={styles.sectionTitle}>Awards</Text>
+            <View style={styles.sectionLinkRow}>
+              <Text style={styles.sectionLink}>
+                {earnedDefs.length}/{ACHIEVEMENTS.length}
+              </Text>
+              <Icon name="chevronRight" size={14} color={palette.textQuaternary} strokeWidth={2} />
+            </View>
+          </Pressable>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.railBleed}
+            contentContainerStyle={styles.awardRow}
+          >
+            {ACHIEVEMENTS.slice(0, 8).map((def) => {
+              const earned = earnedIds.has(def.id);
+              const stamp = progress.achievements.find((a) => a.id === def.id);
+              return (
+                <Pressable key={def.id} onPress={() => setShareTarget(def)} style={styles.awardCol}>
+                  <Medal medal={def.medal} def={def} locked={!earned} id={def.id} />
+                  <Text style={styles.awardName} numberOfLines={1}>{def.name}</Text>
+                  <Text style={styles.awardSub} numberOfLines={2}>
+                    {earned && stamp ? formatPrettyDate(stamp.earnedAt) : def.statLabel}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
           {/* INTENSITY CHART */}
           <Animated.View entering={FadeInDown.delay(80).duration(420)} style={styles.chartCard}>
@@ -568,36 +652,6 @@ export default function ProfileScreen({
             </>
           )}
 
-          {/* AWARDS RAIL */}
-          <Pressable onPress={onOpenMilestones} style={styles.sectionHead}>
-            <Text style={styles.sectionTitle}>Awards</Text>
-            <View style={styles.sectionLinkRow}>
-              <Text style={styles.sectionLink}>
-                {earnedDefs.length}/{ACHIEVEMENTS.length}
-              </Text>
-              <Icon name="chevronRight" size={14} color={palette.textQuaternary} strokeWidth={2} />
-            </View>
-          </Pressable>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.railBleed}
-            contentContainerStyle={styles.awardRow}
-          >
-            {ACHIEVEMENTS.slice(0, 8).map((def) => {
-              const earned = earnedIds.has(def.id);
-              const stamp = progress.achievements.find((a) => a.id === def.id);
-              return (
-                <Pressable key={def.id} onPress={() => setShareTarget(def)} style={styles.awardCol}>
-                  <Medal medal={def.medal} def={def} locked={!earned} id={def.id} />
-                  <Text style={styles.awardName} numberOfLines={1}>{def.name}</Text>
-                  <Text style={styles.awardSub} numberOfLines={2}>
-                    {earned && stamp ? formatPrettyDate(stamp.earnedAt) : def.statLabel}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
         </ScrollView>
       </SafeAreaView>
 
@@ -721,6 +775,18 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
   },
   statCol: { flex: 1, alignItems: 'center', gap: 6 },
+  glowStat: { flex: 1, alignItems: 'center' },
+  glowWrap: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
+  glowRing: { position: 'absolute', width: 72, height: 72, borderRadius: 36 },
+  glowCore: { position: 'absolute', width: 46, height: 46, borderRadius: 23 },
+  glowValue: { fontSize: 27, fontWeight: '800', letterSpacing: -0.8, marginTop: 2 },
+  glowLabel: {
+    color: palette.textTertiary,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    marginTop: 3,
+  },
   statIcon: {
     width: 46,
     height: 46,
