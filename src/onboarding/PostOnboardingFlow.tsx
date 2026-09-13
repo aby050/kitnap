@@ -280,73 +280,67 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
           </Animated.View>
         )}
 
+        {/* What actually happens when you open a blocked app.
+         *
+         *  This was a phone drawn inside a phone: a fake home screen, a
+         *  curved arrow, then a staged push notification reading "Time to go
+         *  outside". That component — device frame around a mocked
+         *  notification — is the single most copied beat in this category,
+         *  and worse, it described the wrong product. Byre does not send a
+         *  gentle nudge you can swipe away. It takes the whole screen and
+         *  does not give it back until you have done something.
+         *
+         *  So the screen stops depicting the block and becomes it: the same
+         *  wash, the same lock, the same voice the real shield uses. No
+         *  frame, because the user is already holding the phone. */}
         {step === 5 && (
-          <Pressable style={styles.centerBlock} onPress={() => (notifSub < 1 ? setNotifSub(1) : next())}>
-            <Animated.View key={notifSub} entering={FadeIn.duration(350)} style={{ alignItems: 'center', width: '100%' }}>
+          <Pressable style={styles.blockDemo} onPress={() => (notifSub < 1 ? setNotifSub(1) : next())}>
+            {notifSub === 1 && (
+              <Animated.View
+                entering={FadeIn.duration(520)}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              >
+                <LinearGradient
+                  colors={['#1B2138', '#0B0D18', '#04050B']}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            )}
+
+            <Animated.View key={notifSub} entering={FadeIn.duration(380)} style={styles.blockDemoInner}>
               <Text style={styles.eyebrow}>How it works</Text>
+
               {notifSub === 0 ? (
-                <Text style={styles.heading}>Without noticing, you open {primaryApp.name}.</Text>
-              ) : (
-                <Text style={styles.heading}>The app steps in — gently.</Text>
-              )}
-              <View style={{ height: 30 }} />
-              <View style={styles.phoneMock}>
-                <View style={styles.cameraNotch} />
-                {notifSub === 0 ? (
-                  <View style={styles.phoneContent}>
-                    <View style={styles.appGrid}>
-                      {Array.from({ length: 12 }).map((_, i) => {
-                        if (i === 0) {
-                          return (
-                            <View key={i} style={styles.gridAppSquareWrapper}>
-                              {primaryApp.name === 'Facebook' ? (
-                                <View style={[styles.gridAppSquare, { backgroundColor: '#1877F2' }]}>
-                                  <Text style={styles.facebookText}>f</Text>
-                                </View>
-                              ) : primaryApp.name === 'Instagram' ? (
-                                <View style={[styles.gridAppSquare, { overflow: 'hidden' }]}>
-                                  <LinearGradient
-                                    colors={['#C13584', '#E1306C', '#F77737']}
-                                    style={StyleSheet.absoluteFill}
-                                  />
-                                  <Text style={styles.instagramText}>◎</Text>
-                                </View>
-                              ) : (
-                                <View style={[styles.gridAppSquare, { backgroundColor: primaryApp.color }]}>
-                                  <Text style={styles.genericText}>{primaryApp.letter}</Text>
-                                </View>
-                              )}
-                            </View>
-                          );
-                        }
-                        return <View key={i} style={styles.gridAppCircle} />;
-                      })}
+                <>
+                  <Text style={styles.heading}>
+                    You open {primaryApp.name} without deciding to.
+                  </Text>
+                  <View style={styles.demoAppWrap}>
+                    <View style={[styles.demoAppTile, { backgroundColor: primaryApp.color }]}>
+                      <Text style={styles.demoAppLetter}>{primaryApp.letter}</Text>
                     </View>
-                    <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
-                      <Path
-                        d="M 95,160 Q 90,80 50,48"
-                        fill="none"
-                        stroke={palette.accent}
-                        strokeWidth={3.5}
-                        strokeLinecap="round"
-                      />
-                      <Path
-                        d="M 50,48 L 62,50 M 50,48 L 52,60"
-                        fill="none"
-                        stroke={palette.accent}
-                        strokeWidth={3.5}
-                        strokeLinecap="round"
-                      />
-                    </Svg>
                   </View>
-                ) : (
-                  <View style={styles.notifCard}>
-                    <Text style={styles.notifTitle}>Time to go outside · now</Text>
-                    <Text style={styles.notifBody}>You've already spent a while on distracting apps today.</Text>
+                  <Text style={styles.demoSub}>
+                    Not a decision. A reflex, forty times a day.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <View style={styles.demoLock}>
+                    <Icon name="lock" size={26} color="#FFFFFF" strokeWidth={1.9} />
                   </View>
-                )}
-              </View>
+                  <Text style={styles.demoShieldLine}>
+                    “The work you said mattered is still waiting.”
+                  </Text>
+                  <Text style={styles.demoSub}>
+                    Not a notification you can swipe away. The screen stays
+                    like this until you have earned your way back in.
+                  </Text>
+                </>
+              )}
             </Animated.View>
+
             <Text style={styles.tapHint}>TAP TO CONTINUE</Text>
           </Pressable>
         )}
@@ -447,6 +441,47 @@ function SummaryRow({ icon, title, desc }: { icon: React.ReactNode; title: strin
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
+  blockDemo: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  blockDemoInner: { alignItems: 'center', width: '100%', paddingHorizontal: 26 },
+  demoAppWrap: { marginTop: 34, marginBottom: 26 },
+  demoAppTile: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoAppLetter: { color: '#FFFFFF', fontSize: 46, fontFamily: fonts.extrabold, fontWeight: '800' },
+  demoLock: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.24)',
+    marginTop: 30,
+    marginBottom: 24,
+  },
+  demoShieldLine: {
+    color: '#FFFFFF',
+    fontFamily: fonts.extrabold,
+    fontSize: 26,
+    lineHeight: 33,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+    textAlign: 'center',
+    maxWidth: 320,
+  },
+  demoSub: {
+    color: palette.textSecondary,
+    fontSize: 14.5,
+    lineHeight: 21,
+    textAlign: 'center',
+    marginTop: 20,
+    maxWidth: 300,
+  },
   centerBlock: { alignItems: 'center', width: '100%', justifyContent: 'center' },
   /* Left-aligned and heavy, matching the education slides and the question
      flow, rather than the centred small-caption-plus-glowing-number stack
@@ -523,84 +558,6 @@ const styles = StyleSheet.create({
   removeBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   removeIcon: { color: palette.textSecondary, fontSize: 12 },
   appsSelectedLabel: { color: palette.textSecondary, fontSize: 13 },
-  phoneMock: {
-    width: 220,
-    height: 280,
-    borderRadius: 36,
-    borderWidth: 6,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: '#0d0d0e',
-    padding: 14,
-    paddingTop: 24,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  cameraNotch: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignSelf: 'center',
-    position: 'absolute',
-    top: 6,
-  },
-  phoneContent: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-  },
-  appGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 16,
-    columnGap: 10,
-    paddingHorizontal: 6,
-    marginTop: 10,
-  },
-  gridAppCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  gridAppSquareWrapper: {
-    width: 34,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gridAppSquare: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  facebookText: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '800',
-    marginTop: 3,
-  },
-  instagramText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  genericText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  notifCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 14,
-    width: '100%',
-  },
-  notifTitle: { color: palette.text, fontSize: 12, fontWeight: '700', marginBottom: 4 },
-  notifBody: { color: palette.textSecondary, fontSize: 11.5, lineHeight: 16 },
   tapHint: { color: palette.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: 40 },
   summaryRow: {
     flexDirection: 'row',
