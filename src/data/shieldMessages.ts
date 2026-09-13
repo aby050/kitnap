@@ -112,9 +112,18 @@ export function pickShieldMessage(themeKey: ThemeKey | undefined, seed: number):
   // A stride coprime with most pool sizes walks the list instead of stepping
   // through it in order, so consecutive unlocks don't read as a list being
   // recited — while still never repeating until the pool is exhausted.
-  const stride = 7;
-  const index = Math.abs(Math.round(seed) * stride) % list.length;
-  return list[index];
+  // 11, not 7. The themed pools come out at 25, 27 and 28 entries, and 7
+  // shares a factor with 28 — so a health-theme user was walking a cycle of
+  // four lines out of twenty-eight and seeing the same handful forever. 11 is
+  // coprime with all three, so the walk covers the whole pool before it
+  // repeats.
+  const stride = 11;
+  // A non-finite seed used to walk straight off the end of the list and return
+  // undefined, which every caller then dereferenced. Callers cannot render
+  // "no message", so clamp here rather than making each of them defend.
+  const safe = Number.isFinite(seed) ? Math.round(seed) : 0;
+  const index = Math.abs(safe * stride) % list.length;
+  return list[index] ?? list[0];
 }
 
 /**
