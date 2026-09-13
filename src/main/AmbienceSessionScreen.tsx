@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
@@ -8,6 +8,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Ambience, mediaFor } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
+import UnlockControl from '../components/UnlockControl';
 
 const KEEP_AWAKE_TAG = 'byre-ambience';
 
@@ -23,7 +24,6 @@ const KEEP_AWAKE_TAG = 'byre-ambience';
  */
 let videoLayer: React.ComponentType<{
   source: number;
-  paused: boolean;
   onFirstFrame: () => void;
 }> | null | undefined;
 
@@ -67,19 +67,31 @@ export default function AmbienceSessionScreen({
   endsAt,
   onClose,
   onEnd,
+  onEndSession,
 }: {
   ambience: Ambience;
   /** Epoch ms the underlying block ends. The room counts down to it rather
    *  than running its own clock, so closing and reopening never drifts. */
   endsAt: number;
+  /** Leave the room, block untouched. */
   onClose: () => void;
+  /** The countdown reached zero on its own. */
   onEnd?: () => void;
+  /** Ask to end the block early. Guarded by the three-second hold, and it
+   *  hands over to the timer's own end-session sheet rather than ending
+   *  anything here — leaving a block costs a Bailout, and the room must not
+   *  be a free way around that. */
+  onEndSession?: () => void;
 }) {
+  /* Measured, not <SafeAreaView>. Inside a `Modal` the component renders
+   * outside the view the provider measures, so its top edge resolves to 0 and
+   * the close and sound buttons land under the clock and the battery. Reading
+   * the inset and padding by hand is the only version that clears them. */
+  const insets = useSafeAreaInsets();
   const media = mediaFor(ambience.key);
   const [remaining, setRemaining] = useState(() => (endsAt - Date.now()) / 1000);
   const [muted, setMuted] = useState(false);
   const [firstFrame, setFirstFrame] = useState(false);
-  const [paused, setPaused] = useState(false);
   const ended = useRef(false);
 
   const VideoLayer = getVideoLayer();
@@ -120,14 +132,6 @@ export default function AmbienceSessionScreen({
   useEffect(() => {
     audio.muted = muted;
   }, [audio, muted]);
-
-  /* Pause is one control over the whole room, not just the picture — a
-   * paused loop under a track that keeps playing reads as a bug. */
-  useEffect(() => {
-    if (!media.audio) return;
-    if (paused) audio.pause();
-    else audio.play();
-  }, [audio, media.audio, paused]);
 
   /* ── Countdown ───────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -174,11 +178,7 @@ export default function AmbienceSessionScreen({
           </Animated.View>
         ) : null}
         {hasVideo && VideoLayer && media.video ? (
-          <VideoLayer
-            source={media.video}
-            paused={paused}
-            onFirstFrame={() => setFirstFrame(true)}
-          />
+          <VideoLayer source={media.video} onFirstFrame={() => setFirstFrame(true)} />
         ) : null}
 
         {/* Legibility scrim for the controls at both ends. */}
@@ -189,7 +189,12 @@ export default function AmbienceSessionScreen({
           pointerEvents="none"
         />
 
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View
+          style={[
+            styles.safe,
+            { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 16) },
+          ]}
+        >
           <View style={styles.topRow}>
             <Pressable
               onPress={() => {
@@ -199,9 +204,9 @@ export default function AmbienceSessionScreen({
               style={styles.circle}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Leave the room"
+              accessibilityLabel="Leave the room, keep the block running"
             >
-              <Icon name="close" size={18} color="#FFFFFF" strokeWidth={2.2} />
+              <Icon name="chevronDown" size={20} color="#FFFFFF" strokeWidth={2.2} />
             </Pressable>
 
             <Pressable
@@ -232,26 +237,28 @@ export default function AmbienceSessionScreen({
             <Text style={styles.intent}>{ambience.intent}</Text>
           </Animated.View>
 
-          {/* Pause stops the LOOP, not the block. Said out loud underneath,
-           *  because a pause button on a screen-time app that quietly
-           *  suspended the block would be the app lying to the user. */}
-          <Pressable
-            onPress={() => {
-              tapLight();
-              setPaused((p) => !p);
-            }}
-            style={[styles.playBtn, !hasVideo && !media.audio && styles.circleDisabled]}
-            disabled={!hasVideo && !media.audio}
-            accessibilityRole="button"
-            accessibilityLabel={paused ? 'Resume the room' : 'Pause the room'}
-          >
-            <Icon name={paused ? 'play' : 'pause'} size={26} color="#FFFFFF" strokeWidth={2} />
-          </Pressable>
+          {/* There is nothing to pause in a room with no footage, and pausing
+           *  the picture never stopped the block anyway — so the centre is
+           *  the way out instead. A bare cross that has to be held for three
+           *  seconds: the same gesture as ending a session on the timer and
+           *  loosening a rule in Settings, and it lands on the same sheet, at
+           *  the same price. */}
+          <View style={styles.exitWrap}>
+            <UnlockControl
+              onReveal={() => {
+                onEndSession?.();
+                onClose();
+              }}
+              label="hold to unlock"
+              accessibilityLabel="Leave and end this session"
+              accessibilityHint="Press and hold for three seconds to see the ways out of this session"
+            />
+          </View>
 
           <Text style={styles.footnote}>
-            Your apps stay locked whether this is open or not.
+            Tap the arrow to step out — your apps stay locked either way.
           </Text>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );
@@ -290,18 +297,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 280,
   },
-  playBtn: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
-    backgroundColor: 'rgba(0,0,0,0.42)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginTop: 34,
-  },
+  exitWrap: { alignItems: 'center', marginTop: 34 },
   footnote: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
@@ -18,11 +18,9 @@ import { useVideoPlayer, VideoView } from 'expo-video';
  */
 export default function AmbienceVideoLayer({
   source,
-  paused,
   onFirstFrame,
 }: {
   source: number;
-  paused: boolean;
   onFirstFrame: () => void;
 }) {
   const player = useVideoPlayer(source, (p) => {
@@ -31,11 +29,6 @@ export default function AmbienceVideoLayer({
     p.muted = true;
     p.play();
   });
-
-  useEffect(() => {
-    if (paused) player.pause();
-    else player.play();
-  }, [paused, player]);
 
   return (
     <VideoView

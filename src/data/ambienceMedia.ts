@@ -35,14 +35,22 @@ export type AmbienceMedia = {
 };
 
 export const AMBIENCE_MEDIA: Record<string, AmbienceMedia> = {
-  // family: {
-  //   video: require('../../assets/ambience/family.mp4'),
-  //   audio: require('../../assets/ambience/family.m4a'),
-  //   still: require('../../assets/ambience/family.jpg'),
-  // },
-  // meditate: { ... },
-  // think: { ... },
-  // peace: { ... },
-  // study: { ... },
-  // winddown: { ... },
+  family: {
+    video: require('../../assets/ambience/family.mp4'),
+    still: require('../../assets/ambience/family.jpg'),
+  },
+  meditate: {
+    video: require('../../assets/ambience/meditate.mp4'),
+    still: require('../../assets/ambience/meditate.jpg'),
+  },
+  peace: {
+    video: require('../../assets/ambience/peace.mp4'),
+    still: require('../../assets/ambience/peace.jpg'),
+  },
+  winddown: {
+    video: require('../../assets/ambience/winddown.mp4'),
+    still: require('../../assets/ambience/winddown.jpg'),
+  },
+  // think: {},  ← still on its wash, waiting for footage
+  // study: {},
 };
