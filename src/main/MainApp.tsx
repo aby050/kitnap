@@ -987,9 +987,15 @@ export default function MainApp({
              "free: —, Pro: Yes" and nothing enforced it. Free users get the
              offer rather than a dead row, so the door is visible and the
              price is stated. */
+          /* Reaching the Guardian screen at all needs the code, once one is
+             set. Without this the whole feature was theatre: the screen has
+             a "Generate a new code" button and an off switch, so anyone who
+             wanted out could simply replace their guardian's code with one
+             of their own — no memorising required. Guarding the door is the
+             only thing that makes what is behind it mean anything. */
           onOpenGuardian={() =>
             isPro
-              ? setOverlay('guardian')
+              ? requireGuardian(() => setOverlay('guardian'), 'settings')
               : Alert.alert(
                   'Guardian is part of Byre Pro',
                   'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
