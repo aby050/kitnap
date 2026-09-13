@@ -41,7 +41,6 @@ function KeyRow({ qty, dim }: { qty: number; dim?: boolean }) {
 export default function EmergencyTokensScreen({
   tokenBalance,
   onBack,
-  onTestTopUp,
   products = [],
   onGrant,
 }: {
@@ -52,10 +51,6 @@ export default function EmergencyTokensScreen({
   products?: PurchasesStoreProduct[];
   /** Adds the purchased quantity to the persisted balance. */
   onGrant?: (quantity: number) => void;
-  /** TESTING ONLY — tops the balance up so the post-cap flows can be reached
-   *  without real purchases, which aren't live yet. Remove this prop, its
-   *  button, and TEST_TOP_UP in MainApp before any release build. */
-  onTestTopUp?: () => void;
 }) {
   const [buying, setBuying] = useState<string | null>(null);
 
@@ -164,11 +159,11 @@ export default function EmergencyTokensScreen({
           </View>
           <Text style={styles.balanceValue}>{tokenBalance}</Text>
           <Text style={styles.balanceLabel}>{tokenBalance === 1 ? 'Bailout' : 'Bailouts'} available</Text>
-          {/* The TESTING top-up button that used to sit here is gone. It set the
-              balance to 99 — paid consumables handed out free — and shipping a
-              gated-but-present giveaway inside a binary under IAP review is not
-              a risk worth the convenience. `onTestTopUp` stays on the props so
-              a dev build can pass one in. */}
+          {/* A TESTING button used to sit here that set the balance to 99 —
+              paid consumables handed out free. The button went first and the
+              prop was left behind "so a dev build can pass one in", which is
+              how a giveaway ends up shipping inside a binary under IAP
+              review. Both are gone now. */}
         </Animated.View>
 
         {/* The store first. The explanation used to sit above it, so anyone
