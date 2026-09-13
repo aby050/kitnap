@@ -9,6 +9,21 @@ import {
   isConfigured,
 } from './purchases';
 
+/**
+ * Pretend the subscription is active, for development only.
+ *
+ * Flip to `true` to exercise every Pro-gated path — guardian, unlimited
+ * schedules, the "what you've got" state of the subscription screen —
+ * without a live purchase. Useful while the store side is still being set
+ * up, and the only way to see those screens at all if offerings will not
+ * load.
+ *
+ * Double-gated on `__DEV__` below, so leaving it `true` cannot reach a
+ * release build. Unlike the old TEST_TOP_UP button this has no UI: a switch
+ * a user could find is a switch that eventually ships.
+ */
+const DEV_FORCE_PRO = true;
+
 export type PurchasesState = {
   ready: boolean;
   pro: boolean;
@@ -64,5 +79,13 @@ export function usePurchases(): PurchasesState {
     };
   }, [load]);
 
-  return { ready, pro: hasPro(info), info, offering, discountOffering, bailoutProducts, refresh: load };
+  return {
+    ready,
+    pro: (__DEV__ && DEV_FORCE_PRO) || hasPro(info),
+    info,
+    offering,
+    discountOffering,
+    bailoutProducts,
+    refresh: load,
+  };
 }

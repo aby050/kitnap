@@ -116,10 +116,15 @@ export default function SubscriptionScreen({
               : 'Blocking, unlimited'}
           </Text>
           <Text style={styles.heroSub}>
+            {/* "until then" needs a `then`. Without a renewal date — a
+                restored purchase still syncing, or a lifetime entitlement —
+                the sentence pointed at nothing. */}
             {isPro
               ? willRenew
                 ? 'Cancel any time — everything you built stays.'
-                : "You'll keep everything until then, then drop to the free plan."
+                : renews
+                  ? "You'll keep everything until then, then drop to the free plan."
+                  : 'Everything below is yours while this is active.'
               : 'Everything below is what a plan adds on top.'}
           </Text>
         </LinearGradient>
