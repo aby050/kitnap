@@ -41,8 +41,9 @@ import { ActivityKind, ActivitySessionResult } from '../shield/activity/types';
 import { EMPTY_GOAL, GoalData } from '../data/goal';
 import { Account, DEFAULT_STATE, PersistedState, AppLimit, FocusSession, startingEmergencyTokens } from '../data/store';
 import { activeLockdown } from '../data/scheduleEnforcer';
-import { CustomerInfo, PurchasesStoreProduct } from 'react-native-purchases';
+import { CustomerInfo, PurchasesPackage, PurchasesStoreProduct } from 'react-native-purchases';
 import SubscriptionScreen from './SubscriptionScreen';
+import TrialTimelineScreen from '../onboarding/TrialTimelineScreen';
 import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, focusScore, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
 import {
   endGrantNow as endAndroidGrantNow,
@@ -115,6 +116,7 @@ type Overlay =
   | 'blocks'
   | 'emergencyTokens'
   | 'subscription'
+  | 'plans'
   | 'deleteAccount'
   | 'screenTimeDiagnostics';
 type Block = null | 'shield' | 'gate' | 'grant' | 'emergency';
@@ -176,6 +178,8 @@ export default function MainApp({
   bailoutProducts = [],
   isPro = false,
   customerInfo = null,
+  offering = null,
+  onPurchasedPlan,
 }: {
   themeKey?: ThemeKey;
   intensityKey?: IntensityKey;
@@ -200,6 +204,9 @@ export default function MainApp({
   /** Active `pro` entitlement, from RevenueCat. */
   isPro?: boolean;
   customerInfo?: CustomerInfo | null;
+  /** Live plans, so Settings can sell rather than only describe. */
+  offering?: { availablePackages: PurchasesPackage[] } | null;
+  onPurchasedPlan?: (bailouts: number) => void;
   /** Wipes all local data and returns the app to onboarding — owned by
    *  App.tsx since it has to reset top-level state this component doesn't. */
   onDeleteAccount?: () => Promise<void>;
@@ -1092,6 +1099,22 @@ export default function MainApp({
           bailouts={emergencyTokens}
           onBack={() => setOverlay('settings')}
           onBuyBailouts={() => setOverlay('emergencyTokens')}
+          onUpgrade={() => setOverlay('plans')}
+        />
+      );
+    /* Plans, reachable from Settings.
+     *
+     *  This is the same screen the onboarding funnel uses, deliberately: one
+     *  purchase implementation, one set of 3.1.2 disclosures, one restore
+     *  button. A second bespoke buy sheet in Settings would be two things to
+     *  keep correct and two things for App Review to disagree with. */
+    if (ov === 'plans')
+      return (
+        <TrialTimelineScreen
+          offering={offering}
+          onPurchased={onPurchasedPlan}
+          onStart={() => setOverlay('subscription')}
+          onClose={() => setOverlay('subscription')}
         />
       );
     if (ov === 'blockScreens')
