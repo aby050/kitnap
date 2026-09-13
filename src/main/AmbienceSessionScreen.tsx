@@ -9,6 +9,7 @@ import { Ambience, mediaFor } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
 import UnlockControl from '../components/UnlockControl';
+import CancelConfirm from '../components/CancelConfirm';
 
 const KEEP_AWAKE_TAG = 'byre-ambience';
 
@@ -67,7 +68,9 @@ export default function AmbienceSessionScreen({
   endsAt,
   onClose,
   onEnd,
-  onEndSession,
+  onBailout,
+  tokenBalance = 0,
+  onOpenTokenInfo,
 }: {
   ambience: Ambience;
   /** Epoch ms the underlying block ends. The room counts down to it rather
@@ -77,11 +80,11 @@ export default function AmbienceSessionScreen({
   onClose: () => void;
   /** The countdown reached zero on its own. */
   onEnd?: () => void;
-  /** Ask to end the block early. Guarded by the three-second hold, and it
-   *  hands over to the timer's own end-session sheet rather than ending
-   *  anything here — leaving a block costs a Bailout, and the room must not
-   *  be a free way around that. */
-  onEndSession?: () => void;
+  /** Spend a Bailout to end the block and leave. The only way out of a room
+   *  before its time: the hold reveals the price, never skips it. */
+  onBailout?: () => void;
+  tokenBalance?: number;
+  onOpenTokenInfo?: () => void;
 }) {
   /* Measured, not <SafeAreaView>. Inside a `Modal` the component renders
    * outside the view the provider measures, so its top edge resolves to 0 and
@@ -92,6 +95,7 @@ export default function AmbienceSessionScreen({
   const [remaining, setRemaining] = useState(() => (endsAt - Date.now()) / 1000);
   const [muted, setMuted] = useState(false);
   const [firstFrame, setFirstFrame] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const ended = useRef(false);
 
   const VideoLayer = getVideoLayer();
@@ -245,10 +249,7 @@ export default function AmbienceSessionScreen({
            *  the same price. */}
           <View style={styles.exitWrap}>
             <UnlockControl
-              onReveal={() => {
-                onEndSession?.();
-                onClose();
-              }}
+              onReveal={() => setConfirming(true)}
               label="hold to unlock"
               accessibilityLabel="Leave and end this session"
               accessibilityHint="Press and hold for three seconds to see the ways out of this session"
@@ -259,6 +260,31 @@ export default function AmbienceSessionScreen({
             Tap the arrow to step out — your apps stay locked either way.
           </Text>
         </View>
+
+        {/* The same sheet, and the same price, as ending a session on the
+            timer. A room that could be left for free would make the Bailout
+            meaningless everywhere else. */}
+        <CancelConfirm
+          visible={confirming}
+          title="Leave this room?"
+          remainingLabel={clock(remaining)}
+          remainingUnits={remaining >= 3600 ? 'hours · minutes' : 'minutes · seconds'}
+          tokenBalance={tokenBalance}
+          onClose={() => setConfirming(false)}
+          onSpend={() => {
+            if (tokenBalance <= 0) return;
+            setConfirming(false);
+            onBailout?.();
+          }}
+          onOpenTokenInfo={
+            onOpenTokenInfo
+              ? () => {
+                  setConfirming(false);
+                  onOpenTokenInfo();
+                }
+              : undefined
+          }
+        />
       </View>
     </Modal>
   );

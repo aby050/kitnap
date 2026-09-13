@@ -409,8 +409,6 @@ export default function MainApp({
   /** The focus room currently open over the app, if any. Closing it leaves
    *  the block running — the room is a place to look, not the block itself. */
   const [room, setRoom] = useState<{ ambience: Ambience; endsAt: number } | null>(null);
-  /** Bumped to ask TimerScreen to open its end-session sheet. See below. */
-  const [cancelNonce, setCancelNonce] = useState(0);
 
   const startAmbience = (ambience: Ambience) => {
     const endsAt = Date.now() + ambience.minutes * 60 * 1000;
@@ -1196,7 +1194,6 @@ export default function MainApp({
                 setTab('timer');
               }}
               onStartPreset={(minutes, label, hardMode) => startSession(minutes, label, !!hardMode)}
-              onStartAmbience={startAmbience}
               onOpenSleepSchedule={() => setOverlay('schedules')}
               onOpenBlockedApps={() => setOverlay('blockedApps')}
               bailoutBalance={emergencyTokens}
@@ -1243,7 +1240,7 @@ export default function MainApp({
               session={session}
               onStartSession={startSession}
               onEndSession={endSession}
-              openCancelNonce={cancelNonce}
+              onStartAmbience={startAmbience}
               hardMode={!!timerPreset.hardMode}
               onFocusComplete={(mins) => {
                 applyProgress([{ type: 'focus', minutes: mins }, { type: 'lockSession' }]);
@@ -1312,16 +1309,28 @@ export default function MainApp({
           ambience={room.ambience}
           endsAt={room.endsAt}
           onClose={() => setRoom(null)}
-          onEnd={() => setRoom(null)}
-          /* Deliberately NOT `endSession`. Leaving a running block costs a
-             Bailout on the timer, and a room that ended the same block for
-             free would be a way around the only thing the block asks of you.
-             The hold hands over to the timer's own sheet instead, so there is
-             one price for one action. */
-          onEndSession={() => {
+          /* Ran its full length. Nothing is owed, and the room hands back to
+             Home rather than to a timer the user is finished with. */
+          onEnd={() => {
             setRoom(null);
-            setTab('timer');
-            setCancelNonce((n) => n + 1);
+            setTab('home');
+          }}
+          tokenBalance={emergencyTokens}
+          onOpenTokenInfo={() => {
+            setRoom(null);
+            setOverlay('emergencyTokens');
+          }}
+          /* Left early. The room charges exactly what the locked timer
+             charges — one Bailout — and then puts the user on Home, not on
+             the timer for a session that no longer exists. */
+          onBailout={() => {
+            if (emergencyTokens <= 0) return;
+            const next = Math.max(0, emergencyTokens - 1);
+            setEmergencyTokens(next);
+            onPatch({ emergencyTokens: next });
+            endSession();
+            setRoom(null);
+            setTab('home');
           }}
         />
       )}

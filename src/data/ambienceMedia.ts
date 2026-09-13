@@ -5,7 +5,7 @@
  *  1. Drop the files into `assets/ambience/` named after the room key:
  *       assets/ambience/family.mp4     ← the loop (silent, see below)
  *       assets/ambience/family.m4a     ← the ambient track
- *       assets/ambience/family.jpg     ← first frame, shown while the loop
+ *       assets/ambience/family-poster.jpg  ← first frame, shown while the loop
  *                                        decodes and used on the card
  *  2. Uncomment that room's block below and point the requires at them.
  *
@@ -37,19 +37,19 @@ export type AmbienceMedia = {
 export const AMBIENCE_MEDIA: Record<string, AmbienceMedia> = {
   family: {
     video: require('../../assets/ambience/family.mp4'),
-    still: require('../../assets/ambience/family.jpg'),
+    still: require('../../assets/ambience/family-poster.jpg'),
   },
   meditate: {
     video: require('../../assets/ambience/meditate.mp4'),
-    still: require('../../assets/ambience/meditate.jpg'),
+    still: require('../../assets/ambience/meditate-poster.jpg'),
   },
   peace: {
     video: require('../../assets/ambience/peace.mp4'),
-    still: require('../../assets/ambience/peace.jpg'),
+    still: require('../../assets/ambience/peace-poster.jpg'),
   },
   winddown: {
     video: require('../../assets/ambience/winddown.mp4'),
-    still: require('../../assets/ambience/winddown.jpg'),
+    still: require('../../assets/ambience/winddown-poster.jpg'),
   },
   // think: {},  ← still on its wash, waiting for footage
   // study: {},

@@ -33,6 +33,9 @@ import AppGlyph from '../ui/AppGlyph';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import BlockedAppsPill from '../components/BlockedAppsPill';
 import UnlockControl from '../components/UnlockControl';
+import CancelConfirm from '../components/CancelConfirm';
+import { AmbienceShelf } from '../components/AmbienceCard';
+import { Ambience } from '../data/ambiences';
 import BlockedListSheet from '../components/BlockedListSheet';
 import BlockedSelection from '../components/BlockedSelection';
 import EmergencyDialer from '../components/EmergencyDialer';
@@ -71,7 +74,7 @@ export default function TimerScreen({
   session = null,
   onStartSession,
   onEndSession,
-  openCancelNonce,
+  onStartAmbience,
   hardMode = false,
   label = 'Timer',
   motivationLine,
@@ -94,11 +97,7 @@ export default function TimerScreen({
   session?: FocusSession | null;
   onStartSession?: (minutes: number, label: string, hardMode: boolean) => void;
   onEndSession?: () => void;
-  /** Bumped by a caller that wants this screen's end-session sheet opened —
-   *  the focus room's hold-to-unlock, which must not be a second, free way
-   *  out of a session the timer charges a Bailout to leave. A nonce rather
-   *  than a boolean so repeated requests re-open it. */
-  openCancelNonce?: number;
+  onStartAmbience?: (ambience: Ambience) => void;
   /** Hard mode: the session cannot be ended with a Bailout. Emergency access stays. */
   hardMode?: boolean;
   label?: string;
@@ -117,10 +116,6 @@ export default function TimerScreen({
   onUpdateBlockedPackages?: (packages: string[]) => void;
 }) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-
-  useEffect(() => {
-    if (openCancelNonce) setShowCancelConfirm(true);
-  }, [openCancelNonce]);
   const [showAppSelectModal, setShowAppSelectModal] = useState(false);
   const [showPickPrompt, setShowPickPrompt] = useState(false);
   // Mid-session the timer is the point; the controls around it are not. Tapping
@@ -575,63 +570,28 @@ export default function TimerScreen({
         </View>
         <Animated.View entering={FadeInDown.duration(motion.transition)}>
           <Editorial
-            lead="Set the length,"
+            lead="Pick somewhere to be,"
             emphasis="then commit to it."
             style={styles.voice}
           />
         </Animated.View>
 
-        <Animated.View entering={FadeIn.duration(motion.transition)} style={styles.hero}>
-          <Ring progress={progress} size={272} thickness={4}>
-            <Text style={[type.overline, styles.heroCap]}>Session length</Text>
-            <Text style={styles.bigTime}>
-              {lcdLeft}
-              <Text style={styles.colon}>:</Text>
-              {lcdRight}
-            </Text>
-            <Text style={[type.unit, styles.unitLine]}>{showHours ? 'hours · minutes' : 'minutes' }</Text>
-          </Ring>
-
-          <View style={styles.stepper}>
-            <Pressable style={styles.stepBtn} onPress={() => handleStep(-1)} hitSlop={8}>
-              <Icon name="minus" size={20} color={palette.text} />
-            </Pressable>
-            <Text style={[type.caption, styles.stepHint]}>15-min steps</Text>
-            <Pressable style={styles.stepBtn} onPress={() => handleStep(1)} hitSlop={8}>
-              <Icon name="plus" size={20} color={palette.text} />
-            </Pressable>
-          </View>
-        </Animated.View>
-
-        <View style={styles.spacer} />
-
-        {/* Slide to start */}
-        <GestureDetector gesture={slideGesture}>
-        <View style={styles.slideTrack}>
-          {/* Charge trail: dim at the start, blazing at the thumb. */}
-          <Animated.View style={[styles.slideFill, slideFillStyle]} pointerEvents="none">
-            <LinearGradient
-              colors={[
-                'rgba(71,107,235,0.04)',
-                'rgba(71,107,235,0.22)',
-                'rgba(71,107,235,0.55)',
-                'rgba(150,255,205,0.95)',
-              ]}
-              locations={[0, 0.45, 0.82, 1]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={StyleSheet.absoluteFill}
-            />
+        {/* The dial, the 15-minute stepper and the slide-to-start that used
+            to fill this screen are gone. A length picker asks "how long can
+            you stand it?" — the wrong question, and the one every app in this
+            category opens with. A room asks what you are doing instead, and
+            brings its own length. The manual dial still exists on Home for
+            anyone who just wants a number. */}
+        {onStartAmbience && (
+          <Animated.View
+            entering={FadeIn.duration(motion.transition)}
+            style={styles.roomShelf}
+          >
+            <AmbienceShelf onStart={onStartAmbience} />
           </Animated.View>
-          <Animated.View style={[styles.slideGlow, slideGlowStyle]} pointerEvents="none" />
-          <Animated.Text style={[styles.slideLabel, slideLabelStyle]}>Slide to start</Animated.Text>
-          <Animated.View style={[styles.slideThumb, slideAnimStyle]}>
-            <Icon name="chevronRight" size={22} color={palette.textInverse} strokeWidth={2.2} />
-          </Animated.View>
-        </View>
-        </GestureDetector>
+        )}
 
-        {/* Right under the start control: what this session will hold back. */}
+        {/* Under the rooms: what any of them will hold back. */}
         <BlockedAppsPill style={styles.blockedPill} />
 
         {onOpenEssentials && (
@@ -1040,60 +1000,6 @@ function UnlockAppConfirm({
   );
 }
 
-/** Two ways out and no third: wait, or spend. Leading with the time left makes
- *  waiting the obvious default rather than burying it under the paid option. */
-function CancelConfirm({
-  visible,
-  remainingLabel,
-  remainingUnits,
-  tokenBalance,
-  onClose,
-  onSpend,
-  onOpenTokenInfo,
-}: {
-  visible: boolean;
-  remainingLabel?: string;
-  remainingUnits?: string;
-  tokenBalance: number;
-  onClose: () => void;
-  onSpend: () => void;
-  onOpenTokenInfo?: () => void;
-}) {
-  const noun = tokenBalance === 1 ? 'Bailout' : 'Bailouts';
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.confirmOverlay}>
-        <Animated.View entering={FadeIn.duration(200)} style={styles.confirmBox}>
-          <Text style={styles.confirmTitle}>End this session?</Text>
-          {!!remainingLabel && (
-            <View style={styles.confirmWaitWrap}>
-              <Text style={styles.confirmWaitValue}>{remainingLabel}</Text>
-              <Text style={styles.confirmWaitUnits}>{remainingUnits} left</Text>
-            </View>
-          )}
-          <Text style={styles.confirmBody}>
-            You can wait it out, or end it now for{' '}
-            <Text style={styles.confirmAccent}>1 Bailout</Text>.{'\n'}You have {tokenBalance} {noun}.
-          </Text>
-          <Button label="Wait it out" variant="accent" onPress={onClose} />
-          <Button
-            label={tokenBalance <= 0 ? 'No Bailouts left' : 'End now · 1 Bailout'}
-            variant="ghost"
-            disabled={tokenBalance <= 0}
-            onPress={onSpend}
-          />
-          {onOpenTokenInfo && (
-            <Pressable onPress={onOpenTokenInfo} hitSlop={8}>
-              <Text style={styles.confirmInfoLink}>What is a Bailout?</Text>
-            </Pressable>
-          )}
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
-
 const styles = StyleSheet.create({
   shrink: { flex: 1, minWidth: 0 },
   content: { flexGrow: 1, paddingHorizontal: space.gutter, paddingBottom: space.tabClearance },
@@ -1145,6 +1051,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(71,107,235,0.22)',
     zIndex: 0,
   },
+  /* The shelf spans the full width, so it cancels the content gutter and
+   * re-applies it inside the rail — a horizontal list that stops short of
+   * the edge reads as clipped rather than as scrollable. */
+  roomShelf: { marginTop: space.lg, marginHorizontal: -space.gutter },
   slideTrack: {
     width: '100%',
     height: SLIDE_TRACK_H,
