@@ -66,6 +66,8 @@ import { ProgressPhoto } from '../data/progressPhotos';
 import CalendarScreen from './CalendarScreen';
 import WeeklyInsight from './WeeklyInsight';
 import RealUsageScreen from './RealUsageScreen';
+import AmbienceSessionScreen from './AmbienceSessionScreen';
+import { Ambience } from '../data/ambiences';
 import { endLiveTimer, startLiveTimer } from 'live-timer';
 import {
   blockSelectedApps,
@@ -402,6 +404,16 @@ export default function MainApp({
     setGrantIsEmergency(true);
     setGrantExpiresAt(Date.now() + EMERGENCY_MINUTES * 60000);
     setBlock('emergency');
+  };
+
+  /** The focus room currently open over the app, if any. Closing it leaves
+   *  the block running — the room is a place to look, not the block itself. */
+  const [room, setRoom] = useState<{ ambience: Ambience; endsAt: number } | null>(null);
+
+  const startAmbience = (ambience: Ambience) => {
+    const endsAt = Date.now() + ambience.minutes * 60 * 1000;
+    startSession(ambience.minutes, ambience.title, false);
+    setRoom({ ambience, endsAt });
   };
 
   const startSession = (minutes: number, label: string, hardMode: boolean) => {
@@ -1182,6 +1194,7 @@ export default function MainApp({
                 setTab('timer');
               }}
               onStartPreset={(minutes, label, hardMode) => startSession(minutes, label, !!hardMode)}
+              onStartAmbience={startAmbience}
               onOpenSleepSchedule={() => setOverlay('schedules')}
               onOpenBlockedApps={() => setOverlay('blockedApps')}
               bailoutBalance={emergencyTokens}
@@ -1286,6 +1299,17 @@ export default function MainApp({
             alertGrantEnded();
           }}
           onPress={() => setBlock(grantIsEmergency ? 'emergency' : 'grant')}
+        />
+      )}
+      {/* Over everything, including the tab bar: a room is the whole screen
+          or it is not a room. Dismissing it only closes the view — the block
+          it started keeps running, which is what the footnote inside says. */}
+      {room && (
+        <AmbienceSessionScreen
+          ambience={room.ambience}
+          endsAt={room.endsAt}
+          onClose={() => setRoom(null)}
+          onEnd={() => setRoom(null)}
         />
       )}
     </View>
