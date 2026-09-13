@@ -404,14 +404,26 @@ export default function MainApp({
    *  window. Long enough to deal with whatever it is, short enough that it
    *  can't quietly become the way in. */
   const openEmergencyAccess = () => {
+    /* A refusal has to land somewhere.
+     *
+     * `emergencyRefusal` is rendered inline by the Gate and by nothing else,
+     * so on the locked timer — the one screen where someone is most stuck —
+     * tapping Emergency during a lockdown window, or after today's has been
+     * used, set the message and returned in silence. The button looked dead.
+     * Anywhere the Gate is not on screen, say it out loud. */
+    const refuse = (message: string) => {
+      setEmergencyRefusal(message);
+      if (block !== 'gate') Alert.alert('Emergency access', message, [{ text: 'OK' }]);
+    };
+
     const lock = currentLockdown();
     if (lock) {
-      setEmergencyRefusal(`${lock.name} is on until ${lock.end}. No emergency access inside it.`);
+      refuse(`${lock.name} is on until ${lock.end}. No emergency access inside it.`);
       return;
     }
     const today = new Date().toDateString();
     if (emergencyUsedOn === today) {
-      setEmergencyRefusal("You've already used today's emergency access. It comes back tomorrow.");
+      refuse("You've already used today's emergency access. It comes back tomorrow.");
       return;
     }
     setEmergencyRefusal(null);
