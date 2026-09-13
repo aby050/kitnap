@@ -6,7 +6,7 @@ import { fonts, palette, radius, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 import { getSelectionCounts } from '../data/iosScreenTime';
 import Constants from 'expo-constants';
-import { brandMark } from '../ui/brandMark';
+import ByreMark from '../ui/ByreMark';
 import { DEMO_DAYS } from '../data/demoData';
 import { APPEARANCES, appearance } from '../design/appearance';
 
@@ -91,6 +91,9 @@ export default function SettingsScreen({
   onOpenDifficulty,
   onOpenDeleteAccount,
   onOpenScreenTimeDiagnostics,
+  onOpenAbout,
+  onOpenTerms,
+  onOpenPrivacy,
   onLoadDemoData,
   onClearDemoData,
   difficultyLabel,
@@ -110,6 +113,9 @@ export default function SettingsScreen({
   onOpenDeleteAccount?: () => void;
   /** iOS only — reads the live Family Controls state. */
   onOpenScreenTimeDiagnostics?: () => void;
+  onOpenAbout?: () => void;
+  onOpenTerms?: () => void;
+  onOpenPrivacy?: () => void;
   /** __DEV__ only — see the Developer group below. */
   onLoadDemoData?: () => void;
   onClearDemoData?: () => void;
@@ -275,8 +281,45 @@ export default function SettingsScreen({
         {/* Sign-off. Reads from the manifest rather than a hardcoded string,
             so it cannot drift from what was actually shipped — and it is the
             first thing to ask for when someone reports a bug. */}
+        {(onOpenAbout || onOpenTerms || onOpenPrivacy) && (
+          <>
+            {/* Terms and Privacy used to be `Linking.openURL` — a tap that
+                threw the user into Safari. They render in the app now, which
+                also means App Review can reach them without leaving it. */}
+            <GroupLabel>About &amp; legal</GroupLabel>
+            <Group>
+              {onOpenAbout && (
+                <SettingRow
+                  icon={<RowIcon name="info" />}
+                  title="About Byre"
+                  subtitle="What it does, and how to reach us"
+                  onPress={onOpenAbout}
+                />
+              )}
+              {onOpenTerms && (
+                <SettingRow
+                  icon={<RowIcon name="note" />}
+                  title="Terms of Use"
+                  onPress={onOpenTerms}
+                />
+              )}
+              {onOpenPrivacy && (
+                <SettingRow
+                  icon={<RowIcon name="lock" />}
+                  title="Privacy Policy"
+                  onPress={onOpenPrivacy}
+                  last
+                />
+              )}
+            </Group>
+          </>
+        )}
+
         <View style={styles.footer}>
-          <Image source={brandMark} style={styles.footerMark} resizeMode="contain" />
+          {/* Vector, and deliberately the dark tone: at this size the bright
+              turquoise mark would out-shout the list above it, which is the
+              screen's actual content. Dark, it reads as a maker's stamp. */}
+          <ByreMark size={72} tone="dark" />
           <Text style={styles.footerName}>Byre</Text>
           <Text style={styles.footerVersion}>{versionLine}</Text>
         </View>
@@ -320,8 +363,8 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
     marginLeft: 2,
   },
-  footer: { alignItems: 'center', paddingTop: space.xxxl, paddingBottom: space.xl, gap: 6 },
-  footerMark: { width: 34, height: 34, opacity: 0.45 },
+  footer: { alignItems: 'center', paddingTop: space.xxxl, paddingBottom: space.xl, gap: 10 },
+
   footerName: {
     color: palette.textTertiary,
     fontFamily: fonts.extrabold,

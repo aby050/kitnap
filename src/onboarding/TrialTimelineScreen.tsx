@@ -287,44 +287,8 @@ export default function TrialTimelineScreen({
           Everything Byre does
         </Animated.Text>
         <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={styles.subheading}>
-          Free keeps the blocking. A plan adds the two marked below.
+          Pick how to pay. What you get is listed underneath.
         </Animated.Text>
-
-        <Animated.View entering={FadeInDown.delay(120).duration(420)} style={styles.included}>
-          {INCLUDED.map((f, i) => (
-            <View
-              key={f.title}
-              style={[styles.incRow, i < INCLUDED.length - 1 && styles.incDivider]}
-            >
-              <View style={styles.incIcon}>
-                <Icon name={f.icon} size={17} color={palette.text} strokeWidth={1.9} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={styles.incTitleRow}>
-                  <Text style={styles.incTitle}>{f.title}</Text>
-                  {/* Only on what a plan actually unlocks. The list used to
-                      present all five as bought, and three of them —
-                      blocking, the movement unlock, the screen-time read —
-                      are free and always have been. */}
-                  {f.plan && (
-                    <View style={styles.planPill}>
-                      <Text style={styles.planPillText}>PLAN</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.incDesc}>{f.desc}</Text>
-              </View>
-            </View>
-          ))}
-        </Animated.View>
-
-        {/* The free plan is a real state, so say so here rather than only on
-            the decline screen. A paywall that admits what you keep for
-            nothing is the one people trust. */}
-        <Text style={styles.freeNote}>
-          Byre keeps working free forever — blocking, movement unlocks and emergency access are
-          never behind a plan. A plan adds the rest, and tops up your bailouts.
-        </Text>
 
         {selected.isTrial && selected.trialDays ? (
           <TrialTerms days={selected.trialDays} price={`${selected.price}${selected.per}`} />
@@ -365,6 +329,43 @@ export default function TrialTimelineScreen({
             );
           })}
         </View>
+
+        <Text style={styles.listEyebrow}>WHAT YOU GET</Text>
+        <Animated.View entering={FadeInDown.delay(120).duration(420)} style={styles.included}>
+          {INCLUDED.map((f, i) => (
+            <View
+              key={f.title}
+              style={[styles.incRow, i < INCLUDED.length - 1 && styles.incDivider]}
+            >
+              <View style={styles.incIcon}>
+                <Icon name={f.icon} size={17} color={palette.text} strokeWidth={1.9} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.incTitleRow}>
+                  <Text style={styles.incTitle}>{f.title}</Text>
+                  {/* Only on what a plan actually unlocks. The list used to
+                      present all five as bought, and three of them —
+                      blocking, the movement unlock, the screen-time read —
+                      are free and always have been. */}
+                  {f.plan && (
+                    <View style={styles.planPill}>
+                      <Text style={styles.planPillText}>PLAN</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.incDesc}>{f.desc}</Text>
+              </View>
+            </View>
+          ))}
+        </Animated.View>
+
+        {/* The free plan is a real state, so say so here rather than only on
+            the decline screen. A paywall that admits what you keep for
+            nothing is the one people trust. */}
+        <Text style={styles.freeNote}>
+          Byre keeps working free forever — blocking, movement unlocks and emergency access are
+          never behind a plan. A plan adds the rest, and tops up your bailouts.
+        </Text>
       </ScrollView>
 
       <View style={styles.ctaWrap}>
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20.5,
     marginTop: -14,
-    marginBottom: 20,
+    marginBottom: 8,
     paddingHorizontal: 10,
   },
   included: {
@@ -533,6 +534,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   plans: { gap: 10, marginTop: 18 },
+  listEyebrow: {
+    color: palette.textTertiary,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.3,
+    marginTop: 30,
+    marginBottom: 10,
+    marginLeft: 2,
+  },
   plan: {
     flexDirection: 'row',
     alignItems: 'flex-start',

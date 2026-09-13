@@ -42,7 +42,10 @@ import { EMPTY_GOAL, GoalData } from '../data/goal';
 import { Account, DEFAULT_STATE, PersistedState, AppLimit, FocusSession, startingEmergencyTokens } from '../data/store';
 import { activeLockdown } from '../data/scheduleEnforcer';
 import { CustomerInfo, PurchasesPackage, PurchasesStoreProduct } from 'react-native-purchases';
+import { PRIVACY_POLICY_URL, TERMS_URL } from '../data/purchases';
 import SubscriptionScreen from './SubscriptionScreen';
+import AboutScreen from './AboutScreen';
+import WebDocScreen from './WebDocScreen';
 import TrialTimelineScreen from '../onboarding/TrialTimelineScreen';
 import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, focusScore, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
 import {
@@ -117,6 +120,9 @@ type Overlay =
   | 'emergencyTokens'
   | 'subscription'
   | 'plans'
+  | 'about'
+  | 'terms'
+  | 'privacy'
   | 'deleteAccount'
   | 'screenTimeDiagnostics';
 type Block = null | 'shield' | 'gate' | 'grant' | 'emergency';
@@ -971,6 +977,9 @@ export default function MainApp({
           onOpenSubscription={() => setOverlay('subscription')}
           onOpenDifficulty={() => openDifficulty('settings')}
           onOpenDeleteAccount={() => setOverlay('deleteAccount')}
+          onOpenAbout={() => setOverlay('about')}
+          onOpenTerms={() => setOverlay('terms')}
+          onOpenPrivacy={() => setOverlay('privacy')}
           onOpenScreenTimeDiagnostics={
             Platform.OS === 'ios' ? () => setOverlay('screenTimeDiagnostics') : undefined
           }
@@ -1108,6 +1117,23 @@ export default function MainApp({
      *  purchase implementation, one set of 3.1.2 disclosures, one restore
      *  button. A second bespoke buy sheet in Settings would be two things to
      *  keep correct and two things for App Review to disagree with. */
+    if (ov === 'about') return <AboutScreen onBack={() => setOverlay('settings')} />;
+    if (ov === 'terms')
+      return (
+        <WebDocScreen
+          title="Terms of Use"
+          url={TERMS_URL}
+          onBack={() => setOverlay('settings')}
+        />
+      );
+    if (ov === 'privacy')
+      return (
+        <WebDocScreen
+          title="Privacy Policy"
+          url={PRIVACY_POLICY_URL}
+          onBack={() => setOverlay('settings')}
+        />
+      );
     if (ov === 'plans')
       return (
         <TrialTimelineScreen
