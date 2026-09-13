@@ -523,6 +523,7 @@ export default function MainApp({
   );
   const [schedules, setSchedules] = useState(persisted.schedules);
   const [gateReflections, setGateReflections] = useState(persisted.gateReflections);
+  const [waitingRoomFamilies, setWaitingRoomFamilies] = useState(persisted.waitingRoomFamilies);
   const [activitySessions, setActivitySessions] = useState(persisted.activitySessions ?? []);
   const [appLimits, setAppLimits] = useState<AppLimit[]>(persisted.appLimits ?? []);
   const [emergencyTokens, setEmergencyTokens] = useState(persisted.emergencyTokens ?? startingEmergencyTokens());
@@ -879,6 +880,7 @@ export default function MainApp({
         emergencyRefusal={emergencyRefusal}
         onSkipWithToken={unlockWithBailout}
         onReflectionChange={(prompt, text) => setPendingReflection({ prompt, text })}
+        waitingRoomFamilies={waitingRoomFamilies}
         onGranted={(m) => {
           commitReflection(true);
           // The return value used to be discarded, so passing the challenge
@@ -948,8 +950,6 @@ export default function MainApp({
       return (
         <SettingsScreen
           onBack={() => setOverlay('profile')}
-          onLoadDemoData={() => applyDevState(buildDemoState())}
-          onClearDemoData={() => applyDevState(clearDemoState())}
           /* Guardian is a Pro feature — PlanCompareScreen lists it as
              "free: —, Pro: Yes" and nothing enforced it. Free users get the
              offer rather than a dead row, so the door is visible and the
@@ -980,9 +980,6 @@ export default function MainApp({
           onOpenAbout={() => setOverlay('about')}
           onOpenTerms={() => setOverlay('terms')}
           onOpenPrivacy={() => setOverlay('privacy')}
-          onOpenScreenTimeDiagnostics={
-            Platform.OS === 'ios' ? () => setOverlay('screenTimeDiagnostics') : undefined
-          }
           difficultyLabel={intensity.name}
         />
       );
@@ -1099,7 +1096,17 @@ export default function MainApp({
           }}
         />
       );
-    if (ov === 'waitingRoom') return <WaitingRoomScreen onBack={() => setOverlay('settings')} />;
+    if (ov === 'waitingRoom')
+      return (
+        <WaitingRoomScreen
+          onBack={() => setOverlay('settings')}
+          initial={waitingRoomFamilies}
+          onSave={(families) => {
+            setWaitingRoomFamilies(families);
+            onPatch({ waitingRoomFamilies: families });
+          }}
+        />
+      );
     if (ov === 'subscription')
       return (
         <SubscriptionScreen

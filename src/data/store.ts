@@ -66,6 +66,9 @@ export type PersistedState = {
   session: FocusSession | null;
   /** Which essential categories stay reachable during a block. */
   essentials: Record<EssentialKey, boolean>;
+  /** Waiting Room: which gate families may appear. Absent means all of them.
+   *  Keyed by family letter, matching gateQuestions' A/C/E. */
+  waitingRoomFamilies?: Record<string, boolean>;
   gateReflections: GateReflection[];
   schedules: Schedule[];
   appLimits?: AppLimit[];

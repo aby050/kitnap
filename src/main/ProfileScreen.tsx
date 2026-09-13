@@ -82,6 +82,14 @@ const STAT_TINTS = {
   saved: '#6FE3A9',
 } as const;
 
+/** A headline figure has one line and a third of the screen. `formatDuration`
+ *  returns "197h 26m", which wraps there and pushes the caption out from under
+ *  it — and at two hundred hours the minutes were never the point. */
+function compactDuration(minutes: number): string {
+  if (minutes >= 6000) return `${Math.round(minutes / 60)}h`;
+  return formatDuration(minutes);
+}
+
 function GlowStat({
   icon,
   value,
@@ -111,7 +119,9 @@ function GlowStat({
         <View style={[styles.glowCore, { backgroundColor: `${tint}22` }]} />
         <Icon name={icon} size={28} color={tint} strokeWidth={1.9} />
       </View>
-      <Text style={[styles.glowValue, { color: tint }]}>{value}</Text>
+      <Text style={[styles.glowValue, { color: tint }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+        {value}
+      </Text>
       <Text style={styles.glowLabel}>{label}</Text>
     </Container>
   );
@@ -405,7 +415,7 @@ export default function ProfileScreen({
             <GlowStat
               icon="clock"
               tint={STAT_TINTS.saved}
-              value={formatDuration(all.savedMinutes)}
+              value={compactDuration(all.savedMinutes)}
               label="SAVED"
             />
           </View>
