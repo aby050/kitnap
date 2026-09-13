@@ -33,6 +33,13 @@ import KnockoutLabel from '../components/KnockoutLabel';
 
 /** A commitment runs from half an hour up to a week. */
 const MIN_BLOCK_MINUTES = 30;
+
+/** The four lengths people actually pick, plus a way to any other one.
+ *  The +/- stepper this replaces needed six taps to reach two hours and
+ *  eleven to reach a day — a fine adjustment tool standing in for the choice
+ *  itself. It is still here, one tap behind "Custom", for the lengths a grid
+ *  cannot hold. */
+const PRESET_MINUTES = [30, 60, 120, 240] as const;
 const MAX_BLOCK_MINUTES = 7 * 24 * 60;
 
 /** Every press moves exactly 15 minutes. Holding doesn't change that amount —
@@ -60,6 +67,16 @@ function stepTo(current: number, dir: number): number {
 /** The smaller unit is always spelled out, including when it's zero — "1h 0m",
  *  not "1h". The stepper reads as a dial the user is turning, and a component
  *  that vanishes at zero makes the value jump around as it crosses an hour. */
+/** Compact label for a preset: whole hours drop the ":00" that
+ *  formatBlockLength keeps, because "1h 0m" on a button reads as a bug. */
+function presetLabel(minutes: number): string {
+  if (minutes % 60 === 0) {
+    const h = minutes / 60;
+    return h >= 24 && h % 24 === 0 ? `${h / 24}d` : `${h}h`;
+  }
+  return `${minutes}m`;
+}
+
 function formatBlockLength(minutes: number): string {
   const d = Math.floor(minutes / 1440);
   const h = Math.floor((minutes % 1440) / 60);
@@ -158,6 +175,7 @@ export default function HomeScreen({
   // hours can't express. 30m is the default commitment, 7d the ceiling.
   const [durationMinutes, setDurationMinutes] = useState(MIN_BLOCK_MINUTES);
   const [showBailout, setShowBailout] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* Geometry for the knocked-out CTA label — see the Button in the render.
@@ -264,7 +282,7 @@ export default function HomeScreen({
 
         {/* Commitment hero */}
         <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={[styles.hero, heroAnimStyle]}>
-          <Ring progress={ringProgress} size={248} thickness={4}>
+          <Ring progress={ringProgress} size={210} thickness={4}>
             <Text style={[type.overline, styles.heroLabel]}>
               {/* Blocking is already on by default (see BlockedAppsPill above)
                   — this timer is a stricter lockdown on top of that, not what
@@ -276,28 +294,74 @@ export default function HomeScreen({
           </Ring>
         </Animated.View>
 
-        {/* Duration stepper */}
-        <Animated.View entering={FadeInDown.delay(100).duration(motion.transition)} style={styles.stepper}>
+        {/* Duration */}
+        <Animated.View entering={FadeInDown.delay(100).duration(motion.transition)} style={styles.presetGrid}>
+          {PRESET_MINUTES.map((m) => {
+            const active = durationMinutes === m && !customOpen;
+            return (
+              <Pressable
+                key={m}
+                style={[styles.presetBtn, active && styles.presetBtnOn]}
+                onPress={() => {
+                  tapLight();
+                  setCustomOpen(false);
+                  setDurationMinutes(m);
+                  heroScale.value = withSpring(1.04, { damping: 10, stiffness: 400 }, () => {
+                    heroScale.value = withSpring(1, { damping: 14, stiffness: 300 });
+                  });
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text style={[styles.presetValue, active && styles.presetValueOn]}>
+                  {presetLabel(m)}
+                </Text>
+              </Pressable>
+            );
+          })}
+
+          {/* Custom opens the old stepper in place rather than on another
+              screen: choosing a length is one decision and should not cost a
+              navigation. */}
           <Pressable
-            style={styles.stepBtn}
-            onPressIn={() => startAdjust(-1)}
-            onPressOut={stopAdjust}
-            hitSlop={8}
+            style={[styles.presetBtn, styles.presetWide, customOpen && styles.presetBtnOn]}
+            onPress={() => {
+              tapLight();
+              setCustomOpen((o) => !o);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: customOpen }}
           >
-            <Icon name="minus" size={20} color={palette.text} />
-          </Pressable>
-          <View style={styles.stepValue}>
-            <Text style={type.bodyStrong}>{formatBlockLength(durationMinutes)}</Text>
-          </View>
-          <Pressable
-            style={styles.stepBtn}
-            onPressIn={() => startAdjust(1)}
-            onPressOut={stopAdjust}
-            hitSlop={8}
-          >
-            <Icon name="plus" size={20} color={palette.text} />
+            <Text style={[styles.presetValue, customOpen && styles.presetValueOn]}>Custom</Text>
+            <Text style={[styles.presetHint, customOpen && styles.presetHintOn]}>
+              {customOpen ? formatBlockLength(durationMinutes) : 'any length'}
+            </Text>
           </Pressable>
         </Animated.View>
+
+        {customOpen && (
+          <Animated.View entering={FadeIn.duration(motion.enter)} style={styles.stepper}>
+            <Pressable
+              style={styles.stepBtn}
+              onPressIn={() => startAdjust(-1)}
+              onPressOut={stopAdjust}
+              hitSlop={8}
+            >
+              <Icon name="minus" size={20} color={palette.text} />
+            </Pressable>
+            <View style={styles.stepValue}>
+              <Text style={type.bodyStrong}>{formatBlockLength(durationMinutes)}</Text>
+            </View>
+            <Pressable
+              style={styles.stepBtn}
+              onPressIn={() => startAdjust(1)}
+              onPressOut={stopAdjust}
+              hitSlop={8}
+            >
+              <Icon name="plus" size={20} color={palette.text} />
+            </Pressable>
+          </Animated.View>
+        )}
 
         {/* Primary action */}
         <Animated.View entering={FadeInDown.delay(140).duration(motion.transition)} style={styles.cta}>
@@ -532,6 +596,33 @@ const styles = StyleSheet.create({
   heroRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
   heroPair: { flexDirection: 'row', alignItems: 'flex-end', gap: space.xs },
 
+  /* Two across, wrapping — the fifth cell spans the row, so "Custom" reads
+   * as the escape hatch rather than as a fifth length. */
+  presetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: space.lg,
+    marginHorizontal: -5,
+  },
+  presetBtn: {
+    width: '50%',
+    minHeight: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.glass,
+    // Inset via margin rather than padding so the 50% widths still tile.
+    transform: [{ scale: 1 }],
+  },
+  presetWide: { width: '100%' },
+  presetBtnOn: { backgroundColor: palette.surfaceInverse, borderColor: palette.surfaceInverse },
+  presetValue: { color: palette.text, fontSize: 19, fontWeight: '700', letterSpacing: -0.4 },
+  presetValueOn: { color: palette.onLight },
+  presetHint: { color: palette.textTertiary, fontSize: 11.5, fontWeight: '600', marginTop: 2 },
+  presetHintOn: { color: palette.onLight, opacity: 0.7 },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md, marginTop: space.xl },
   stepBtn: {
     width: 46,

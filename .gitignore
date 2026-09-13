@@ -51,3 +51,7 @@ expo*.log
 # Local secrets
 .env
 *.ipa
+
+# Encoded output of scripts/publish-ambience.sh — the source lives in
+# assets/ambience and the published copies live in R2.
+/build/ambience/
