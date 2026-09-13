@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { palette } from '../design/tokens';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import QuestionBlock from './QuestionBlock';
@@ -95,6 +96,10 @@ export default function OnboardingFlow({
     // they have already completed. `return` before advancing the step, or the
     // flow moves to the next question underneath the login screen and they
     // land mid-funnel on skip.
+    //
+    // Dormant while ASK_RETURNING is off: the question is not in QUESTIONS,
+    // so this never fires. Kept whole, alongside the login screen below, so
+    // turning accounts back on is one boolean rather than a rebuild.
     if (question.id === 'returning' && value === RETURNING_EXISTING) {
       setShowLogin(true);
       return;
@@ -171,7 +176,7 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
     width: '100%',
-    backgroundColor: 'rgba(71,107,235,0.85)',
+    backgroundColor: palette.accent,
     transformOrigin: 'left center',
   },
   currentArea: {

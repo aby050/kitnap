@@ -42,7 +42,7 @@ import { EMPTY_GOAL, GoalData } from './src/data/goal';
 import { clearState, DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
 import { QUESTION_CHUNKS } from './src/onboarding/questions';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
-import { estimateDailyHours, recommendSetup } from './src/data/setupPlan';
+import { estimateDailyHours, recommendSetup, scheduleFromSlipWindow } from './src/data/setupPlan';
 import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
 import { effectiveBlockedPackages } from './src/data/scheduleEnforcer';
 import { usePurchases } from './src/data/usePurchases';
@@ -305,6 +305,18 @@ export default function App() {
               onComplete={(a, h) => {
                 setAnswers(a);
                 if (h) setHistory(h);
+                // The slip window becomes a real schedule rather than a
+                // stored string — seeded once, and editable in Settings from
+                // the moment setup ends.
+                const seeded = scheduleFromSlipWindow(a);
+                if (seeded) {
+                  patch({
+                    schedules: [
+                      seeded,
+                      ...persisted.schedules.filter((s) => s.id !== seeded.id),
+                    ],
+                  });
+                }
                 setAskingPermission(true);
               }}
               onAccountSignedIn={(account) => patch({ account })}
