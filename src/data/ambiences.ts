@@ -45,7 +45,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'meditate',
     title: 'Meditation',
-    intent: 'Ten quiet minutes with nothing to check.',
+    intent: 'Ten quiet minutes. Nothing to check.',
     minutes: 10,
     theme: 'quiet',
     mark: 'mist',
@@ -55,7 +55,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'morning',
     title: 'First light',
-    intent: 'Start the day before the phone does.',
+    intent: 'Start your day before the phone does.',
     minutes: 20,
     theme: 'health',
     mark: 'sunrise',
@@ -65,7 +65,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'reading',
     title: 'Reading',
-    intent: 'A chapter. Not a feed.',
+    intent: 'A chapter, not a feed.',
     minutes: 30,
     theme: 'learning',
     mark: 'book',
@@ -75,7 +75,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'think',
     title: 'Deep thinking',
-    intent: 'One problem. No interruptions.',
+    intent: 'One problem, no interruptions.',
     minutes: 45,
     theme: 'deepWork',
     mark: 'tower',
@@ -85,7 +85,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'winddown',
     title: 'Wind down',
-    intent: 'Screens off before the bedroom.',
+    intent: 'Screens off before bed.',
     minutes: 45,
     theme: 'health',
     mark: 'moon',
@@ -95,7 +95,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'family',
     title: 'Family time',
-    intent: 'They are in the room. Be in it too.',
+    intent: "They're in the room. Be in it too.",
     minutes: 60,
     theme: 'presence',
     mark: 'home',
@@ -105,7 +105,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'study',
     title: 'Deep study',
-    intent: 'Chapter-sized. Phone in another room.',
+    intent: 'Chapter-sized, phone in another room.',
     minutes: 90,
     theme: 'learning',
     mark: 'hourglass',
@@ -115,7 +115,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'peace',
     title: 'Peace',
-    intent: 'A long reset. Nothing is waiting.',
+    intent: "A long reset. Nothing's waiting.",
     minutes: 120,
     theme: 'quiet',
     mark: 'leaf',
@@ -125,7 +125,7 @@ export const AMBIENCES: Ambience[] = [
   {
     key: 'night',
     title: 'Night',
-    intent: 'Nothing good is happening after midnight.',
+    intent: 'Give tomorrow a head start.',
     minutes: 480,
     theme: 'health',
     mark: 'sun',
@@ -136,9 +136,9 @@ export const AMBIENCES: Ambience[] = [
 
 /** Section headings for the browse grid, in order. */
 export const BANDS: { key: Ambience['band']; title: string; sub: string }[] = [
-  { key: 'short', title: 'A few minutes', sub: 'When you only have a gap.' },
+  { key: 'short', title: 'A few minutes', sub: "When you've only got a gap." },
   { key: 'medium', title: 'An hour or so', sub: 'Long enough to get somewhere.' },
-  { key: 'long', title: 'A long stretch', sub: 'For a whole evening, or a night.' },
+  { key: 'long', title: 'A long stretch', sub: 'A whole evening, or a night.' },
 ];
 
 export const inBand = (band: Ambience['band']) => AMBIENCES.filter((a) => a.band === band);
