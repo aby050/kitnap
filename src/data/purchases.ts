@@ -16,7 +16,10 @@ const API_KEYS = {
   android: process.env.EXPO_PUBLIC_RC_ANDROID_KEY ?? '',
 };
 
-/** The single entitlement that gates Strict mode, schedules and Autofocus.
+/** The single entitlement that gates the guardian code and schedules beyond
+ *  the first. Strict mode and the screen-time read are free and always have
+ *  been; "Autofocus" never existed at all, and this comment naming all three
+ *  is how it ended up being sold on the subscription screen.
  *  Must match the identifier created in the RevenueCat dashboard exactly. */
 export const ENTITLEMENT_ID = 'byre_pro';
 

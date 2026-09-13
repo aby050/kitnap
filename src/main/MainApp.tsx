@@ -937,7 +937,22 @@ export default function MainApp({
           onBack={() => setOverlay('profile')}
           onLoadDemoData={() => applyDevState(buildDemoState())}
           onClearDemoData={() => applyDevState(clearDemoState())}
-          onOpenGuardian={() => setOverlay('guardian')}
+          /* Guardian is a Pro feature — PlanCompareScreen lists it as
+             "free: —, Pro: Yes" and nothing enforced it. Free users get the
+             offer rather than a dead row, so the door is visible and the
+             price is stated. */
+          onOpenGuardian={() =>
+            isPro
+              ? setOverlay('guardian')
+              : Alert.alert(
+                  'Guardian is part of Byre Pro',
+                  'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
+                  [
+                    { text: 'Not now', style: 'cancel' },
+                    { text: 'See plans', onPress: () => setOverlay('subscription') },
+                  ],
+                )
+          }
           onOpenWaitingRoom={() => setOverlay('waitingRoom')}
           onOpenBlockScreens={() => setOverlay('blockScreens')}
           onOpenAppearance={() => setOverlay('appearance')}
@@ -1096,6 +1111,8 @@ export default function MainApp({
             onPatch({ schedules: next });
           }}
           onBack={() => setOverlay(null)}
+          isPro={isPro}
+          onUpgrade={() => setOverlay('subscription')}
         />
       );
     if (ov === 'account')

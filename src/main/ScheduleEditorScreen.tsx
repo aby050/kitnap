@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
+import { FREE_SCHEDULE_LIMIT } from '../data/store';
 import { Schedule } from '../data/store';
 import { fieldStyle, palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
@@ -33,10 +34,18 @@ export default function ScheduleEditorScreen({
   schedules,
   onChange,
   onBack,
+  isPro = false,
+  onUpgrade,
 }: {
   schedules: Schedule[];
   onChange: (next: Schedule[]) => void;
   onBack: () => void;
+  /** The free plan keeps one schedule. PlanCompareScreen has been telling
+   *  users "Schedules — free: 1, Pro: Unlimited" since the paywall was
+   *  written; nothing enforced it, so the promise was the only thing that was
+   *  true. This is the code catching up to the copy, not a new restriction. */
+  isPro?: boolean;
+  onUpgrade?: () => void;
 }) {
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [draftName, setDraftName] = useState('');
@@ -75,6 +84,21 @@ export default function ScheduleEditorScreen({
     if (!editing || !draftName.trim() || !draftStart.trim() || !draftEnd.trim()) return;
     const next: Schedule = { ...editing, name: draftName.trim(), start: draftStart.trim(), end: draftEnd.trim(), days: draftDays };
     const exists = schedules.some((s) => s.id === next.id);
+    // Editing what you already have is never blocked — only adding a second.
+    if (!exists && !isPro && schedules.length >= FREE_SCHEDULE_LIMIT) {
+      setEditing(null);
+      Alert.alert(
+        'One schedule on the free plan',
+        'Byre Pro adds as many recurring windows as you want. Your existing schedule keeps working either way.',
+        onUpgrade
+          ? [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'See plans', onPress: onUpgrade },
+            ]
+          : [{ text: 'OK' }],
+      );
+      return;
+    }
     onChange(exists ? schedules.map((s) => (s.id === next.id ? next : s)) : [...schedules, next]);
     setEditing(null);
   };

@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Icon from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
 import { restorePurchases, ENTITLEMENT_ID } from '../data/purchases';
-import { palette, space } from '../design/tokens';
+import { palette, space, radius } from '../design/tokens';
 
 /** Apple and Google both refuse to let an app cancel its own subscription —
  *  the only sanctioned route is the store's own management page, and an app
@@ -76,13 +76,35 @@ export default function SubscriptionScreen({
             left the whole screen reading as an error state. It carries the
             same aurora card the rest of the app uses, and on the free plan it
             does the job a status card can't: say what Pro is for. */}
+        {/* The two hero gradients were hardcoded — a blue ramp for Pro and a
+            green one for free — so on the mint scheme the Pro card was blue
+            and on the blue scheme the free card was green. Both now derive
+            from the active accent, which is the same sweep the rest of the
+            app sits on. */}
         <LinearGradient
-          colors={isPro ? ['#080D14', '#0F1A26', '#153458', '#1C3FA8'] : ['#101314', '#171B1A', '#1F2A26']}
-          locations={[0, 0.4, 0.76, 1]}
+          colors={
+            isPro
+              ? ['#05070B', '#0C1220', palette.accentPressed, palette.accent]
+              : ['#08090B', '#101216', '#1A1D22']
+          }
+          locations={isPro ? [0, 0.38, 0.78, 1] : [0, 0.5, 1]}
           start={{ x: 0.05, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.hero}
         >
+          <View style={styles.heroBadgeRow}>
+            <View style={[styles.heroBadge, isPro && styles.heroBadgeOn]}>
+              <Icon
+                name={isPro ? 'checkCircle' : 'lock'}
+                size={13}
+                color={isPro ? '#FFFFFF' : palette.textSecondary}
+                strokeWidth={2}
+              />
+              <Text style={[styles.heroBadgeText, isPro && styles.heroBadgeTextOn]}>
+                {isPro ? (isTrial ? 'TRIAL' : 'ACTIVE') : 'FREE'}
+              </Text>
+            </View>
+          </View>
           <Text style={styles.heroLabel}>{isPro ? (isTrial ? 'Free trial' : 'Byre Pro') : 'Free plan'}</Text>
           <Text style={styles.heroValue}>
             {isPro
@@ -204,12 +226,23 @@ function Row({
 
 /** Stated once, here, rather than as a vague "unlock everything" — a plan
  *  screen that can't name what it sells is why people cancel. */
+/**
+ * What a plan adds — and only what it actually adds.
+ *
+ * This list sold five things. "Autofocus — Byre starts a block when it sees
+ * you drifting" does not exist anywhere in this codebase and never has; it
+ * was a feature invented on a paywall. "Strict mode" and "Screen time
+ * insights" are both free and always have been. Selling a feature that does
+ * not exist is a straight 2.3.1 rejection and worse than the guideline
+ * problem this app was already fighting.
+ *
+ * What is left is the split PlanCompareScreen has been promising users all
+ * along: more bailouts, the guardian code, and more than one schedule.
+ */
 const PERKS: { icon: React.ComponentProps<typeof Icon>['name']; title: string; desc: string }[] = [
-  { icon: 'shield', title: 'Strict mode', desc: 'The physical challenge, not just a quiz.' },
-  { icon: 'calendar', title: 'Schedules', desc: 'Recurring windows that block on their own.' },
-  { icon: 'target', title: 'Autofocus', desc: 'Byre starts a block when it sees you drifting.' },
-  { icon: 'chart', title: 'Screen time insights', desc: 'Your real numbers, day, week and month.' },
-  { icon: 'key', title: 'Bailouts every renewal', desc: 'Topped up automatically, never expire.' },
+  { icon: 'key', title: '10 bailouts a year', desc: 'Topped up every renewal. Free plan keeps its 2 forever.' },
+  { icon: 'shield', title: 'Guardian code', desc: 'Someone you trust holds the key to loosening Strict mode.' },
+  { icon: 'calendar', title: 'Unlimited schedules', desc: 'Recurring windows that block on their own. Free plan gets one.' },
 ];
 
 const styles = StyleSheet.create({
@@ -231,7 +264,30 @@ const styles = StyleSheet.create({
   },
   headerTitle: { color: palette.text, fontSize: 17, fontWeight: '700' },
   scroll: { paddingHorizontal: space.base, paddingBottom: 40 },
-  hero: { borderRadius: 24, padding: 20, overflow: 'hidden' },
+  hero: { borderRadius: 26, padding: 20, paddingTop: 16, overflow: 'hidden', minHeight: 168 },
+  heroBadgeRow: { flexDirection: 'row', marginBottom: 14 },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  heroBadgeOn: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  heroBadgeText: {
+    color: palette.textSecondary,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
+  heroBadgeTextOn: { color: '#FFFFFF' },
   heroLabel: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
