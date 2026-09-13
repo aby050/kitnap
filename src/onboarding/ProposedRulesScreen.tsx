@@ -40,7 +40,7 @@ const RULES: Rule[] = [
     name: 'Work Time',
     action: 'Block',
     tint: ['#fff4d4', '#e2c67e'], // cream-yellow gradient
-    description: 'Holds back social, games and video during your working hours, so the day doesn't disappear into your phone.',
+    description: "Holds back social, games and video during your working hours, so the day doesn't disappear into your phone.",
     textColor: '#2e250f',
   },
   {
