@@ -22,7 +22,7 @@ export default function AmbienceVideoLayer({
   onFirstFrame,
 }: {
   source: MediaSource;
-  onFirstFrame: () => void;
+  onFirstFrame?: () => void;
 }) {
   // expo-video takes a require id as-is and a remote clip as a bare URL
   // string, so a streamed loop needs unwrapping from the {uri} the rest of

@@ -1187,6 +1187,7 @@ export default function MainApp({
               onOpenProfile={() => setOverlay('profile')}
               onOpenApps={() => setTab('apps')}
               onTriggerShield={openUnlockFlow}
+              onOpenRooms={() => setTab('timer')}
               sessionRunning={timerRunning}
               onStartBlock={(minutes) => startSession(minutes, 'Focus Timer', false)}
               onStartRest={() => {
