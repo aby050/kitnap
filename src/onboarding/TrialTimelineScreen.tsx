@@ -93,7 +93,7 @@ function TrialTerms({ days, price }: { days: number; price: string }) {
  *  nothing here is aspirational, and the free column is stated honestly
  *  underneath rather than hidden.
  */
-const INCLUDED: { icon: IconName; title: string; desc: string }[] = [
+const INCLUDED: { icon: IconName; title: string; desc: string; plan?: boolean }[] = [
   {
     icon: 'shield',
     title: 'Blocking that holds',
@@ -107,11 +107,13 @@ const INCLUDED: { icon: IconName; title: string; desc: string }[] = [
   {
     icon: 'calendar',
     title: 'Schedules that run themselves',
+    plan: true,
     desc: 'Recurring windows that start without you remembering to start them.',
   },
   {
     icon: 'key',
     title: 'Guardian code',
+    plan: true,
     desc: 'Someone you trust holds the key to your settings, so you cannot quietly undo it.',
   },
   {
@@ -192,6 +194,7 @@ export default function TrialTimelineScreen({
   onStart,
   offering,
   onPurchased,
+  onClose,
 }: {
   /** Advances the funnel. Called after a successful purchase, and also on
    *  restore — a returning subscriber must never be walled in here. The
@@ -201,6 +204,10 @@ export default function TrialTimelineScreen({
   onStart: (result?: PurchaseResult) => void;
   offering?: { availablePackages: PurchasesPackage[] } | null;
   onPurchased?: (bailouts: number) => void;
+  /** A way out, for when this is opened from Settings rather than reached
+   *  through the funnel. Absent in onboarding, where the free-plan link at
+   *  the bottom is the exit and a close button would be a second one. */
+  onClose?: () => void;
 }) {
   const PLANS = useMemo(() => {
     const live = offering?.availablePackages?.length ? toPlans(offering.availablePackages) : [];
@@ -260,7 +267,15 @@ export default function TrialTimelineScreen({
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      {onClose && (
+        <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12} accessibilityLabel="Close">
+          <Icon name="close" size={18} color={palette.text} />
+        </Pressable>
+      )}
+      <ScrollView
+        contentContainerStyle={[styles.scroll, onClose && styles.scrollWithClose]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* The four-step "Day 5: we remind you / Day 7: keep it going"
             timeline that used to open this screen is gone. It is the most
             recognisable beat in the category's paywall — the same graphic,
@@ -269,10 +284,10 @@ export default function TrialTimelineScreen({
             stated in full beneath the CTA, where guideline 3.1.2 expects
             them anyway. */}
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          Everything Byre does, kept on
+          Everything Byre does
         </Animated.Text>
         <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={styles.subheading}>
-          Here is what a plan covers, before you pick how to pay for it.
+          Free keeps the blocking. A plan adds the two marked below.
         </Animated.Text>
 
         <Animated.View entering={FadeInDown.delay(120).duration(420)} style={styles.included}>
@@ -285,7 +300,18 @@ export default function TrialTimelineScreen({
                 <Icon name={f.icon} size={17} color={palette.text} strokeWidth={1.9} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.incTitle}>{f.title}</Text>
+                <View style={styles.incTitleRow}>
+                  <Text style={styles.incTitle}>{f.title}</Text>
+                  {/* Only on what a plan actually unlocks. The list used to
+                      present all five as bought, and three of them —
+                      blocking, the movement unlock, the screen-time read —
+                      are free and always have been. */}
+                  {f.plan && (
+                    <View style={styles.planPill}>
+                      <Text style={styles.planPillText}>PLAN</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.incDesc}>{f.desc}</Text>
               </View>
             </View>
@@ -425,8 +451,21 @@ const styles = StyleSheet.create({
   },
   legalDot: { color: palette.textQuaternary, fontSize: 12.5 },
   container: { flex: 1, backgroundColor: 'transparent' },
+  closeBtn: {
+    position: 'absolute',
+    top: 54,
+    left: 20,
+    zIndex: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.glass,
+  },
   restore: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', marginTop: 10, textDecorationLine: 'underline' },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 150 },
+  scrollWithClose: { paddingTop: 104 },
   heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 32, marginBottom: 22 },
   timeline: {},
   step: { flexDirection: 'row', gap: 14 },
@@ -473,7 +512,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  incTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   incTitle: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  planPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: palette.accentSoft,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.accentBorder,
+  },
+  planPillText: { color: palette.accent, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.8 },
   incDesc: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 17.5, marginTop: 2 },
   freeNote: {
     color: palette.textTertiary,

@@ -516,6 +516,11 @@ export default function App() {
               pendingIOSUnlock={pendingIOSUnlock}
               onIOSUnlockConsumed={() => setPendingIOSUnlock(false)}
               onDeleteAccount={handleDeleteAccount}
+              /* The plan offering, so Settings can sell. Without it the
+                 only purchase surface in the whole app was the onboarding
+                 funnel — decline once and there was no way back to it. */
+              offering={purchases.offering}
+              onPurchasedPlan={grantBailouts}
               bailoutProducts={purchases.bailoutProducts}
               isPro={purchases.pro}
               customerInfo={purchases.info}
