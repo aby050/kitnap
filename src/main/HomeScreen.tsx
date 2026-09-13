@@ -229,6 +229,12 @@ export default function HomeScreen({
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Brand header */}
         <View style={styles.headerRow}>
+          {Platform.OS === 'ios' && (
+            <View style={styles.statusPill}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusText}>Blocking on</Text>
+            </View>
+          )}
           <View style={styles.headerRight}>
             <View style={styles.bailoutIconWrap}>
               <IconButton
@@ -295,12 +301,17 @@ export default function HomeScreen({
 
         {/* Primary action */}
         <Animated.View entering={FadeInDown.delay(140).duration(motion.transition)} style={styles.cta}>
-          {Platform.OS === 'ios' && (
+          {/* Only while something is actually running. The idle copy that used
+              to sit here — "Blocking is always on. Focus lock below makes it
+              stricter." — was explanatory text pinned permanently above the
+              primary action, and it pointed the wrong way: the focus lock it
+              called "below" is the dial above. The fact it was carrying is
+              worth keeping, so it moved to the header as a live status pill,
+              where it costs a glance instead of a paragraph. */}
+          {Platform.OS === 'ios' && sessionRunning && (
             <View style={styles.baselineBanner}>
               <Text style={styles.baselineText}>
-                {sessionRunning
-                  ? 'Focus lock running — nothing unlocks until it ends'
-                  : 'Blocking is always on. Focus lock below makes it stricter.'}
+                Focus lock running — nothing unlocks until it ends
               </Text>
             </View>
           )}
@@ -473,7 +484,27 @@ export default function HomeScreen({
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: space.gutter, paddingTop: space.sm, paddingBottom: space.tabClearance },
 
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', minHeight: 44 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  /* The standing fact — apps are blocked right now, with or without a focus
+   * lock — as a state indicator rather than a sentence. */
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    backgroundColor: palette.onColor,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.onColorBorder,
+  },
+  statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.accent },
+  statusText: { color: palette.text, fontSize: 12.5, fontWeight: '700' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   bailoutIconWrap: { position: 'relative' },
   bailoutBadge: {

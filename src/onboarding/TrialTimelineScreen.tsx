@@ -83,6 +83,44 @@ function TrialTerms({ days, price }: { days: number; price: string }) {
   );
 }
 
+/** What the plan actually buys, named one by one.
+ *
+ *  The paywall used to open straight onto two priced rows. Asking someone to
+ *  pick a billing term before anything has told them what they are billing
+ *  for is the single most common reason a paywall reads as a shakedown — and
+ *  under 4.3(a) an unexplained price list is exactly what an interchangeable
+ *  reskin looks like. Every line below is a screen that exists in this build;
+ *  nothing here is aspirational, and the free column is stated honestly
+ *  underneath rather than hidden.
+ */
+const INCLUDED: { icon: IconName; title: string; desc: string }[] = [
+  {
+    icon: 'shield',
+    title: 'Blocking that holds',
+    desc: 'Apps and categories stay shut. Loosening a rule waits a day, on purpose.',
+  },
+  {
+    icon: 'activity',
+    title: 'Unlock by moving',
+    desc: 'The camera counts real reps. A quiz or a breathing pause if you would rather.',
+  },
+  {
+    icon: 'calendar',
+    title: 'Schedules that run themselves',
+    desc: 'Recurring windows that start without you remembering to start them.',
+  },
+  {
+    icon: 'key',
+    title: 'Guardian code',
+    desc: 'Someone you trust holds the key to your settings, so you cannot quietly undo it.',
+  },
+  {
+    icon: 'chart',
+    title: 'Your real numbers',
+    desc: 'Pickups, hours and streaks by day, week and month — from iOS itself, not a guess.',
+  },
+];
+
 /** Shown only until the store answers, and on the rare launch where it never
  *  does. These rows carry **no price at all** — deliberately. The previous
  *  version hardcoded ₹499/₹99, which is the wrong currency and the wrong
@@ -231,8 +269,36 @@ export default function TrialTimelineScreen({
             stated in full beneath the CTA, where guideline 3.1.2 expects
             them anyway. */}
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          Choose how you want to keep it
+          Everything Byre does, kept on
         </Animated.Text>
+        <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={styles.subheading}>
+          Here is what a plan covers, before you pick how to pay for it.
+        </Animated.Text>
+
+        <Animated.View entering={FadeInDown.delay(120).duration(420)} style={styles.included}>
+          {INCLUDED.map((f, i) => (
+            <View
+              key={f.title}
+              style={[styles.incRow, i < INCLUDED.length - 1 && styles.incDivider]}
+            >
+              <View style={styles.incIcon}>
+                <Icon name={f.icon} size={17} color={palette.text} strokeWidth={1.9} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.incTitle}>{f.title}</Text>
+                <Text style={styles.incDesc}>{f.desc}</Text>
+              </View>
+            </View>
+          ))}
+        </Animated.View>
+
+        {/* The free plan is a real state, so say so here rather than only on
+            the decline screen. A paywall that admits what you keep for
+            nothing is the one people trust. */}
+        <Text style={styles.freeNote}>
+          Byre keeps working free forever — blocking, movement unlocks and emergency access are
+          never behind a plan. A plan adds the rest, and tops up your bailouts.
+        </Text>
 
         {selected.isTrial && selected.trialDays ? (
           <TrialTerms days={selected.trialDays} price={`${selected.price}${selected.per}`} />
@@ -361,7 +427,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   restore: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', marginTop: 10, textDecorationLine: 'underline' },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 150 },
-  heading: { color: palette.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 31, marginBottom: 22 },
+  heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 32, marginBottom: 22 },
   timeline: {},
   step: { flexDirection: 'row', gap: 14 },
   rail: { alignItems: 'center', width: 40 },
@@ -379,7 +445,45 @@ const styles = StyleSheet.create({
   stepBody: { flex: 1, paddingBottom: 18 },
   stepTitle: { color: palette.text, fontSize: 16.5, fontWeight: '700' },
   stepText: { color: palette.textSecondary, fontSize: 14, lineHeight: 20.5, marginTop: 5 },
-  plans: { gap: 10, marginTop: 6 },
+  subheading: {
+    color: palette.textSecondary,
+    fontSize: 14.5,
+    textAlign: 'center',
+    lineHeight: 20.5,
+    marginTop: -14,
+    marginBottom: 20,
+    paddingHorizontal: 10,
+  },
+  included: {
+    backgroundColor: palette.surface,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: 16,
+  },
+  incRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 13, paddingVertical: 14 },
+  incDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.hairline },
+  /* White glyph on a neutral disc. An accent-tinted icon here reads as a
+   * decoration; white reads as a spec sheet, which is what this is. */
+  incIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: palette.onColor,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  incTitle: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  incDesc: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 17.5, marginTop: 2 },
+  freeNote: {
+    color: palette.textTertiary,
+    fontSize: 12.5,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 14,
+    paddingHorizontal: 6,
+  },
+  plans: { gap: 10, marginTop: 18 },
   plan: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -405,7 +509,9 @@ const styles = StyleSheet.create({
   planName: { color: palette.text, fontSize: 15, fontWeight: '600' },
   planNote: { color: palette.textSecondary, fontSize: 12.5, marginTop: 2 },
   bailoutRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 7 },
-  bailoutText: { color: palette.accent, fontSize: 12.5, fontWeight: '700' },
+  // Was accent-coloured. Accent body text on a dark surface reads as a
+  // dead link, not as emphasis — the glyph beside it already carries colour.
+  bailoutText: { color: palette.text, fontSize: 12.5, fontWeight: '700' },
   // 3.1.2(c) — the billed amount outranks every other text in the row.
   planPrice: { color: palette.text, fontSize: 22, fontWeight: '900' },
   planPer: { color: palette.textSecondary, fontSize: 13, fontWeight: '500' },
