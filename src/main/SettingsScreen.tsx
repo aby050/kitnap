@@ -164,7 +164,7 @@ export default function SettingsScreen({
           <SettingRow
             icon={<RowIcon name="eye" />}
             title="Block Screens"
-            subtitle="The screen you see when you open a blocked app"
+            subtitle="What you see when you reach for a blocked app"
             onPress={onOpenBlockScreens}
           />
           <SettingRow
@@ -176,14 +176,14 @@ export default function SettingsScreen({
           <SettingRow
             icon={<RowIcon name="calendar" />}
             title="Schedules"
-            subtitle="Recurring windows that block on their own"
+            subtitle="Windows that block on their own"
             onPress={onOpenSchedules}
           />
           <SettingRow
             icon={<RowIcon name="image" />}
             title="Appearance"
             value={appearanceName}
-            subtitle="Colour scheme for the whole app"
+            subtitle="How the app looks"
             onPress={onOpenAppearance}
             last
           />
@@ -207,7 +207,7 @@ export default function SettingsScreen({
               <SettingRow
                 icon={<RowIcon name="shield" />}
                 title="Guardian"
-                subtitle="A friend holds the code to loosen Strict mode"
+                subtitle="Someone you trust holds the code"
                 onPress={onOpenGuardian}
                 last
               />
@@ -220,7 +220,7 @@ export default function SettingsScreen({
           <SettingRow
             icon={<RowIcon name="card" />}
             title="Subscription"
-            subtitle="Plan, bailouts, restore purchases"
+            subtitle="Your plan, bailouts and purchases"
             onPress={onOpenSubscription}
           />
           <SettingRow
@@ -232,7 +232,7 @@ export default function SettingsScreen({
           <SettingRow
             icon={<RowIcon name="trash" />}
             title="Delete Account"
-            subtitle="Permanently erase your data from this device"
+            subtitle="Erase everything from this device, for good"
             onPress={onOpenDeleteAccount}
             last={!onOpenScreenTimeDiagnostics}
           />
@@ -240,7 +240,7 @@ export default function SettingsScreen({
             <SettingRow
               icon={<RowIcon name="chart" />}
               title="Screen Time diagnostics"
-              subtitle="Check whether blocking is actually wired up"
+              subtitle="Check blocking is really wired up"
               onPress={onOpenScreenTimeDiagnostics}
               last
             />

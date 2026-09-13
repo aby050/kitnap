@@ -404,7 +404,7 @@ export default function HomeScreen({
               </View>
               <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
             </View>
-            <Text style={styles.roomsLine}>Somewhere to be while your apps are locked.</Text>
+            <Text style={styles.roomsLine}>Somewhere to be while your apps are shut.</Text>
             <View style={styles.roomsStrip}>
               {ROOM_PREVIEW.map((a) => {
                 const still = mediaFor(a.key).still;
