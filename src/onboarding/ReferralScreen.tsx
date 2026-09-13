@@ -20,7 +20,7 @@ const TIERS = [
   {
     count: '20 FRIENDS',
     title: '2 Years of Pro',
-    desc: 'Get in touch and we'll add two years of Pro.',
+    desc: "Get in touch and we'll add two years of Pro.",
     progress: 0,
     gem: true,
   },
@@ -34,7 +34,7 @@ const TIERS = [
   {
     count: '100 FRIENDS',
     title: 'Life-Changing Gear',
-    desc: 'Get in touch and we'll send you something we made.',
+    desc: "Get in touch and we'll send you something we made.",
     progress: 0,
     gem: false,
   },

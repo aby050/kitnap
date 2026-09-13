@@ -952,7 +952,7 @@ function UnlockAppConfirm({
           <Text style={styles.confirmTitle}>Unlock {app.name}?</Text>
           <Text style={styles.confirmBody}>
             {hardMode
-              ? 'This session was started in hard mode. A Bailout won't end it — this one runs to the end.'
+              ? "This session was started in hard mode. A Bailout won't end it — this one runs to the end."
               : (
                   <>
                     This ends the whole session, not just this app, and costs{' '}
