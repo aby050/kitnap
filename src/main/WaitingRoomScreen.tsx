@@ -16,13 +16,30 @@ const CONTENT_TYPES: { id: string; name: string; desc: string; icon: IconName }[
   { id: 'E', name: 'Physical holds', desc: 'A slow hold or a breath. Deliberately boring.', icon: 'breathe' },
 ];
 
-export default function WaitingRoomScreen({ onBack }: { onBack: () => void }) {
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({ A: true, B: true, C: true, D: true, E: true });
+export default function WaitingRoomScreen({
+  onBack,
+  initial,
+  onSave,
+}: {
+  onBack: () => void;
+  initial?: Record<string, boolean>;
+  /** Persists the choice. Without this the toggles were local state that the
+   *  back button discarded — a settings screen that looked like it worked and
+   *  did nothing at all. */
+  onSave?: (families: Record<string, boolean>) => void;
+}) {
+  const [enabled, setEnabled] = useState<Record<string, boolean>>(
+    initial ?? { A: true, B: true, C: true, D: true, E: true },
+  );
 
   const toggle = (id: string) => {
     const activeCount = Object.values(enabled).filter(Boolean).length;
     if (enabled[id] && activeCount <= 1) return; // at least one family must stay on
-    setEnabled((p) => ({ ...p, [id]: !p[id] }));
+    setEnabled((p) => {
+      const next = { ...p, [id]: !p[id] };
+      onSave?.(next);
+      return next;
+    });
   };
 
   return (

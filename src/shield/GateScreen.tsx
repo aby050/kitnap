@@ -52,6 +52,8 @@ type Props = {
    *  parent can capture the text before the grant fires. The parent stores it
    *  as pendingReflection and commits it on resolution. */
   onReflectionChange?: (prompt: string, text: string) => void;
+  /** Waiting Room: the gate families the user has left switched on. */
+  waitingRoomFamilies?: Record<string, boolean>;
 };
 
 /** Family C — Self-confrontation. The user types a free-text response; the
@@ -219,6 +221,7 @@ export default function GateScreen({
   emergencyRefusal = null,
   onSkipWithToken,
   onReflectionChange,
+  waitingRoomFamilies,
 }: Props) {
   // One challenge, chosen once per mount. Lazy initial state rather than a
   // useMemo: the adaptive rep target is derived from state that can change
@@ -226,7 +229,7 @@ export default function GateScreen({
   // lands), and with that in a dependency list the question would reroll out
   // from under a user who had just finished it.
   const [q] = useState<GateQuestion>(() =>
-    pickChallenge(intensity.key, healthLimitRaw, repsFor, activitySessions),
+    pickChallenge(intensity.key, healthLimitRaw, repsFor, activitySessions, waitingRoomFamilies),
   );
   const [showFutureSelf, setShowFutureSelf] = useState(!!futureSelfMessage);
   const [showSkipConfirm, setShowSkipConfirm] = useState(false);

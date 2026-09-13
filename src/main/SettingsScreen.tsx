@@ -7,7 +7,6 @@ import Icon, { IconName } from '../ui/Icon';
 import { getSelectionCounts } from '../data/iosScreenTime';
 import Constants from 'expo-constants';
 import ByreMark from '../ui/ByreMark';
-import { DEMO_DAYS } from '../data/demoData';
 import { APPEARANCES, appearance } from '../design/appearance';
 
 /** Shown as the row's current value, so the setting states itself. */
@@ -15,7 +14,6 @@ const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'M
 
 /** Derived rather than written out, so the copy can't drift from the seed the
  *  way it did when DEMO_DAYS went from 60 to 183. */
-const DEMO_SPAN = `${Math.round(DEMO_DAYS / 30.4)} months`;
 
 /**
  * The two controls people actually open Settings for, lifted out of the list
@@ -90,12 +88,9 @@ export default function SettingsScreen({
   onOpenBlockedApps,
   onOpenDifficulty,
   onOpenDeleteAccount,
-  onOpenScreenTimeDiagnostics,
   onOpenAbout,
   onOpenTerms,
   onOpenPrivacy,
-  onLoadDemoData,
-  onClearDemoData,
   difficultyLabel,
 }: {
   onBack: () => void;
@@ -111,14 +106,9 @@ export default function SettingsScreen({
   onOpenBlockedApps?: () => void;
   onOpenDifficulty?: () => void;
   onOpenDeleteAccount?: () => void;
-  /** iOS only — reads the live Family Controls state. */
-  onOpenScreenTimeDiagnostics?: () => void;
   onOpenAbout?: () => void;
   onOpenTerms?: () => void;
   onOpenPrivacy?: () => void;
-  /** __DEV__ only — see the Developer group below. */
-  onLoadDemoData?: () => void;
-  onClearDemoData?: () => void;
   difficultyLabel?: string;
 }) {
   /* Read on render rather than held in state: this screen is pushed over the
@@ -240,43 +230,9 @@ export default function SettingsScreen({
             title="Delete Account"
             subtitle="Erase everything from this device, for good"
             onPress={onOpenDeleteAccount}
-            last={!onOpenScreenTimeDiagnostics}
+            last
           />
-          {onOpenScreenTimeDiagnostics && (
-            <SettingRow
-              icon={<RowIcon name="chart" />}
-              title="Screen Time diagnostics"
-              subtitle="Check blocking is really wired up"
-              onPress={onOpenScreenTimeDiagnostics}
-              last
-            />
-          )}
         </Group>
-
-        {/* Development only. Real users must never be able to fill their own
-            history with numbers the app made up — the entire premise is that
-            what you see happened. Gated here rather than behind a hidden
-            gesture so it simply does not exist in a release build. */}
-        {__DEV__ && (
-          <>
-            <GroupLabel>Developer</GroupLabel>
-            <Group>
-              <SettingRow
-                icon={<RowIcon name="chart" />}
-                title="Load demo data"
-                subtitle={`Fill ${DEMO_SPAN} of history to preview populated screens`}
-                onPress={onLoadDemoData}
-              />
-              <SettingRow
-                icon={<RowIcon name="trash" />}
-                title="Clear demo data"
-                subtitle="Reset history back to empty"
-                onPress={onClearDemoData}
-                last
-              />
-            </Group>
-          </>
-        )}
 
         {/* Sign-off. Reads from the manifest rather than a hardcoded string,
             so it cannot drift from what was actually shipped — and it is the

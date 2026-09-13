@@ -288,11 +288,35 @@ export function isHealthLimited(raw: string | undefined | null): boolean {
   return f.skipPhysical || f.banned.size > 0;
 }
 
-function pickQuizChallenge(): GateQuestion {
-  const roll = Math.random();
-  if (roll < 0.4) return pick(FAMILY_F_BREATHE);
-  if (roll < 0.75) return randomMathChallenge();
-  return pick(FAMILY_F_QUIZ);
+/**
+ * The non-physical gate.
+ *
+ * Families A, C and E were declared, written and then never reached: the
+ * picker only ever rolled breathe, math or quiz, so the intent check-ins, the
+ * typed prompts and the holds existed in this file and nowhere on screen.
+ * That also quietly hollowed out two other surfaces — the Waiting Room
+ * settings toggled families that could not appear, and Profile's "Your words"
+ * could only ever be filled by demo data, because the typed prompt that feeds
+ * it was never shown.
+ *
+ * `enabled` is the Waiting Room setting. A family switched off here is a
+ * family the gate will not roll; at least one always survives, because a gate
+ * with nothing to ask is not a gate.
+ */
+function pickQuizChallenge(enabled?: Record<string, boolean>): GateQuestion {
+  const on = (f: string) => !enabled || enabled[f] !== false;
+
+  const pools: { family: string; get: () => GateQuestion }[] = [
+    { family: 'A', get: () => pick(FAMILY_A) },
+    { family: 'C', get: () => pick(FAMILY_C) },
+    { family: 'E', get: () => pick(FAMILY_E) },
+    { family: 'F', get: () => pick(FAMILY_F_BREATHE) },
+    { family: 'F', get: () => randomMathChallenge() },
+    { family: 'F', get: () => pick(FAMILY_F_QUIZ) },
+  ].filter((p) => on(p.family));
+
+  if (pools.length === 0) return pick(FAMILY_F_BREATHE);
+  return pools[Math.floor(Math.random() * pools.length)].get();
 }
 
 /**
@@ -340,14 +364,16 @@ export function pickChallenge(
   /** Completed-session history, used to rest a movement for 24h after it is
    *  finished so the next unlock asks for something else. */
   activitySessions?: ActivitySessionResult[],
+  /** Waiting Room families the user has left switched on. */
+  enabled?: Record<string, boolean>,
 ): GateQuestion {
   const filter = challengeFilterFromHealth(healthLimitRaw);
-  if (intensityKey === 'steady' || filter.skipPhysical) return pickQuizChallenge();
+  if (intensityKey === 'steady' || filter.skipPhysical) return pickQuizChallenge(enabled);
   const pool = FAMILY_G.filter(
     (q): q is Extract<GateQuestion, { kind: 'activity' }> =>
       q.kind === 'activity' && !filter.banned.has(q.activity),
   );
-  if (pool.length === 0) return pickQuizChallenge();
+  if (pool.length === 0) return pickQuizChallenge(enabled);
 
   /* Finish a movement and it rests for 24 hours.
    *
