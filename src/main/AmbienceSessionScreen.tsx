@@ -1,15 +1,27 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { Ambience, mediaFor } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
+import { Editorial } from '../design/primitives';
 import UnlockControl from '../components/UnlockControl';
 import CancelConfirm from '../components/CancelConfirm';
+import BlockedListSheet from '../components/BlockedListSheet';
+import { getSelectionCounts } from '../data/iosScreenTime';
+import { getTheme } from '../data/themes';
+import { pickShieldMessage, shieldMessageSeed } from '../data/shieldMessages';
 
 const KEEP_AWAKE_TAG = 'byre-ambience';
 
@@ -96,7 +108,64 @@ export default function AmbienceSessionScreen({
   const [muted, setMuted] = useState(false);
   const [firstFrame, setFirstFrame] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [showBlocked, setShowBlocked] = useState(false);
   const ended = useRef(false);
+
+  /* The room's own voice, out of the same pool the block screen draws from
+   * and set in the same Editorial pair — filtered to the theme this room
+   * speaks in, so Wind down gets the night lines and Deep thinking gets the
+   * work ones. It walks the pool on its own five-second clock rather than on
+   * the countdown's, which ticks twice a second and would strobe. */
+  /* Rotation on its own five-second clock, not the countdown's — that one
+   * ticks twice a second and would strobe.
+   *
+   * Deliberately a shared-value cross-fade over ONE view rather than a keyed
+   * pair with entering/exiting: Reanimated's layout animations do not run
+   * reliably on views inside a React Native `Modal`, and when the exiting copy
+   * never finishes it stays parked at full opacity on top of its replacement —
+   * which reads as a message that never changes at all. Swapping the text at
+   * the trough of an opacity curve has no mount or unmount in it, so there is
+   * nothing to get stuck. */
+  const [msgTick, setMsgTick] = useState(0);
+  const msgOpacity = useSharedValue(1);
+
+  /* `runOnJS(setMsgTick)((t) => t + 1)` is what this said first, and it
+   * crashed the room: runOnJS cannot carry a function across the UI-thread
+   * boundary, so React never saw a real updater, the tick went to NaN and the
+   * message lookup came back undefined. Hop to a plain no-argument callback
+   * instead and do the increment on this side. */
+  const advanceMessage = useCallback(() => setMsgTick((t) => t + 1), []);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      msgOpacity.value = withTiming(0, { duration: 420 }, (done) => {
+        if (done) runOnJS(advanceMessage)();
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [advanceMessage, msgOpacity]);
+
+  // Fades back up once the new line is on screen, never on the first render.
+  useEffect(() => {
+    if (msgTick === 0) return;
+    msgOpacity.value = withTiming(1, { duration: 520 });
+  }, [msgTick, msgOpacity]);
+
+  const msgStyle = useAnimatedStyle(() => ({ opacity: msgOpacity.value }));
+
+  const message = useMemo(
+    () =>
+      pickShieldMessage(
+        getTheme(ambience.theme).key,
+        shieldMessageSeed(new Date().getDate(), msgTick),
+      ),
+    [ambience.theme, msgTick],
+  );
+
+  const blockedCount = useMemo(() => {
+    const c = getSelectionCounts();
+    return (c?.apps ?? 0) + (c?.categories ?? 0);
+  }, []);
 
   const VideoLayer = getVideoLayer();
   const hasVideo = !!media.video && !!VideoLayer;
@@ -187,8 +256,17 @@ export default function AmbienceSessionScreen({
 
         {/* Legibility scrim for the controls at both ends. */}
         <LinearGradient
-          colors={['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
-          locations={[0, 0.32, 1]}
+          /* Deeper and starting higher than a normal legibility scrim: the
+             message is set in the shield's accent pair, and accent on a bright
+             blue sky is close to unreadable without something under it. The
+             gradient does that work so the type can keep the app's voice. */
+          colors={[
+            'rgba(0,0,0,0.45)',
+            'rgba(0,0,0,0)',
+            'rgba(0,0,0,0.38)',
+            'rgba(0,0,0,0.84)',
+          ]}
+          locations={[0, 0.26, 0.56, 1]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
@@ -200,17 +278,24 @@ export default function AmbienceSessionScreen({
           ]}
         >
           <View style={styles.topRow}>
+            {/* Was a chevron that closed the room — which only ever landed the
+             *  user back on the locked timer, so it read as an exit and
+             *  delivered a dead end. The useful thing to know in here is what
+             *  is actually being held back, so that is what the corner shows. */}
             <Pressable
               onPress={() => {
                 tapLight();
-                onClose();
+                setShowBlocked(true);
               }}
-              style={styles.circle}
+              style={styles.blockedPill}
               hitSlop={10}
               accessibilityRole="button"
-              accessibilityLabel="Leave the room, keep the block running"
+              accessibilityLabel={`${blockedCount} blocked. Tap to see the list.`}
             >
-              <Icon name="chevronDown" size={20} color="#FFFFFF" strokeWidth={2.2} />
+              <Icon name="lock" size={13} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.blockedText}>
+                {blockedCount > 0 ? `${blockedCount} blocked` : 'Blocking on'}
+              </Text>
             </Pressable>
 
             <Pressable
@@ -236,6 +321,20 @@ export default function AmbienceSessionScreen({
           <View style={styles.spacer} />
 
           <Animated.View entering={FadeIn.duration(500)} style={styles.readout}>
+            {/* Above the countdown, because the number is the fact and this
+                is the reason. A fixed-height slot with the text absolutely
+                placed inside it: these lines run from one to three rows, and
+                in flow the countdown would hop every five seconds. */}
+            <View style={styles.messageSlot}>
+              <Animated.View style={[styles.messageFill, msgStyle]}>
+                <Editorial
+                  lead={message.lead}
+                  emphasis={message.emphasis}
+                  align="center"
+                  style={styles.message}
+                />
+              </Animated.View>
+            </View>
             <Text style={styles.clock}>{clock(remaining)}</Text>
             <Text style={styles.name}>{ambience.title}</Text>
             <Text style={styles.intent}>{ambience.intent}</Text>
@@ -257,13 +356,19 @@ export default function AmbienceSessionScreen({
           </View>
 
           <Text style={styles.footnote}>
-            Tap the arrow to step out — your apps stay locked either way.
+            Your apps stay locked until this ends. Hold the cross to leave early.
           </Text>
         </View>
 
         {/* The same sheet, and the same price, as ending a session on the
             timer. A room that could be left for free would make the Bailout
             meaningless everywhere else. */}
+        <BlockedListSheet
+          visible={showBlocked}
+          onClose={() => setShowBlocked(false)}
+          running
+        />
+
         <CancelConfirm
           visible={confirming}
           title="Leave this room?"
@@ -305,8 +410,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   circleDisabled: { opacity: 0.35 },
+  blockedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 42,
+    paddingHorizontal: 14,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  blockedText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   spacer: { flex: 1 },
   readout: { alignItems: 'center' },
+  /* Three rows of type.editorial (33pt leading) plus breathing room, so the
+   * longest line in the pool fits without resizing the slot. */
+  messageSlot: { height: 116, alignSelf: 'stretch', justifyContent: 'flex-end', marginBottom: 14 },
+  messageFill: { position: 'absolute', left: 0, right: 0, bottom: 0, alignItems: 'center' },
+  message: {
+    maxWidth: 330,
+    // The shield sits on its own dark gradient; a room sits on whatever the
+    // footage is doing, so the type carries its own shadow.
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 14,
+  },
   clock: {
     color: '#FFFFFF',
     fontSize: 52,
