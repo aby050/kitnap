@@ -137,12 +137,6 @@ const EMERGENCY_MINUTES = 5;
  *  and does not count against this. */
 const DAILY_UNLOCK_LIMIT = 3;
 
-/** TESTING ONLY — shows a "set to 99" button on the Bailouts screen so the
- *  post-cap and out-of-Bailouts flows are reachable while in-app purchases
- *  aren't live. MUST be false in anything that ships: it hands out the paid
- *  currency for free, which both breaks the economy and reads to App Review
- *  as test scaffolding left in a production build. */
-const TEST_TOP_UP = false;
 
 /** The only overlays reachable while a session is locked — each is a door the
  *  locked timer screen itself puts on screen (essentials/emergency access, the
@@ -1068,8 +1062,19 @@ export default function MainApp({
           }}
           appModes={blockedAppModes}
           onChangeModes={(next) => {
-            setBlockedAppModes(next);
-            onPatch({ blockedAppModes: next });
+            /* Per-app Strict → Steady is exactly the loosening the global
+               dial asks for a code before allowing. Leaving it free here made
+               the guarded dial pointless: drop every app to Steady one at a
+               time and you have loosened everything without ever touching it. */
+            const wasStrict = (m?: Record<string, string>) =>
+              Object.values(m ?? {}).filter((v) => v === 'strict').length;
+            const loosening = wasStrict(next) < wasStrict(blockedAppModes);
+            const apply = () => {
+              setBlockedAppModes(next);
+              onPatch({ blockedAppModes: next });
+            };
+            if (loosening) requireGuardian(apply, 'blockedApps');
+            else apply();
           }}
           defaultMode={activeIntensityKey}
           onBack={() => setOverlay('settings')}
@@ -1080,7 +1085,19 @@ export default function MainApp({
         <BlocksScreen
           appLimits={appLimits}
           onSaveLimits={(next) => {
-            setAppLimits(next);
+            /* Two ways to loosen a limit: delete it, or give yourself more
+               minutes on it. Both are the same act as taking an app off the
+               blocklist, so both cost the same. */
+            const byPkg = new Map(appLimits.map((l) => [l.packageName, l]));
+            const loosening =
+              next.length < appLimits.length ||
+              next.some((l) => {
+                const before = byPkg.get(l.packageName);
+                return !!before && l.limitMinutes > before.limitMinutes;
+              });
+            const apply = () => setAppLimits(next);
+            if (loosening) requireGuardian(apply, 'blocks');
+            else apply();
           }}
           onBack={() => setOverlay(null)}
         />
@@ -1096,14 +1113,6 @@ export default function MainApp({
             setEmergencyTokens(next);
             onPatch({ emergencyTokens: next });
           }}
-          onTestTopUp={
-            TEST_TOP_UP
-              ? () => {
-                  setEmergencyTokens(99);
-                  onPatch({ emergencyTokens: 99 });
-                }
-              : undefined
-          }
         />
       );
     if (ov === 'difficulty')
