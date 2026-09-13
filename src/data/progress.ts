@@ -390,4 +390,4 @@ export function shareMessage(def: AchievementDef, extra?: string): string {
 
 /** @deprecated Misleading name — see `focusScore`. Kept as an alias only so a
  *  stale import cannot silently resolve to nothing. */
-export const globalPercentile = focusScore;
+
