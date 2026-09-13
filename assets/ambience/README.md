@@ -3,8 +3,8 @@
 Drop loop footage and ambient audio here, named after the room key from
 `src/data/ambiences.ts`:
 
-    family.mp4  family.m4a  family.jpg
-    meditate.mp4  meditate.m4a  meditate.jpg
+    family.mp4  family.m4a  family-poster.jpg
+    meditate.mp4  meditate.m4a  meditate-poster.jpg
     think.*  peace.*  study.*  winddown.*
 
 Then uncomment that room's block in `src/data/ambienceMedia.ts`. A room with

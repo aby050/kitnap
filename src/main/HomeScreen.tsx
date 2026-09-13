@@ -27,8 +27,6 @@ import {
 import AppGlyph from '../ui/AppGlyph';
 import BailoutSheet from '../components/BailoutSheet';
 import Icon from '../ui/Icon';
-import { AmbienceShelf } from '../components/AmbienceCard';
-import { Ambience } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
 import { dataRamp, motion, palette, radius, space, type } from '../design/tokens';
 import KnockoutLabel from '../components/KnockoutLabel';
@@ -94,7 +92,6 @@ export default function HomeScreen({
   onStartBlock,
   onStartRest,
   onStartPreset,
-  onStartAmbience,
   onOpenSleepSchedule,
   onOpenBlockedApps,
   onBuyBailouts,
@@ -125,7 +122,6 @@ export default function HomeScreen({
   onStartRest?: () => void;
   /** Start an arbitrary preset session (from the For you / Detox cards). */
   onStartPreset?: (minutes: number, label: string, hardMode?: boolean) => void;
-  onStartAmbience?: (ambience: Ambience) => void;
   onOpenSleepSchedule?: () => void;
   onOpenBlockedApps?: () => void;
   /** Opens the Bailout store (real screen) from inside the header sheet. */
@@ -402,25 +398,55 @@ export default function HomeScreen({
         />
         */}
 
-        {/* Focus rooms.
-            Replaces the screen-time card that used to sit here. That card was
-            a read-out — it told you how bad yesterday was and gave you
-            nothing to do about it — and the same numbers are on Profile ›
-            screen time, drawn by the same extension. What Home is missing is
-            the other half of a block: somewhere to be while it runs.
+        {/* Screen time */}
+        <Card onPress={Platform.OS === 'ios' ? undefined : onOpenApps} style={styles.section}>
+          {Platform.OS === 'ios' ? (
+            // Real numbers, drawn by iOS itself via the UsageReport
+            // extension — the old "Apple doesn't let any app read your
+            // screen time" line belongs to the Android usage-stats path,
+            // and was stale here since this is the one channel Apple does
+            // allow.
+            <ScreenTimeCard />
+          ) : (
+            <>
+              <View style={styles.stCardHead}>
+                <Stat
+                  value={screenTimeLabel}
+                  label={usage?.available ? 'Screen time · today' : 'Screen time · not available'}
+                />
+                <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
+              </View>
 
-            The rooms are also the answer to a 4.3(a) problem. A shelf of
-            "Deep Study / Commute / Quiet Day" timer presets is the most
-            copied component in this category. These are named for reasons a
-            person already has — family in the room, one problem to think
-            about, ten quiet minutes — each one speaks in the block-screen
-            voice that reason picked, and each one puts something on screen
-            worth looking at instead of a progress ring. */}
-        {onStartAmbience && (
-          <View style={styles.section}>
-            <AmbienceShelf onStart={onStartAmbience} />
-          </View>
-        )}
+              {topApps.length > 0 ? (
+                <View style={styles.appList}>
+                  {topApps.map((app, i) => (
+                    <View key={app.packageName} style={styles.appRow}>
+                      <AppGlyph name={app.label} packageName={app.packageName} size={38} />
+                      <View style={styles.appMeter}>
+                        <View style={styles.appMeterHead}>
+                          <Text style={type.body} numberOfLines={1}>{app.label}</Text>
+                          <Text style={[type.sub, styles.appValue]}>{fmtMin(app.minutes)}</Text>
+                        </View>
+                        <Meter
+                          progress={app.minutes / peakMinutes}
+                          color={dataRamp[Math.min(dataRamp.length - 1, 1 + i)]}
+                        />
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={[type.sub, styles.usageEmpty]}>
+                  {!usage?.available
+                    ? "Apple doesn't let any app read your screen time — not even with permission granted. Your numbers live in Settings › Screen Time."
+                    : !usage?.granted
+                      ? 'Turn on Usage Access to see real per-app screen time here.'
+                      : 'No app usage recorded yet today.'}
+                </Text>
+              )}
+            </>
+          )}
+        </Card>
 
         {/* Unlock difficulty + Bailouts — both real screens already, just
             without an entry point on Home before this. */}
