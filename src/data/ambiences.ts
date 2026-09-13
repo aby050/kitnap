@@ -36,7 +36,7 @@ export const AMBIENCES: Ambience[] = [
     minutes: 60,
     theme: 'presence',
     mark: 'home',
-    wash: ['#3A2418', '#8A5A32', '#D9A268'],
+    wash: ['#1E4A6E', '#3E86C0', '#8FC8E8'],
   },
   {
     key: 'meditate',
@@ -45,7 +45,7 @@ export const AMBIENCES: Ambience[] = [
     minutes: 10,
     theme: 'quiet',
     mark: 'breathe',
-    wash: ['#10202B', '#2C5A72', '#7FB6CE'],
+    wash: ['#2C4A38', '#7A8A6E', '#E8B9AE'],
   },
   {
     key: 'think',
@@ -63,7 +63,7 @@ export const AMBIENCES: Ambience[] = [
     minutes: 120,
     theme: 'quiet',
     mark: 'mist',
-    wash: ['#1C1626', '#453563', '#8F7CC4'],
+    wash: ['#3E5E32', '#6E9456', '#AFCB8C'],
   },
   {
     key: 'study',
@@ -81,7 +81,7 @@ export const AMBIENCES: Ambience[] = [
     minutes: 45,
     theme: 'health',
     mark: 'moon',
-    wash: ['#141830', '#2E3A6E', '#6E7CC4'],
+    wash: ['#2A2140', '#5A4670', '#C79BB4'],
   },
 ];
 
