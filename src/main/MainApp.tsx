@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Alert, AppState, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated from 'react-native-reanimated';
@@ -492,6 +492,39 @@ export default function MainApp({
   const [account, setAccount] = useState<Account | null>(persisted.account);
   const [guardian, setGuardian] = useState(persisted.guardian);
   const [pendingGuardianTarget, setPendingGuardianTarget] = useState<IntensityKey | null>(null);
+
+  /**
+   * An action waiting behind the guardian code.
+   *
+   * Guardian used to guard exactly one thing — stepping the intensity down —
+   * while the three bigger escape hatches stayed open: taking an app off the
+   * blocklist, deleting a schedule, and wiping the account. Removing the app
+   * you are trying not to open is a far cheaper way out than dropping Strict
+   * to Steady, so guarding only the dial was guarding the wrong door.
+   *
+   * Held as a thunk rather than a discriminated union of intents: each caller
+   * already knows how to do its own work, and a union would mean re-deriving
+   * that here for every new guarded action.
+   */
+  const [guardedAction, setGuardedAction] = useState<{ run: () => void; back: Overlay } | null>(
+    null,
+  );
+
+  /** Runs `action` now, or behind the code when a guardian is set. */
+  const requireGuardian = useCallback(
+    (action: () => void, back: Overlay) => {
+      if (!guardian?.enabled) {
+        action();
+        return;
+      }
+      // The extra arrow is not noise: setState treats a bare function as an
+      // updater and would call it immediately, which is the exact thing this
+      // is supposed to defer.
+      setGuardedAction({ run: action, back });
+      setOverlay('guardianVerify');
+    },
+    [guardian],
+  );
   const joinedDays = daysSinceJoin(persisted.firstOpenDate);
 
   // Demo data (__DEV__ only, see SettingsScreen): writes the persisted copy
@@ -976,7 +1009,15 @@ export default function MainApp({
           onOpenBlockedApps={() => setOverlay('blockedApps')}
           onOpenSubscription={() => setOverlay('subscription')}
           onOpenDifficulty={() => openDifficulty('settings')}
-          onOpenDeleteAccount={() => setOverlay('deleteAccount')}
+          /* The biggest door of the three: deleting the account takes the
+             blocklist, the schedules and the guardian with it. Guarded on the
+             way in rather than at the confirm — `onConfirmDelete` has to
+             return the promise the screen awaits before it navigates away,
+             and deferring inside it would let the screen carry on as though
+             the account were gone. */
+          onOpenDeleteAccount={() =>
+            requireGuardian(() => setOverlay('deleteAccount'), 'settings')
+          }
           onOpenAbout={() => setOverlay('about')}
           onOpenTerms={() => setOverlay('terms')}
           onOpenPrivacy={() => setOverlay('privacy')}
@@ -1008,8 +1049,16 @@ export default function MainApp({
         <BlockedAppsScreen
           blockedPackages={blockedPackages}
           onChange={(next) => {
-            setBlockedPackagesState(next);
-            onPatch({ blockedPackages: next });
+            /* Adding is free; taking something off is the loosening. Guarding
+               both would make the guardian a tax on tightening, which is the
+               opposite of the point. */
+            const loosening = next.length < blockedPackages.length;
+            const apply = () => {
+              setBlockedPackagesState(next);
+              onPatch({ blockedPackages: next });
+            };
+            if (loosening) requireGuardian(apply, 'blockedApps');
+            else apply();
           }}
           appModes={blockedAppModes}
           onChangeModes={(next) => {
@@ -1086,11 +1135,24 @@ export default function MainApp({
         <GuardianVerifyScreen
           guardian={guardian}
           onVerified={() => {
+            if (guardedAction) {
+              const { run, back } = guardedAction;
+              setGuardedAction(null);
+              run();
+              setOverlay(back);
+              return;
+            }
             if (pendingGuardianTarget) changeIntensity(pendingGuardianTarget);
             setPendingGuardianTarget(null);
             setOverlay(difficultyOrigin);
           }}
           onCancel={() => {
+            if (guardedAction) {
+              const { back } = guardedAction;
+              setGuardedAction(null);
+              setOverlay(back);
+              return;
+            }
             setPendingGuardianTarget(null);
             setOverlay('difficulty');
           }}
@@ -1163,8 +1225,14 @@ export default function MainApp({
         <ScheduleEditorScreen
           schedules={schedules}
           onChange={(next) => {
-            setSchedules(next);
-            onPatch({ schedules: next });
+            const apply = () => {
+              setSchedules(next);
+              onPatch({ schedules: next });
+            };
+            /* Removing a window is the loosening. Adding or editing one is
+               not, so the code is only asked for on the way down. */
+            if (next.length < schedules.length) requireGuardian(apply, 'schedules');
+            else apply();
           }}
           onBack={() => setOverlay(null)}
           isPro={isPro}
@@ -1334,8 +1402,12 @@ export default function MainApp({
               }}
               blockedPackages={blockedPackages}
               onUpdateBlockedPackages={(next) => {
-                setBlockedPackagesState(next);
-                onPatch({ blockedPackages: next });
+                const apply = () => {
+                  setBlockedPackagesState(next);
+                  onPatch({ blockedPackages: next });
+                };
+                if (next.length < blockedPackages.length) requireGuardian(apply, null);
+                else apply();
               }}
               tokenBalance={emergencyTokens}
               onSpendTokenToCancel={() => {
