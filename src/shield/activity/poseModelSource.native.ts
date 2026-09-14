@@ -52,8 +52,16 @@ import { Directory, File, Paths } from 'expo-file-system';
  * keypoints.
  */
 
-/** Set this to fetch the model on first use. Empty means "only look on disk". */
-export const POSE_MODEL_URL = '';
+/** Set this to fetch the model on first use. Empty means "only look on disk".
+ *
+ *  ⚠️ This currently points at a copy in a third-party GitHub repo, because
+ *  Kaggle's own download is licence-gated and tfhub.dev is retired. It is the
+ *  right bytes (2,894,840, SHA-256 cd7cc22f…, `TFL3` magic, int8) and
+ *  `validatePoseModel` rejects anything else, so a swapped file cannot produce
+ *  wrong keypoints — it just turns the tier off. But a repo we do not own can
+ *  vanish or change at any time. Move this to our own storage before release. */
+export const POSE_MODEL_URL =
+  'https://raw.githubusercontent.com/Eddddddddy/data/main/lite-model_movenet_singlepose_lightning_tflite_int8_4.tflite';
 
 const MODEL_DIR = new Directory(Paths.document, 'models');
 const MODEL_NAME = 'movenet.tflite';
