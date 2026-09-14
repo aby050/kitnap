@@ -10,7 +10,7 @@ import ByreMark from '../ui/ByreMark';
 import { APPEARANCES, appearance } from '../design/appearance';
 
 /** Shown as the row's current value, so the setting states itself. */
-const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'Midnight';
+const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'Byre';
 
 /** Derived rather than written out, so the copy can't drift from the seed the
  *  way it did when DEMO_DAYS went from 60 to 183. */

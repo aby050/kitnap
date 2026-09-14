@@ -94,6 +94,7 @@ export default function HoldButton({
   disabled = false,
   holdMs = DEFAULT_HOLD_MS,
   style,
+  accessibilityLabel,
 }: {
   label: string;
   /** Shown while the charge is building. */
@@ -103,6 +104,9 @@ export default function HoldButton({
   /** How long the hold takes. Longer where the decision is heavier. */
   holdMs?: number;
   style?: ViewStyle;
+  /** Defaults to `label`, which is usually right — pass one only where the
+   *  visible copy is shorter than what a screen reader needs. */
+  accessibilityLabel?: string;
 }) {
   const progress = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -179,6 +183,7 @@ export default function HoldButton({
     <Animated.View style={[shellStyle, style]}>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? label}
         accessibilityHint="Press and hold to continue"
         accessibilityState={{ disabled }}
         disabled={disabled}

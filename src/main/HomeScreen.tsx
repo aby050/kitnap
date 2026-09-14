@@ -25,6 +25,7 @@ import {
   Stat,
 } from '../design/primitives';
 import AppGlyph from '../ui/AppGlyph';
+import BailoutGlyph from '../components/BailoutGlyph';
 import BailoutSheet from '../components/BailoutSheet';
 import Icon from '../ui/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -97,6 +98,11 @@ export default function HomeScreen({
   onOpenApps,
   onTriggerShield,
   onOpenRooms,
+  onOpenGuardian,
+  guardianName = null,
+  onOpenProgressPhotos,
+  progressPhotos = [],
+  photoDue = false,
   sessionRunning = false,
   onStartBlock,
   onStartRest,
@@ -124,6 +130,15 @@ export default function HomeScreen({
   onTriggerShield: () => void;
   /** Jumps to the Timer tab, where the rooms live. */
   onOpenRooms?: () => void;
+  /** Opens Guardian setup. Absent hides the card entirely. */
+  onOpenGuardian?: () => void;
+  /** Set means Guardian is live — the card becomes a status display. */
+  guardianName?: string | null;
+  onOpenProgressPhotos?: () => void;
+  /** Oldest first, as stored. */
+  progressPhotos?: { date: string; uri: string }[];
+  /** Seven days since the last one — the card leads with the prompt. */
+  photoDue?: boolean;
   /** A committed block is counting down — the blocked list freezes. */
   sessionRunning?: boolean;
   /** Starts the real timer at the chosen length and hands the screen over to
@@ -248,8 +263,12 @@ export default function HomeScreen({
           )}
           <View style={styles.headerRight}>
             <View style={styles.bailoutIconWrap}>
+              {/* The app's own Bailout mark, not the icon set's generic key.
+                  Every other surface that talks about bailouts draws this
+                  coin; Home drawing a keyring made the same currency look
+                  like two different things. */}
               <IconButton
-                name="key"
+                glyph={<BailoutGlyph size={20} color={palette.text} />}
                 onPress={() => setShowBailout(true)}
                 accessibilityLabel="Bailouts"
                 bordered
@@ -395,6 +414,84 @@ export default function HomeScreen({
             route: it says what a room is for, shows three of them so the
             phrase means something, and hands over rather than duplicating
             the shelf. */}
+        {/* Guardian, surfaced where people actually are.
+            It used to live only in Settings, four taps from anywhere, which
+            meant the one feature that makes a block hold was the one almost
+            nobody found. This card is not a menu row: it says what Guardian
+            does in a sentence, and once set it becomes the status display —
+            who holds the key, and how many doors it shuts. */}
+        {/* Progress photos, where the cadence actually lives.
+            The feature asks for one photo a week, and a weekly prompt buried
+            three screens deep in Profile is a prompt nobody sees in time.
+            Home is where the week is decided, so the card sits here — and it
+            only shouts when one is actually due. */}
+        {onOpenProgressPhotos && (
+          <Card onPress={onOpenProgressPhotos} style={styles.section}>
+            <View style={styles.roomsHead}>
+              <View style={styles.roomsEyebrowRow}>
+                <View style={[styles.roomsDot, !photoDue && styles.guardDotOff]} />
+                <Text style={styles.roomsEyebrow}>PROGRESS PHOTOS</Text>
+              </View>
+              <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
+            </View>
+            <Text style={styles.roomsLine}>
+              {photoDue
+                ? 'This week’s photo is due.'
+                : progressPhotos.length > 0
+                  ? `${progressPhotos.length} week${progressPhotos.length === 1 ? '' : 's'} on record.`
+                  : 'Take the first one.'}
+            </Text>
+            {progressPhotos.length > 0 ? (
+              <View style={styles.photoStrip}>
+                {progressPhotos.slice(-4).reverse().map((ph) => (
+                  <Image key={ph.date} source={{ uri: ph.uri }} style={styles.photoThumb} />
+                ))}
+                {photoDue && (
+                  <View style={[styles.photoThumb, styles.photoAdd]}>
+                    <Icon name="camera" size={18} color={palette.accent} strokeWidth={1.9} />
+                  </View>
+                )}
+              </View>
+            ) : (
+              <Text style={styles.guardBody}>
+                One a week. Months from now it is the only record of this that isn’t a number.
+              </Text>
+            )}
+          </Card>
+        )}
+
+        {onOpenGuardian && (
+          <Card onPress={onOpenGuardian} style={styles.section}>
+            <View style={styles.roomsHead}>
+              <View style={styles.roomsEyebrowRow}>
+                <View style={[styles.roomsDot, guardianName ? null : styles.guardDotOff]} />
+                <Text style={styles.roomsEyebrow}>GUARDIAN</Text>
+              </View>
+              <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
+            </View>
+            {guardianName ? (
+              <>
+                <Text style={styles.roomsLine}>{guardianName} holds your key.</Text>
+                <Text style={styles.guardBody}>
+                  Unblocking an app, weakening a limit or deleting a schedule needs their code.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.roomsLine}>Give the key to someone you trust.</Text>
+                <Text style={styles.guardBody}>
+                  They hold a code. Without it you cannot quietly undo your own rules — you have to
+                  ask a real person first.
+                </Text>
+                <View style={styles.guardCta}>
+                  <Icon name="shield" size={15} color={palette.accent} />
+                  <Text style={styles.guardCtaText}>Set up Guardian</Text>
+                </View>
+              </>
+            )}
+          </Card>
+        )}
+
         {onOpenRooms && (
           <Card onPress={onOpenRooms} style={styles.section}>
             <View style={styles.roomsHead}>
@@ -506,7 +603,7 @@ export default function HomeScreen({
             <Text style={styles.twinLabel}>Unlock difficulty</Text>
           </Pressable>
           <Pressable style={styles.twinCard} onPress={onBuyBailouts}>
-            <Icon name="key" size={20} color={palette.accent} />
+            <BailoutGlyph size={20} />
             <Text style={styles.twinValue}>{bailoutBalance}</Text>
             <Text style={styles.twinLabel}>{bailoutBalance === 1 ? 'Bailout' : 'Bailouts'}</Text>
           </Pressable>
@@ -656,6 +753,31 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
   },
   roomsLine: { color: palette.text, fontSize: 16, fontWeight: '600', marginTop: 8, lineHeight: 22 },
+  guardDotOff: { backgroundColor: palette.textQuaternary },
+  guardBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 6 },
+  photoStrip: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  photoThumb: { flex: 1, aspectRatio: 0.82, borderRadius: 12, backgroundColor: palette.surfaceHigh },
+  photoAdd: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+  },
+  guardCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+    backgroundColor: palette.accentSoft,
+  },
+  guardCtaText: { color: palette.accent, fontSize: 14, fontWeight: '700' },
   roomsStrip: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14 },
   roomsThumb: {
     width: 62,

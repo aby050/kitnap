@@ -1,5 +1,6 @@
+import Svg, { Circle, G } from 'react-native-svg';
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
+import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -44,37 +45,13 @@ const CONTENT_W = width - space.gutter * 2;
 /** Ten weeks fits the card and is long enough for streaks to read as shapes. */
 const HEATMAP_WEEKS = 10;
 
-/** The signature headline figure — big tabular numerals with small dim units,
- *  the way Opal renders "3h 37m". Split so the unit contrast does the work. */
-function HeroDuration({ minutes, color = palette.accent }: { minutes: number; color?: string }) {
-  const safe = Math.max(0, Math.round(minutes));
-  const h = Math.floor(safe / 60);
-  const m = safe % 60;
-  return (
-    <View style={styles.heroFigure}>
-      {h > 0 && (
-        <>
-          <Text style={[styles.heroNum, { color }]}>{h}</Text>
-          <Text style={styles.heroUnit}>h</Text>
-        </>
-      )}
-      <Text style={[styles.heroNum, { color }]}>{h > 0 ? String(m).padStart(2, '0') : m}</Text>
-      <Text style={styles.heroUnit}>m</Text>
-    </View>
-  );
-}
-
-/** One column of the three-up stat row under the hero. */
 /**
- * One of the three headline numbers.
+ * Tints for the stat row.
  *
- * The row used to be three flat glyphs in a single accent, on the reasoning
- * that three hues read as three unrelated widgets. That holds for small line
- * icons on a card; it stops holding once each glyph sits in its own bloom,
- * because the glow is what makes it read as one object rather than as
- * decoration. The hues carry meaning rather than decorating: heat for the
- * streak, the app's own accent for the score it computes, cool for time that
- * came back to you.
+ * The hues carry meaning rather than decorating: heat for the streak, cool
+ * for time that came back to you. The score's own tint stays defined because
+ * the metric cards below still use it, but the row itself is two tiles now —
+ * the ring above carries the accent.
  */
 const STAT_TINTS = {
   streak: '#E9B23E',
@@ -82,12 +59,60 @@ const STAT_TINTS = {
   saved: '#6FE3A9',
 } as const;
 
-/** A headline figure has one line and a third of the screen. `formatDuration`
- *  returns "197h 26m", which wraps there and pushes the caption out from under
- *  it — and at two hundred hours the minutes were never the point. */
+/** The signature headline figure — big tabular numerals with small dim units,
+ *  the way Opal renders "3h 37m". Split so the unit contrast does the work. */
 function compactDuration(minutes: number): string {
   if (minutes >= 6000) return `${Math.round(minutes / 60)}h`;
   return formatDuration(minutes);
+}
+
+/**
+ * The focus score, drawn as a ring.
+ *
+ * A bare percentage is a number you read; a ring is a shape you recognise
+ * across the room, and it is the same gesture the Room timer uses — one
+ * vocabulary for "how far through something am I".
+ *
+ * Deliberately not animated on mount: this screen already opens with a
+ * FadeInDown, and a number that counts up while a ring sweeps is two
+ * animations competing for the same glance.
+ */
+function ScoreRing({ percent }: { percent: number }) {
+  const size = 232;
+  const stroke = 10;
+  const r = (size - stroke) / 2 - 6;
+  const circumference = 2 * Math.PI * r;
+  const filled = Math.max(0, Math.min(100, percent)) / 100;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+        <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth={stroke}
+            fill="none"
+          />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={palette.accent}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={`${circumference} ${circumference}`}
+            strokeDashoffset={circumference * (1 - filled)}
+          />
+        </G>
+      </Svg>
+      <Text style={styles.ringValue}>{percent}</Text>
+      <Text style={styles.ringLabel}>FOCUS SCORE</Text>
+    </View>
+  );
 }
 
 function GlowStat({
@@ -194,6 +219,7 @@ export default function ProfileScreen({
   onOpenSettings,
   onOpenMilestones,
   onOpenProgressPhotos,
+  progressPhotos = [],
   onOpenCalendar,
   onOpenRealUsage,
   onOpenWeeklyInsight,
@@ -207,6 +233,8 @@ export default function ProfileScreen({
   onOpenSettings: () => void;
   onOpenMilestones: () => void;
   onOpenProgressPhotos?: () => void;
+  /** Newest first. Drives the thumbnail strip on the card. */
+  progressPhotos?: { date: string; uri: string }[];
   onOpenCalendar?: () => void;
   onOpenRealUsage?: () => void;
   onOpenWeeklyInsight?: () => void;
@@ -383,12 +411,18 @@ export default function ProfileScreen({
           pointerEvents="none"
         />
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* HERO — the focus crystal + today's headline figure */}
+          {/* HERO — the one figure that answers "am I doing well?"
+              It used to be a 196pt medal, and on most accounts that medal was
+              *locked*: the largest, most prominent thing on the screen told
+              the user they had not earned it. An award is an outcome, not a
+              status — identity moved to the header chip, and the hero is now
+              the score, drawn as a ring so the number has a shape. */}
           <Animated.View entering={FadeInDown.duration(420)} style={styles.hero}>
-            <Medal def={heroAward.def} locked={heroAward.locked} size={196} id="hero" />
+            <ScoreRing percent={rank.percent} />
             <Text style={styles.username} numberOfLines={1}>{username}</Text>
-            <HeroDuration minutes={todayLog.focusMinutes} />
-            <Text style={styles.heroCaption}>FOCUS TODAY</Text>
+            <Text style={styles.heroCaption}>
+              {formatDuration(todayLog.focusMinutes)} focused today
+            </Text>
           </Animated.View>
 
           {/* THREE-UP STAT ROW */}
@@ -399,28 +433,60 @@ export default function ProfileScreen({
                 than one stat row, and none of the colours carried meaning.
                 Chromatic colour in this app is rationed to accent/warn/danger
                 and these are all the same kind of thing: a neutral count. */}
+            {/* Two, not three: the score is the hero above, and repeating it
+                here was the screen telling the user the same thing twice in
+                the same glance. */}
             <GlowStat
               icon="flame"
               tint={STAT_TINTS.streak}
               value={String(progress.currentStreak)}
-              label="DAY STREAK"
+              label={`DAY STREAK · BEST ${progress.bestStreak}`}
               onPress={onOpenMilestones}
-            />
-            <GlowStat
-              icon="pulse"
-              tint={STAT_TINTS.score}
-              value={`${rank.percent}%`}
-              label="FOCUS SCORE"
             />
             <GlowStat
               icon="clock"
               tint={STAT_TINTS.saved}
               value={compactDuration(all.savedMinutes)}
-              label="SAVED"
+              label={`RECLAIMED · ${compactDuration(Math.round(avgDailyAll))}/DAY`}
             />
           </View>
 
-          {/* AWARDS RAIL */}
+          {/* AWARDS
+              The rail below is sixteen locked discs out of eighteen, which
+              reads as absence rather than progress. This card goes in front of
+              it with the one award that is actually within reach and how far
+              away it is — "2 days to go" motivates in a way a wall of grey
+              circles cannot. */}
+          <Pressable onPress={onOpenMilestones} style={styles.nextCard}>
+            <View style={styles.nextGlyph}>
+              <Icon name="flame" size={22} color="#E9AE62" strokeWidth={1.9} />
+            </View>
+            <View style={styles.nextBody}>
+              <Text style={styles.nextEyebrow}>NEXT UP</Text>
+              <Text style={styles.nextTitle} numberOfLines={1}>
+                {streakGoal.next}-day streak
+              </Text>
+              <View style={styles.nextTrack}>
+                <View
+                  style={[
+                    styles.nextFill,
+                    {
+                      width: `${Math.min(
+                        100,
+                        Math.round((progress.currentStreak / Math.max(1, streakGoal.next)) * 100),
+                      )}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.nextSub}>
+                {Math.max(0, streakGoal.next - progress.currentStreak)} day
+                {streakGoal.next - progress.currentStreak === 1 ? '' : 's'} to go
+              </Text>
+            </View>
+            <Icon name="chevronRight" size={16} color={palette.textQuaternary} strokeWidth={2} />
+          </Pressable>
+
           <Pressable onPress={onOpenMilestones} style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>Awards</Text>
             <View style={styles.sectionLinkRow}>
@@ -480,14 +546,22 @@ export default function ProfileScreen({
             </View>
           </Animated.View>
 
-          {/* CALENDAR HEATMAP — the long view the bars cannot give */}
+          {/* CALENDAR HEATMAP — the long view the bars cannot give.
+              It is also the calendar's entry point now. "Calendar" used to be
+              a text row four rows down, below the fold, while ten weeks of the
+              same data sat drawn on the screen above it — the grid IS the
+              calendar in miniature, so tapping it is where anyone would look
+              for the full one. */}
           {heatData.length > 7 && (
-            <Animated.View entering={FadeInDown.delay(120).duration(420)} style={styles.chartCard}>
+            <Animated.View entering={FadeInDown.delay(120).duration(420)}>
+            <Pressable onPress={onOpenCalendar} style={styles.chartCard}>
               <View style={styles.chartHead}>
                 <View>
                   <Text style={styles.metricEyebrow}>LAST 10 WEEKS</Text>
                   <Text style={styles.chartHeadValue}>{heatActiveDays} active days</Text>
-                  <Text style={[styles.chartHeadSub, styles.chartHeadSentence]}>Darker means more focus</Text>
+                  <Text style={[styles.chartHeadSub, styles.chartHeadSentence]}>
+                    {onOpenCalendar ? 'Tap for the full calendar' : 'Darker means more focus'}
+                  </Text>
                 </View>
                 <View style={styles.legend}>
                   <View style={styles.legendItem}>
@@ -505,6 +579,7 @@ export default function ProfileScreen({
                 width={CONTENT_W - space.lg * 2}
                 style={styles.chart}
               />
+            </Pressable>
             </Animated.View>
           )}
 
@@ -630,11 +705,51 @@ export default function ProfileScreen({
             </View>
           )}
 
+          {/* PROGRESS PHOTOS
+              This was a text row at the very bottom of a long screen, under
+              three other text rows — which is to say it was invisible, and a
+              feature nobody can find is a feature that does not exist. A photo
+              feature has to show photos: the strip is the affordance, and an
+              empty state that says what it is for is more use than a label. */}
+          {onOpenProgressPhotos && (
+            <Pressable onPress={onOpenProgressPhotos} style={styles.photoCard}>
+              <View style={styles.photoHead}>
+                <View>
+                  <Text style={styles.metricEyebrow}>PROGRESS PHOTOS</Text>
+                  <Text style={styles.photoTitle}>
+                    {progressPhotos.length > 0
+                      ? `${progressPhotos.length} check-in${progressPhotos.length === 1 ? '' : 's'}`
+                      : 'Take your first one'}
+                  </Text>
+                </View>
+                <Icon name="chevronRight" size={16} color={palette.textQuaternary} strokeWidth={2} />
+              </View>
+              {progressPhotos.length > 0 ? (
+                <View style={styles.photoStrip}>
+                  {progressPhotos.slice(0, 4).map((ph) => (
+                    <Image key={ph.date} source={{ uri: ph.uri }} style={styles.photoThumb} />
+                  ))}
+                  {progressPhotos.length > 4 && (
+                    <View style={[styles.photoThumb, styles.photoMore]}>
+                      <Text style={styles.photoMoreText}>+{progressPhotos.length - 4}</Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.photoEmpty}>
+                  <Icon name="camera" size={20} color={palette.textTertiary} strokeWidth={1.8} />
+                  <Text style={styles.photoEmptyText}>
+                    One photo a week. Months from now it is the only record of this that
+                    isn't a number.
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          )}
+
           {/* SECTION LINKS */}
           {onOpenWeeklyInsight && <LinkRow title="Weekly insight" sub="Your last 7 days" icon="pulse" onPress={onOpenWeeklyInsight} />}
-          {onOpenRealUsage && <LinkRow title="Real device usage" sub="Android screen time" icon="bars" onPress={onOpenRealUsage} />}
-          {onOpenCalendar && <LinkRow title="Calendar" sub="Every day, by colour" icon="calendar" onPress={onOpenCalendar} />}
-          {onOpenProgressPhotos && <LinkRow title="Progress photos" sub="Your weekly check-ins" icon="camera" onPress={onOpenProgressPhotos} />}
+          {onOpenRealUsage && <LinkRow title="Real device usage" sub="Your screen time, by app" icon="bars" onPress={onOpenRealUsage} />}
 
           {/* YOUR WORDS — the only thing that read gateReflections, carried over
               when the Reflect tab was removed. Without it this data would still
@@ -716,6 +831,75 @@ function LinkRow({ title, sub, icon, onPress }: { title: string; sub: string; ic
 }
 
 const styles = StyleSheet.create({
+  ringValue: {
+    color: palette.text,
+    fontSize: 66,
+    lineHeight: 70,
+    fontWeight: '700',
+    letterSpacing: -3,
+  },
+  ringLabel: {
+    color: palette.textTertiary,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  photoCard: {
+    backgroundColor: palette.surfaceRaised,
+    borderWidth: 1,
+    borderColor: palette.hairline,
+    borderRadius: radius.xl,
+    padding: 16,
+    marginTop: space.xl,
+    gap: 14,
+  },
+  photoHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  photoTitle: { color: palette.text, fontSize: 16, fontWeight: '700', marginTop: 5 },
+  photoStrip: { flexDirection: 'row', gap: 8 },
+  photoThumb: {
+    flex: 1,
+    aspectRatio: 0.82,
+    borderRadius: 12,
+    backgroundColor: palette.surfaceHigh,
+  },
+  photoMore: { alignItems: 'center', justifyContent: 'center' },
+  photoMoreText: { color: palette.textTertiary, fontSize: 13, fontWeight: '700' },
+  photoEmpty: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  photoEmptyText: { flex: 1, color: palette.textTertiary, fontSize: 13, lineHeight: 18 },
+  nextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: palette.surfaceRaised,
+    borderWidth: 1,
+    borderColor: palette.hairline,
+    borderRadius: radius.xl,
+    padding: 16,
+    marginTop: space.xl,
+  },
+  nextGlyph: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(233,174,98,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(233,174,98,0.26)',
+  },
+  nextBody: { flex: 1, gap: 3 },
+  nextEyebrow: { color: palette.accent, fontSize: 10.5, fontWeight: '700', letterSpacing: 1.3 },
+  nextTitle: { color: palette.text, fontSize: 15.5, fontWeight: '700' },
+  nextTrack: {
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    marginTop: 5,
+    overflow: 'hidden',
+  },
+  nextFill: { height: '100%', borderRadius: 999, backgroundColor: palette.accent },
+  nextSub: { color: palette.textTertiary, fontSize: 11.5, marginTop: 3 },
   root: { flex: 1, backgroundColor: palette.base },
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.md },
@@ -772,7 +956,7 @@ const styles = StyleSheet.create({
     marginRight: space.sm,
     marginLeft: 3,
   },
-  heroCaption: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 1.6, marginTop: 2 },
+  heroCaption: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '500', marginTop: 4 },
 
   statRow: {
     flexDirection: 'row',

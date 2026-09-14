@@ -10,8 +10,8 @@ import { createMMKV } from 'react-native-mmkv';
 export type Appearance = 'blue' | 'green';
 
 export const APPEARANCES: { key: Appearance; name: string; blurb: string; swatch: string }[] = [
-  { key: 'blue', name: 'Midnight', blurb: 'Electric blue on black', swatch: '#3B4FF2' },
   { key: 'green', name: 'Byre', blurb: 'The mark’s own mint', swatch: '#6FE3A9' },
+  { key: 'blue', name: 'Midnight', blurb: 'Electric blue on black', swatch: '#3B4FF2' },
 ];
 
 /**
@@ -33,10 +33,10 @@ const KEY = 'appearance';
 
 function read(): Appearance {
   try {
-    return store.getString(KEY) === 'green' ? 'green' : 'blue';
+    return store.getString(KEY) === 'blue' ? 'blue' : 'green';
   } catch {
     // A corrupt or unavailable store must never stop the app booting.
-    return 'blue';
+    return 'green';
   }
 }
 

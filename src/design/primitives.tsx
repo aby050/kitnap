@@ -379,6 +379,7 @@ export function Field({ style, ...rest }: TextInputProps) {
 /** Square tappable icon — nav back, close, overflow. Never carries a label. */
 export function IconButton({
   name,
+  glyph,
   onPress,
   size = 20,
   color = palette.text,
@@ -386,7 +387,12 @@ export function IconButton({
   accessibilityLabel,
   style,
 }: {
-  name: IconName;
+  /** Omit when passing `glyph`. */
+  name?: IconName;
+  /** A custom mark to draw instead of an icon-set glyph — for the few marks
+   *  the app owns (the Bailout coin) that must not degrade to a generic key
+   *  just because they sit in a round button. */
+  glyph?: React.ReactNode;
   onPress: () => void;
   size?: number;
   color?: string;
@@ -410,7 +416,7 @@ export function IconButton({
         onPressOut={press.onPressOut}
         style={[styles.iconBtn, bordered && styles.iconBtnBordered]}
       >
-        <Icon name={name} size={size} color={color} />
+        {glyph ?? (name ? <Icon name={name} size={size} color={color} /> : null)}
       </Pressable>
     </Animated.View>
   );
