@@ -17,7 +17,11 @@ export type ActivityKind =
   | 'toe touches';
 
 export const ACTIVITY_KINDS: ActivityKind[] = [
-  'squats',
+  // 'squats' is deliberately absent: the kind stays in `ActivityKind` (the rep
+  // engine still knows how to count one, and any saved preference still
+  // parses) but it is no longer offered. It is the option people are least
+  // willing to do where they actually get stuck — at a desk, on a sofa, near
+  // other people — so offering it mostly pushed users to the bailout.
   'jumping jacks',
   'push-ups',
   // The easy end of the ladder. Standing marches and overhead arm raises ask

@@ -53,6 +53,28 @@ const JOINTS: { index: number; size: number }[] = [
   { index: KP.rightAnkle, size: 12 },
 ];
 
+/** The bones, as pairs of joint indices. Same set the dots use — a limb whose
+ *  either end is below the score floor simply isn't drawn, so the skeleton can
+ *  never invent a connection the model didn't see. No face bones: the eyes and
+ *  ears cluster too tightly to read, exactly as for the dots. */
+const BONES: [number, number][] = [
+  [KP.leftShoulder, KP.rightShoulder],
+  [KP.leftShoulder, KP.leftElbow],
+  [KP.leftElbow, KP.leftWrist],
+  [KP.rightShoulder, KP.rightElbow],
+  [KP.rightElbow, KP.rightWrist],
+  [KP.leftShoulder, KP.leftHip],
+  [KP.rightShoulder, KP.rightHip],
+  [KP.leftHip, KP.rightHip],
+  [KP.leftHip, KP.leftKnee],
+  [KP.leftKnee, KP.leftAnkle],
+  [KP.rightHip, KP.rightKnee],
+  [KP.rightKnee, KP.rightAnkle],
+];
+
+/** Thickness of a bone, in points. */
+const BONE_W = 3;
+
 type Props = {
   /** `[y, x, score] × 17`, normalized to the model's square input. */
   keypoints: SharedValue<number[]>;
@@ -120,6 +142,77 @@ function Dot({
   );
 }
 
+/**
+ * One limb, drawn as a rotated 1×N bar.
+ *
+ * A line between two moving points is a width, an angle and an origin — all
+ * three derived on the UI thread from the same shared value the dots read, so
+ * the skeleton can never lag a frame behind its own joints. Rendered as a View
+ * rather than SVG deliberately: react-native-svg's props are not animatable
+ * from a worklet without a bridge hop per frame, which is precisely the cost
+ * this whole pipeline is built to avoid.
+ *
+ * Obeys the same two rules as `Dot`: identical style keys on every path, and
+ * `transform` rather than animated layout props.
+ */
+function Bone({
+  keypoints,
+  from,
+  to,
+  mirrored,
+  width,
+  height,
+}: {
+  keypoints: SharedValue<number[]>;
+  from: number;
+  to: number;
+  mirrored: boolean;
+  width: number;
+  height: number;
+}) {
+  const style = useAnimatedStyle(() => {
+    const k = keypoints.value;
+    const a = from * 3;
+    const b = to * 3;
+
+    let opacity = 0;
+    let tx = 0;
+    let ty = 0;
+    let angle = 0;
+    let length = 0;
+
+    if (k && k.length >= Math.max(a, b) + 3) {
+      const scoreA = k[a + 2];
+      const scoreB = k[b + 2];
+      if (scoreA >= DOT_MIN_SCORE && scoreB >= DOT_MIN_SCORE) {
+        const ax = (mirrored ? 1 - k[a + 1] : k[a + 1]) * width;
+        const ay = k[a] * height;
+        const bx = (mirrored ? 1 - k[b + 1] : k[b + 1]) * width;
+        const by = k[b] * height;
+        const dx = bx - ax;
+        const dy = by - ay;
+        length = Math.sqrt(dx * dx + dy * dy);
+        angle = Math.atan2(dy, dx);
+        // The bar is anchored at its left edge, vertically centred on the
+        // joint, then rotated about that end — so it runs from A to B.
+        tx = ax;
+        ty = ay - BONE_W / 2;
+        // Dimmer than the dots on purpose: the joints are what the counter
+        // works from, the bones are only there to make a body legible.
+        opacity = Math.min(1, (Math.min(scoreA, scoreB) - DOT_MIN_SCORE) / 0.25) * 0.65;
+      }
+    }
+
+    return {
+      opacity,
+      width: length,
+      transform: [{ translateX: tx }, { translateY: ty }, { rotateZ: `${angle}rad` }],
+    };
+  });
+
+  return <Animated.View pointerEvents="none" style={[styles.bone, style]} />;
+}
+
 function PoseDotsInner({ keypoints, mirrored = true }: Props) {
   // Measured rather than assumed: the normalized keypoints only become pixels
   // once we know how big the preview actually is.
@@ -131,6 +224,19 @@ function PoseDotsInner({ keypoints, mirrored = true }: Props) {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={onLayout}>
+      {/* Bones first so the joints sit on top of them. */}
+      {box.width > 0 &&
+        BONES.map(([from, to]) => (
+          <Bone
+            key={`${from}-${to}`}
+            keypoints={keypoints}
+            from={from}
+            to={to}
+            mirrored={mirrored}
+            width={box.width}
+            height={box.height}
+          />
+        ))}
       {box.width > 0 &&
         JOINTS.map((j) => (
           <Dot
@@ -165,6 +271,16 @@ const PoseDots = React.memo(PoseDotsInner);
 export default PoseDots;
 
 const styles = StyleSheet.create({
+  bone: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    height: BONE_W,
+    borderRadius: BONE_W / 2,
+    backgroundColor: palette.accent,
+    // Rotate about the end that sits on joint A, not the bar's centre.
+    transformOrigin: '0% 50%',
+  },
   dot: {
     position: 'absolute',
     left: 0,
