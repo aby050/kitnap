@@ -55,3 +55,13 @@ expo*.log
 # Encoded output of scripts/publish-ambience.sh — the source lives in
 # assets/ambience and the published copies live in R2.
 /build/ambience/
+.signing/
+
+# Local build scratch: archives, IPAs, AABs, xcodebuild logs. Multi-GB.
+/build/wireless/
+/build/serve/
+# Local Android SDK paths — machine-specific, see the project registry.
+/android-env.sh
+# Design canvases drafted for review; the published Artifact is the record.
+/design-room/
+/design-profile/

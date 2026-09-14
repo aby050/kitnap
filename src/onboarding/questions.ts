@@ -96,6 +96,39 @@ export const ASK_RETURNING = false;
  * Permissions are interleaved, one group after every three questions, so each
  * ask arrives beside the answer that explains why it is needed.
  */
+/**
+ * Categories that get blocked outright rather than gated by a challenge.
+ *
+ * `adult` is the only one iOS can enforce at the OS level today, through
+ * Apple's own automatic web filter (see `setAdultContentFilter`) — it covers
+ * every browser, so it cannot be stepped around by installing another one.
+ * The rest are honest about being ordinary blocks the user picks apps for.
+ */
+export const HARD_BLOCKS: { key: string; label: string; why: string }[] = [
+  {
+    key: 'adult',
+    label: 'Adult sites',
+    why: 'You asked for this one to be gone, not negotiable. Byre uses the filter built into iOS, so it holds in every browser — there is no challenge to pass and no timer to wait out.',
+  },
+  {
+    key: 'gambling',
+    label: 'Betting and gambling',
+    why: 'You asked for this one to be gone. Pick the apps and they stay shut.',
+  },
+  {
+    key: 'shorts',
+    label: 'Short-form video',
+    why: 'Reels, Shorts, TikTok — the ones that go fastest.',
+  },
+  {
+    key: 'news',
+    label: 'News and doomscroll',
+    why: 'You asked for this one to be gone.',
+  },
+];
+
+export const hardBlockWhy = (key: string) => HARD_BLOCKS.find((h) => h.key === key)?.why ?? null;
+
 export const QUESTIONS: Question[] = [
   { id: 'intro', kind: 'static', prompt: "I'll help protect your focus." },
   ...(ASK_RETURNING
@@ -140,6 +173,28 @@ export const QUESTIONS: Question[] = [
     kind: 'choice',
     prompt: 'When does the phone usually **win**?',
     options: SLIP_WINDOWS.map((w) => w.label),
+  },
+  /**
+   * Asked, never inferred.
+   *
+   * The obvious product instinct is to *detect* this and act on it. iOS makes
+   * that impossible — Family Controls tokens are opaque, so Byre never learns
+   * what anyone opens — and it would be the wrong thing even if it were
+   * possible: being told by an app that it has noticed your habit is a worse
+   * first minute than being asked.
+   *
+   * Asking is also the stronger mechanic. A person who has named the thing
+   * has made a decision, and everything after this holds them to a decision
+   * they made rather than a guess we made about them. Optional and neutrally
+   * worded: a list nobody can tick without admitting something is a list
+   * nobody ticks.
+   */
+  {
+    id: 'hardBlock',
+    kind: 'multi',
+    prompt: 'Anything you want **gone completely**?',
+    options: HARD_BLOCKS.map((h) => h.label),
+    optional: true,
   },
 
   /* ── 2. Who you are, and how you get back in ───────────────────────── */

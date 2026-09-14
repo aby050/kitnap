@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.abhay.byre",
       "appleTeamId": "RG96N3U9GH",
       "supportsTablet": false,
-      "buildNumber": "9",
+      "buildNumber": "11",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
         "NSCameraUsageDescription": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone.",
@@ -27,7 +27,11 @@
           "twitter",
           "reddit",
           "whatsapp"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "Byre never records audio. The camera library it uses declares this; nothing in the app asks for your microphone.",
+        "NSPhotoLibraryUsageDescription": "Only if you choose to save a progress photo. Byre never reads your photo library.",
+        "NSLocalNetworkUsageDescription": "Used only when running Byre from a development machine. The App Store build never connects to your local network."
       }
     },
     "android": {
@@ -41,12 +45,11 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.QUERY_ALL_PACKAGES",
         "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "versionCode": 4,
+      "versionCode": 7,
       "package": "com.abhay.byre"
     },
     "web": {
@@ -87,6 +90,7 @@
           "appGroup": "group.com.abhay.byre"
         }
       ],
+      "./plugins/withShieldOpenApp.js",
       "@react-native-community/datetimepicker",
       [
         "expo-video",
@@ -95,7 +99,8 @@
           "supportsPictureInPicture": false
         }
       ],
-      "./plugins/withNoBackgroundAudio.js"
+      "./plugins/withNoBackgroundAudio.js",
+      "./plugins/withLauncherQueries.js"
     ],
     "extra": {
       "eas": {

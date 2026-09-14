@@ -258,6 +258,11 @@ const SHIELD_SUBTITLES = [
   'It will still be there tonight. So will you.',
 ];
 
+/** Identifier for the "open Byre" banner the shield posts, shared with the
+ *  notification-tap handler in App.tsx. Stable so repeat taps replace the
+ *  banner instead of stacking. */
+export const SHIELD_UNLOCK_NOTIFICATION_ID = 'byre-shield-unlock';
+
 export function configureShield(_title?: string, personalLine?: string) {
   if (!native) return;
   const line = shieldLineForToday();
@@ -294,42 +299,60 @@ export function configureShield(_title?: string, personalLine?: string) {
       secondaryButtonLabelColor: WHITE,
     } as any,
     {
-      // The library's own "openApp" type is dead code — its handler never
-      // actually implements it, only "openUrl" does. "device-activity://" is
-      // the scheme Byre already registers (app.json's `scheme` array), so
-      // this is what "Let me in" is supposed to have been doing all along.
+      // "Let me in" brings Byre to the front so the Gate can be earned.
+      //
+      // This used to be a dead button, and the note that replaced it here
+      // blamed Apple. It wasn't Apple: the library's `openUrl` called
+      // `open()` on a freshly allocated `NSExtensionContext`, which is
+      // connected to nothing and dispatches nowhere. Shared.swift now reaches
+      // the real UIApplication by name and sends `openURL:`, which is how
+      // every app in this category does it — there is no public API for an
+      // extension to launch its container.
+      //
+      // `behavior: 'defer'` matters as much as the open itself: 'close' tears
+      // the shield down and takes the launch with it.
+      //
       // Cast: the Swift side implements "openUrl" (Shared.swift) but the
       // library's own ShieldActionType TS union never listed it.
-      // Byre's own registered scheme (app.json's `scheme` array), not the
-      // library default "device-activity://" — one less thing to doubt when
-      // this is the button that wasn't opening the app at all.
-      // "Let me in" cannot open Byre directly. Verified on-device: the
-      // ShieldAction extension builds a bare NSExtensionContext, whose
-      // endpoint is null, so `open()` fires its completion in microseconds
-      // having done nothing ("opening URL / opening URL completion" back to
-      // back in the device log). Apple gives an extension no supported way
-      // to launch its containing app, and this old community workaround is
-      // now inert — the button genuinely did nothing.
-      //
-      // So the shield posts a notification instead, and tapping that opens
-      // Byre on the Gate. One extra tap, but it actually works. The openUrl
-      // stays as the action's `type` in case a future iOS restores it; the
-      // notification is what carries the flow today.
       primary: {
         type: 'openUrl',
+        // Byre's own registered scheme (app.json's `scheme` array), not the
+        // library default "device-activity://".
         url: 'byre://unlock',
-        behavior: 'close',
-        // The extension cannot launch Byre itself, so it posts this instead;
-        // tapping it opens Byre on the Gate.
-        actions: [
-          {
-            type: 'sendNotification',
-            payload: {
-              title: 'Byre',
-              body: 'Tap to earn your way into {applicationOrDomainDisplayName}.',
-            },
-          },
-        ],
+        behavior: 'defer',
+        // The notification IS the route into Byre, not a consolation prize —
+        // an extension cannot launch its container, so this is the only
+        // bridge iOS gives us. Everything here exists to make the second tap
+        // obvious and immediate.
+        fallbackNotification: {
+          // Reads as the door it is. "Byre" as a title told the user nothing
+          // about why their screen just buzzed.
+          //
+          // No placeholders. The extension only ever supplies `action`,
+          // `applicationName`, `webDomain` and `familyActivitySelectionId`
+          // (see ShieldActionExtension.swift) — anything else is printed
+          // raw, braces and all, which is how `{applicationOrDomainDisplayName}`
+          // ended up on screen. `{applicationName}` does resolve, but it is
+          // nil for a blocked website and leaves the sentence hanging, so the
+          // copy is written to stand without it.
+          title: 'Open Byre to get in',
+          body: 'Tap here — one quick step and you’re through.',
+          // 'active' wakes the screen and banners immediately. The better
+          // level here is 'timeSensitive', which also pierces Focus — exactly
+          // when someone is most likely to be blocked — but that entitlement
+          // is portal-only (not exposed in the App Store Connect API), so it
+          // needs Time Sensitive Notifications ticked on the com.abhay.byre
+          // App ID first. Flip this the day that's done.
+          interruptionLevel: 'active',
+          sound: 'default',
+          // A stable id means a second tap replaces the banner rather than
+          // stacking a pile of identical ones down Notification Centre.
+          identifier: SHIELD_UNLOCK_NOTIFICATION_ID,
+          threadIdentifier: SHIELD_UNLOCK_NOTIFICATION_ID,
+          // Read by App.tsx's response listener so tapping lands on the Gate
+          // rather than wherever Byre happened to be last.
+          userInfo: { url: 'byre://unlock' },
+        },
       } as any,
       // Closes the shield and leaves the app blocked — the honest "not now".
       secondary: { type: 'dismiss', behavior: 'close' },
@@ -572,4 +595,48 @@ export function resetAllBlocks() {
   native?.resetBlocks?.('recoverOrphanedShield');
   native?.disableBlockAllMode?.('recoverOrphanedShield');
   setGrantBudget(null);
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Adult-content filter
+ *
+ * Byre cannot detect what anyone looks at, and this is not a workaround for
+ * that — it is the reason one is not needed.
+ *
+ * Family Controls hands out opaque tokens: an ApplicationToken cannot be
+ * resolved to a name, and DeviceActivityReport data can only be drawn inside
+ * Apple's own extension, never read back into the app. So an app that claims
+ * to notice a habit and act on it is either guessing or lying. Asking the
+ * user outright is both the only honest route and the stronger one: a person
+ * who has *said* what they want gone has made a decision, and this holds them
+ * to it.
+ *
+ * `type: "auto"` is Apple's own automatic adult-content filter — the same one
+ * behind Screen Time's "Limit Adult Websites". It is enforced by the OS
+ * across Safari and every in-app browser, so it cannot be sidestepped by
+ * installing a different browser, which is exactly how app-by-app blocking
+ * fails here.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/** Turns Apple's adult-content web filter on or off, device-wide. */
+export function setAdultContentFilter(on: boolean, triggeredBy = 'byre') {
+  if (!native) return;
+  try {
+    if (on) native.setWebContentFilterPolicy({ type: 'auto' }, triggeredBy);
+    else native.clearWebContentFilterPolicy(triggeredBy);
+  } catch {
+    // Authorization can be revoked from Settings at any time; a filter we
+    // cannot set is a thing to reflect in the UI, never a crash.
+  }
+}
+
+/** Whether the filter is actually in force right now — read from the OS, not
+ *  from our own persisted flag, so a filter cleared in Settings shows as off. */
+export function adultContentFilterActive(): boolean {
+  if (!native) return false;
+  try {
+    return !!native.isWebContentFilterPolicyActive?.();
+  } catch {
+    return false;
+  }
 }

@@ -66,9 +66,9 @@ import { DEFAULT_BEDTIME, isWithinBedtime } from '../data/bedtime';
 import { shouldShowCheckIn } from '../data/checkin';
 import CheckInScreen from './CheckInScreen';
 import ProgressPhotosScreen from './ProgressPhotosScreen';
-import { ProgressPhoto } from '../data/progressPhotos';
+import { ProgressPhoto, nextPhotoDue } from '../data/progressPhotos';
 import CalendarScreen from './CalendarScreen';
-import WeeklyInsight from './WeeklyInsight';
+import WeeklyStoryScreen from './WeeklyStoryScreen';
 import RealUsageScreen from './RealUsageScreen';
 import AmbienceSessionScreen from './AmbienceSessionScreen';
 import { Ambience } from '../data/ambiences';
@@ -83,11 +83,13 @@ import {
   getSelectionCounts,
   grantTemporaryAccess,
   hasBlockedSelection,
+  isCurrentlyShielded,
+  resetAllBlocks,
 } from '../data/iosScreenTime';
 import { palette, space } from '../design/tokens';
 import { useEntrance } from '../design/motion';
 import { daysOnLevel, isLoosening, requestIntensityChange, settleIntensity } from '../data/intensityChange';
-import GuardianVerifyScreen from './GuardianVerifyScreen';
+import GuardianVerifyScreen, { GuardedIntent, GUARDIAN_RELEASE_COST } from './GuardianVerifyScreen';
 import { Screen, ScreenHeader } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';
 import { tapLight } from '../ui/haptics';
@@ -359,12 +361,44 @@ export default function MainApp({
    *  Android. Both sides have to be told, or the half that isn't told keeps
    *  enforcing — which on Android meant the shield came straight back after a
    *  passed challenge. */
-  const startGrant = (minutes: number) => {
-    if (Platform.OS === 'ios') {
-      if (hasBlockedSelection()) grantTemporaryAccess(minutes);
-    } else {
+  /**
+   * Opens the door for `minutes`, and says whether it actually managed to.
+   *
+   * The `hasBlockedSelection()` guard used to fail silently, and that produced
+   * the worst possible outcome: a countdown on screen for access that was
+   * never granted. Emergency in particular — the one moment the user has no
+   * patience for a lie — showed "you have five minutes" while every app
+   * stayed shut.
+   *
+   * The gap is Apple's orphaned shield. Reinstalling Byre wipes the App Group
+   * holding the selection record, but the OS keeps enforcing the shield
+   * independently (deliberately — otherwise a child escapes a block by
+   * deleting the controlling app). So the apps are blocked, and the thing we
+   * would point an unblock call at is gone. `resetAllBlocks` exists for
+   * exactly this: it clears the OS-level state without needing the tokens.
+   *
+   * @returns false when nothing could be opened, so the caller shows the
+   *          truth instead of a countdown.
+   */
+  const startGrant = (minutes: number): boolean => {
+    if (Platform.OS !== 'ios') {
       grantAndroidAccess(minutes);
+      return true;
     }
+    if (hasBlockedSelection()) {
+      grantTemporaryAccess(minutes);
+      return true;
+    }
+    if (isCurrentlyShielded()) {
+      // Orphaned shield: no selection to time-limit, so the only honest move
+      // is to lift it outright. Blocking cannot resume by itself afterwards —
+      // there is nothing left describing what to block — so the caller tells
+      // the user to pick their apps again.
+      resetAllBlocks();
+      return true;
+    }
+    // Nothing is blocked at all. Not an error; there is simply no door.
+    return true;
   };
 
   const endGrantEverywhere = () => {
@@ -427,12 +461,26 @@ export default function MainApp({
       return;
     }
     setEmergencyRefusal(null);
-    setEmergencyUsedOn(today);
-    onPatch({ emergencyUsedOn: today });
     // Emergency is still a grant. It used to show the countdown without ever
     // telling the OS side to stand down, so break-glass put a timer on screen
     // and left the apps every bit as blocked as before.
+    const orphaned = Platform.OS === 'ios' && !hasBlockedSelection() && isCurrentlyShielded();
     startGrant(EMERGENCY_MINUTES);
+    if (orphaned) {
+      // The shield outlived its selection (a reinstall), so it has been lifted
+      // outright rather than for five minutes — there is nothing left
+      // describing what to re-block. Say so, and do not burn today's
+      // emergency on it: the user got no timed access, and being told "you've
+      // used today's emergency" after a bug would be indefensible.
+      Alert.alert(
+        'Blocks cleared',
+        'Your apps were still blocked by iOS from a previous install, with no record of which ones. That block has been lifted completely — pick your apps again in Blocked to start over.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+    setEmergencyUsedOn(today);
+    onPatch({ emergencyUsedOn: today });
     setGrantIsEmergency(true);
     setGrantExpiresAt(Date.now() + EMERGENCY_MINUTES * 60000);
     setBlock('emergency');
@@ -512,13 +560,17 @@ export default function MainApp({
    * already knows how to do its own work, and a union would mean re-deriving
    * that here for every new guarded action.
    */
-  const [guardedAction, setGuardedAction] = useState<{ run: () => void; back: Overlay } | null>(
-    null,
-  );
+  const [guardedAction, setGuardedAction] = useState<{
+    run: () => void;
+    back: Overlay;
+    /** Named so the verify screen can say which door this is — it guards five
+     *  of them, and a generic prompt is what made the feature unreadable. */
+    intent: GuardedIntent;
+  } | null>(null);
 
   /** Runs `action` now, or behind the code when a guardian is set. */
   const requireGuardian = useCallback(
-    (action: () => void, back: Overlay) => {
+    (action: () => void, back: Overlay, intent: GuardedIntent) => {
       if (!guardian?.enabled) {
         action();
         return;
@@ -526,11 +578,45 @@ export default function MainApp({
       // The extra arrow is not noise: setState treats a bare function as an
       // updater and would call it immediately, which is the exact thing this
       // is supposed to defer.
-      setGuardedAction({ run: action, back });
+      setGuardedAction({ run: action, back, intent });
       setOverlay('guardianVerify');
     },
     [guardian],
   );
+  /** The single entry point into Guardian, wherever it is offered from.
+   *
+   *  Home, Blocked and Settings all open it; defining the route once means the
+   *  Pro gate and the "reaching Guardian needs the code" rule cannot drift
+   *  between them — an unguarded third door would have made the other two
+   *  pointless. */
+  const openGuardian = () =>
+    isPro
+      ? requireGuardian(() => setOverlay('guardian'), 'settings', 'settings')
+      : Alert.alert(
+          'Guardian is part of Byre Pro',
+          'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'See plans', onPress: () => setOverlay('subscription') },
+          ],
+        );
+
+  /** Runs whatever was waiting behind the code and returns to where it came
+   *  from. Shared by the code path and the bailout path so the two can never
+   *  drift — a key has to open exactly the same door the code does. */
+  const runGuarded = useCallback(() => {
+    if (guardedAction) {
+      const { run, back } = guardedAction;
+      setGuardedAction(null);
+      run();
+      setOverlay(back);
+      return;
+    }
+    if (pendingGuardianTarget) changeIntensity(pendingGuardianTarget);
+    setPendingGuardianTarget(null);
+    setOverlay(difficultyOrigin);
+  }, [guardedAction, pendingGuardianTarget]);
+
   const joinedDays = daysSinceJoin(persisted.firstOpenDate);
 
   // Demo data (__DEV__ only, see SettingsScreen): writes the persisted copy
@@ -999,18 +1085,7 @@ export default function MainApp({
              wanted out could simply replace their guardian's code with one
              of their own — no memorising required. Guarding the door is the
              only thing that makes what is behind it mean anything. */
-          onOpenGuardian={() =>
-            isPro
-              ? requireGuardian(() => setOverlay('guardian'), 'settings')
-              : Alert.alert(
-                  'Guardian is part of Byre Pro',
-                  'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
-                  [
-                    { text: 'Not now', style: 'cancel' },
-                    { text: 'See plans', onPress: () => setOverlay('subscription') },
-                  ],
-                )
-          }
+          onOpenGuardian={openGuardian}
           onOpenWaitingRoom={() => setOverlay('waitingRoom')}
           onOpenBlockScreens={() => setOverlay('blockScreens')}
           onOpenAppearance={() => setOverlay('appearance')}
@@ -1028,7 +1103,7 @@ export default function MainApp({
              and deferring inside it would let the screen carry on as though
              the account were gone. */
           onOpenDeleteAccount={() =>
-            requireGuardian(() => setOverlay('deleteAccount'), 'settings')
+            requireGuardian(() => setOverlay('deleteAccount'), 'settings', 'deleteAccount')
           }
           onOpenAbout={() => setOverlay('about')}
           onOpenTerms={() => setOverlay('terms')}
@@ -1069,7 +1144,7 @@ export default function MainApp({
               setBlockedPackagesState(next);
               onPatch({ blockedPackages: next });
             };
-            if (loosening) requireGuardian(apply, 'blockedApps');
+            if (loosening) requireGuardian(apply, 'blockedApps', 'blockedApps');
             else apply();
           }}
           appModes={blockedAppModes}
@@ -1085,7 +1160,7 @@ export default function MainApp({
               setBlockedAppModes(next);
               onPatch({ blockedAppModes: next });
             };
-            if (loosening) requireGuardian(apply, 'blockedApps');
+            if (loosening) requireGuardian(apply, 'blockedApps', 'blockedApps');
             else apply();
           }}
           defaultMode={activeIntensityKey}
@@ -1108,7 +1183,7 @@ export default function MainApp({
                 return !!before && l.limitMinutes > before.limitMinutes;
               });
             const apply = () => setAppLimits(next);
-            if (loosening) requireGuardian(apply, 'blocks');
+            if (loosening) requireGuardian(apply, 'blocks', 'schedules');
             else apply();
           }}
           onBack={() => setOverlay(null)}
@@ -1155,24 +1230,51 @@ export default function MainApp({
             setGuardian(g);
             onPatch({ guardian: g });
           }}
+          /* Turning Guardian off is the sixth door, and it used to be the
+             only unguarded one — five actions behind a code, defeated by a
+             single toggle. It now goes through the same screen as the rest:
+             the code, or three bailouts. */
+          onRequestDisable={
+            guardian?.enabled
+              ? () =>
+                  requireGuardian(
+                    () => {
+                      setGuardian(null);
+                      onPatch({ guardian: null });
+                      setOverlay('settings');
+                    },
+                    'settings',
+                    'settings',
+                  )
+              : undefined
+          }
         />
       );
     if (ov === 'guardianVerify' && guardian)
       return (
         <GuardianVerifyScreen
           guardian={guardian}
-          onVerified={() => {
-            if (guardedAction) {
-              const { run, back } = guardedAction;
-              setGuardedAction(null);
-              run();
-              setOverlay(back);
-              return;
-            }
-            if (pendingGuardianTarget) changeIntensity(pendingGuardianTarget);
-            setPendingGuardianTarget(null);
-            setOverlay(difficultyOrigin);
+          intent={guardedAction?.intent ?? 'intensity'}
+          bailouts={emergencyTokens}
+          /* One key buys one guarded action — never Guardian itself. A key
+             that deleted the feature would put a one-dollar ceiling on the
+             whole commitment system, so removing Guardian stays code-or-wait.
+             Deleting the account is excluded too: charging for that is a
+             bizarre thing to do and reads as holding data hostage. */
+          onSpendBailout={() => {
+            if (emergencyTokens < GUARDIAN_RELEASE_COST) return;
+            const next = Math.max(0, emergencyTokens - GUARDIAN_RELEASE_COST);
+            setEmergencyTokens(next);
+            // Guardian goes with it. This is the emergency exit for a lost
+            // code or a guardian who has gone quiet — it removes the lock,
+            // not just this one door, because a per-door price would mean
+            // paying again every time and would trap the same user twice.
+            setGuardian(null);
+            onPatch({ emergencyTokens: next, guardian: null });
+            runGuarded();
           }}
+          onBuyBailouts={() => setOverlay('emergencyTokens')}
+          onVerified={runGuarded}
           onCancel={() => {
             if (guardedAction) {
               const { back } = guardedAction;
@@ -1251,6 +1353,7 @@ export default function MainApp({
       return (
         <ScheduleEditorScreen
           schedules={schedules}
+          slipWindow={persisted.onboardingAnswers?.slipWindow?.label ?? null}
           onChange={(next) => {
             const apply = () => {
               setSchedules(next);
@@ -1258,7 +1361,7 @@ export default function MainApp({
             };
             /* Removing a window is the loosening. Adding or editing one is
                not, so the code is only asked for on the way down. */
-            if (next.length < schedules.length) requireGuardian(apply, 'schedules');
+            if (next.length < schedules.length) requireGuardian(apply, 'schedules', 'schedules');
             else apply();
           }}
           onBack={() => setOverlay(null)}
@@ -1325,12 +1428,11 @@ export default function MainApp({
     if (ov === 'calendar') return <CalendarScreen progress={progress} onBack={() => setOverlay('profile')} />;
     if (ov === 'weeklyInsight')
       return (
-        <Screen edges={['top']}>
-          <ScreenHeader title="Weekly insight" onBack={() => setOverlay('profile')} />
-          <ScrollView contentContainerStyle={styles.insightScroll} showsVerticalScrollIndicator={false}>
-            <WeeklyInsight progress={progress} goalLine={goal.line} heading="This week" />
-          </ScrollView>
-        </Screen>
+        <WeeklyStoryScreen
+          progress={progress}
+          goalLine={goal.line}
+          onClose={() => setOverlay('profile')}
+        />
       );
     if (ov === 'realUsage') return <RealUsageScreen onBack={() => setOverlay('profile')} />;
     // World feature — deprioritized, code kept for later.
@@ -1348,8 +1450,12 @@ export default function MainApp({
           onOpenSettings={openSettings}
           onOpenMilestones={() => setOverlay('milestones')}
           onOpenProgressPhotos={() => setOverlay('progressPhotos')}
+          progressPhotos={progressPhotos}
           onOpenCalendar={() => setOverlay('calendar')}
-          onOpenRealUsage={() => setOverlay('realUsage')}
+          // Android only: the screen reads UsageStatsManager, which does not
+          // exist on iOS — there it rendered an empty state under a row
+          // literally subtitled "Android screen time".
+          onOpenRealUsage={Platform.OS === 'android' ? () => setOverlay('realUsage') : undefined}
           onOpenWeeklyInsight={() => setOverlay('weeklyInsight')}
           gateReflections={gateReflections}
           progress={progress}
@@ -1369,6 +1475,11 @@ export default function MainApp({
               onOpenApps={() => setTab('apps')}
               onTriggerShield={openUnlockFlow}
               onOpenRooms={() => setTab('timer')}
+              onOpenGuardian={openGuardian}
+              guardianName={guardian?.enabled ? guardian.name : null}
+              onOpenProgressPhotos={() => setOverlay('progressPhotos')}
+              progressPhotos={progressPhotos}
+              photoDue={nextPhotoDue(progressPhotos, persisted.firstOpenDate)}
               sessionRunning={timerRunning}
               onStartBlock={(minutes) => startSession(minutes, 'Focus Timer', false)}
               onStartRest={() => {
@@ -1397,13 +1508,23 @@ export default function MainApp({
           )}
           {tab === 'apps' && (
             <MyAppsScreen
+              onOpenGuardian={openGuardian}
+              guardianName={guardian?.enabled ? guardian.name : null}
+              hardBlocks={persisted.hardBlocks ?? []}
               blockedPackages={blockedPackages}
               intensityKey={activeIntensityKey}
               schedules={schedules}
               onUnblockPackage={(pkg) => {
+                // Guarded like every other unblock. This one was not, which
+                // made the tidiest route out of Byre a single tap on the very
+                // screen listing what you asked to be protected from — and it
+                // bypassed a guardian entirely.
                 const next = blockedPackages.filter((p) => p !== pkg);
-                setBlockedPackagesState(next);
-                onPatch({ blockedPackages: next });
+                const apply = () => {
+                  setBlockedPackagesState(next);
+                  onPatch({ blockedPackages: next });
+                };
+                requireGuardian(apply, null, 'blockedApps');
               }}
               onOpenBlockedApps={() => setOverlay('blockedApps')}
               onOpenSchedules={() => setOverlay('schedules')}
@@ -1433,7 +1554,7 @@ export default function MainApp({
                   setBlockedPackagesState(next);
                   onPatch({ blockedPackages: next });
                 };
-                if (next.length < blockedPackages.length) requireGuardian(apply, null);
+                if (next.length < blockedPackages.length) requireGuardian(apply, null, 'blockedApps');
                 else apply();
               }}
               tokenBalance={emergencyTokens}
