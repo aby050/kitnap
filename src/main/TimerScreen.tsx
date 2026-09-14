@@ -32,7 +32,7 @@ import Icon, { IconName } from '../ui/Icon';
 import AppGlyph from '../ui/AppGlyph';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import BlockedAppsPill from '../components/BlockedAppsPill';
-import UnlockControl from '../components/UnlockControl';
+import HoldButton from '../components/HoldButton';
 import CancelConfirm from '../components/CancelConfirm';
 import { AmbienceShelf } from '../components/AmbienceCard';
 import { Ambience } from '../data/ambiences';
@@ -479,7 +479,17 @@ export default function TimerScreen({
               style={[styles.cornerBottom, !chromeVisible && styles.chromeHidden]}
               pointerEvents={chromeVisible ? 'auto' : 'none'}
             >
-              <UnlockControl onReveal={() => setShowCancelConfirm(true)} />
+              {/* The same hold gesture, component and proportions as the
+                  delete-account confirm — one commitment control across the
+                  app rather than a bespoke one per screen. */}
+              <HoldButton
+                label="Hold to end this session"
+                holdLabel="Keep holding to end…"
+                holdMs={3000}
+                onComplete={() => setShowCancelConfirm(true)}
+                accessibilityLabel="End session"
+                style={styles.exitHold}
+              />
             </View>
           )}
         </Pressable>
@@ -1109,8 +1119,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
+    // Gutters, now that this holds a full-width pill rather than a 44pt
+    // circle that could sit flush against the edges.
+    paddingHorizontal: space.gutter,
     zIndex: 5,
   },
+  // Matches DeleteAccountScreen's `confirmHold` — same control, same width.
+  exitHold: { width: '100%' },
   cornerRight: { position: 'absolute', top: space.sm, right: space.gutter, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   lockedBody: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingHorizontal: space.xxl },
   lockedLabel: { color: palette.textTertiary },

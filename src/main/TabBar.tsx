@@ -1,11 +1,13 @@
 import React from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import AnimatedIcon from '../ui/AnimatedIcon';
 import { IconName } from '../ui/Icon';
 import { curves } from '../design/motion';
@@ -68,10 +70,80 @@ export default function TabBar<K extends string>({
 
   const slot = row / Math.max(1, tabs.length);
 
-  const pill = useAnimatedStyle(() => ({
-    opacity: row === 0 ? 0 : 1,
-    transform: [{ translateX: slot * pos.value + (slot - PILL_W) / 2 }],
-  }));
+  /**
+   * Press-and-drag across the bar.
+   *
+   * A tab bar you can only tap is a row of buttons that happens to be made of
+   * glass. What makes the iOS 26 bar feel like a physical object is that you
+   * can put a finger down and *push* the selection along it — the indicator
+   * tracks the finger continuously instead of teleporting between slots, and
+   * lets go where you do.
+   *
+   * `drag` is -1 when nobody is touching (the spring owns the pill) and a
+   * pixel x otherwise (the finger owns it). One value, so the two modes can
+   * never both drive the transform.
+   */
+  const drag = useSharedValue(-1);
+  /** 0 resting, 1 under the finger — drives the stretch. */
+  const held = useSharedValue(0);
+  /** Last slot the finger crossed, so the haptic ticks once per tab, not per frame. */
+  const lastSlot = useSharedValue(index);
+
+  const slotAt = (x: number) => {
+    'worklet';
+    if (slot <= 0) return 0;
+    return Math.min(tabs.length - 1, Math.max(0, Math.floor(x / slot)));
+  };
+
+  const commit = (i: number) => {
+    const t = tabs[i];
+    if (t && t.key !== active) onSelect(t.key);
+  };
+
+  const pan = Gesture.Pan()
+    // Long press first, so an ordinary tap still belongs to the tab under it
+    // and scrolling past the bar is never hijacked.
+    .activateAfterLongPress(180)
+    .onStart((e) => {
+      held.value = withTiming(1, { duration: 140 });
+      drag.value = e.x;
+      lastSlot.value = slotAt(e.x);
+      runOnJS(tapLight)();
+    })
+    .onUpdate((e) => {
+      drag.value = Math.min(row, Math.max(0, e.x));
+      const next = slotAt(drag.value);
+      if (next !== lastSlot.value) {
+        lastSlot.value = next;
+        // A tick per tab crossed: the bar is telling the hand where the
+        // detents are, which is what stops this feeling like a slider.
+        runOnJS(tapLight)();
+        runOnJS(commit)(next);
+      }
+    })
+    .onFinalize(() => {
+      const landed = slotAt(drag.value < 0 ? index * slot : drag.value);
+      held.value = withTiming(0, { duration: 200 });
+      drag.value = -1;
+      pos.value = withSpring(landed, motion.snap);
+      runOnJS(commit)(landed);
+    });
+
+  const pill = useAnimatedStyle(() => {
+    const resting = slot * pos.value + (slot - PILL_W) / 2;
+    const following = drag.value - PILL_W / 2;
+    const x = drag.value < 0 ? resting : Math.min(row - PILL_W, Math.max(0, following));
+    return {
+      opacity: row === 0 ? 0 : 1,
+      transform: [
+        { translateX: x },
+        // Stretches along the direction of travel while held — the one cue
+        // that sells the indicator as something viscous rather than a rect.
+        { scaleX: 1 + held.value * 0.14 },
+        { scaleY: 1 - held.value * 0.05 },
+      ],
+    };
+  });
 
   const onLayout = (e: LayoutChangeEvent) => setRow(e.nativeEvent.layout.width);
   const insets = useSafeAreaInsets();
@@ -81,6 +153,7 @@ export default function TabBar<K extends string>({
       style={[styles.wrap, { bottom: Math.max(insets.bottom, 12) + BOTTOM_GAP }]}
       pointerEvents="box-none"
     >
+      <GestureDetector gesture={pan}>
       <Glass
         tone="regular"
         cornerRadius={34}
@@ -107,6 +180,7 @@ export default function TabBar<K extends string>({
           />
         ))}
       </Glass>
+      </GestureDetector>
     </View>
   );
 }

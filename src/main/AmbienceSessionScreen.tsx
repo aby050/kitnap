@@ -17,7 +17,7 @@ import { getVideoLayer } from '../components/videoLayer';
 import { tapLight } from '../ui/haptics';
 import Icon from '../ui/Icon';
 import { Editorial } from '../design/primitives';
-import UnlockControl from '../components/UnlockControl';
+import HoldButton from '../components/HoldButton';
 import CancelConfirm from '../components/CancelConfirm';
 import BlockedListSheet from '../components/BlockedListSheet';
 import { getSelectionCounts } from '../data/iosScreenTime';
@@ -310,16 +310,18 @@ export default function AmbienceSessionScreen({
            *  loosening a rule in Settings, and it lands on the same sheet, at
            *  the same price. */}
           <View style={styles.exitWrap}>
-            <UnlockControl
-              onReveal={() => setConfirming(true)}
-              label="hold to unlock"
+            <HoldButton
+              label="Hold to unlock"
+              holdLabel="Keep holding to unlock…"
+              holdMs={3000}
+              onComplete={() => setConfirming(true)}
               accessibilityLabel="Leave and end this session"
-              accessibilityHint="Press and hold for three seconds to see the ways out of this session"
+              style={styles.exitHold}
             />
           </View>
 
           <Text style={styles.footnote}>
-            Your apps stay locked until this ends. Hold the cross to leave early.
+            Your apps stay locked until this ends. Hold the button to leave early.
           </Text>
         </View>
 
@@ -416,7 +418,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 280,
   },
-  exitWrap: { alignItems: 'center', marginTop: 34 },
+  exitWrap: { alignItems: 'center', marginTop: 34, paddingHorizontal: 20, alignSelf: 'stretch' },
+  // Matches DeleteAccountScreen's `confirmHold` — same control, same width.
+  exitHold: { width: '100%' },
   footnote: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 12,

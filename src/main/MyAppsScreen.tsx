@@ -4,6 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import BlockedSelection from '../components/BlockedSelection';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import { HARD_BLOCKS } from '../onboarding/questions';
 import { getIntensity, IntensityKey } from '../data/themes';
 import {
   Card,
@@ -91,6 +92,9 @@ export default function MyAppsScreen({
   onOpenEssentials,
   onOpenBlocks,
   onOpenDifficulty,
+  onOpenGuardian,
+  guardianName = null,
+  hardBlocks = [],
   schedules = [],
 }: {
   blockedPackages?: string[];
@@ -104,6 +108,12 @@ export default function MyAppsScreen({
   onOpenEssentials?: () => void;
   onOpenBlocks?: () => void;
   onOpenDifficulty?: () => void;
+  /** Opens Guardian setup. Absent hides the card. */
+  onOpenGuardian?: () => void;
+  /** Set means Guardian is live — the card becomes a status display. */
+  guardianName?: string | null;
+  /** HARD_BLOCKS keys the user asked to have gone completely. */
+  hardBlocks?: string[];
   schedules?: { id: string; name: string; start: string; end: string; days: string }[];
 }) {
   const blockedApps = blockedPackages.map((pkg) => ({
@@ -225,7 +235,68 @@ export default function MyAppsScreen({
         )}
 
         {/* Manage */}
-        {(onOpenEssentials || (Platform.OS !== 'ios' && onOpenBlockedApps)) && (
+        {/* What the user asked to have gone completely, and why it is shut.
+            A block with no stated reason reads as the app being difficult.
+            The reason here is the user's own answer from onboarding, quoted
+            back at the moment they are most likely to be arguing with it. */}
+        {hardBlocks.length > 0 && (
+          <>
+            <SectionHeader title="Gone completely" style={styles.section} />
+            <Card style={styles.list}>
+              {hardBlocks.map((key, i) => {
+                const item = HARD_BLOCKS.find((h) => h.key === key);
+                if (!item) return null;
+                return (
+                  <View key={key} style={i === 0 ? undefined : styles.hardNext}>
+                    <View style={styles.hardHead}>
+                      <Icon name="lock" size={15} color={palette.accent} />
+                      <Text style={styles.hardTitle}>{item.label}</Text>
+                    </View>
+                    <Text style={styles.hardWhy}>{item.why}</Text>
+                  </View>
+                );
+              })}
+            </Card>
+          </>
+        )}
+
+        {/* Guardian belongs on this screen more than anywhere else: this is
+            where someone comes to take an app *off* the list, which is
+            precisely the moment the feature exists for. Offering it here is
+            not a cross-sell — it is the answer to what they are about to do. */}
+        {onOpenGuardian && (
+          <Card onPress={onOpenGuardian} style={styles.section}>
+            <View style={styles.guardHead}>
+              <View style={styles.guardEyebrowRow}>
+                <View style={[styles.guardDot, guardianName ? null : styles.guardDotOff]} />
+                <Text style={styles.guardEyebrow}>GUARDIAN</Text>
+              </View>
+              <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
+            </View>
+            <Text style={styles.guardLine}>
+              {guardianName
+                ? `${guardianName} holds your key.`
+                : 'Make this list hard to undo.'}
+            </Text>
+            <Text style={styles.guardBody}>
+              {guardianName
+                ? 'Taking an app off this list needs their code.'
+                : 'Someone you trust holds a code. Without it, apps cannot come off this list.'}
+            </Text>
+          </Card>
+        )}
+
+        {/* "Essentials & always-allowed" is an Android idea and it is hidden
+            here on iOS.
+            Android blocks by package and therefore needs a whitelist. iOS
+            does the opposite: the Family Activity Picker defines what is
+            blocked and everything the user did not pick is allowed already,
+            so a screen promising to keep Maps and the dialer "always allowed"
+            describes a permission Byre never grants — nothing reads these
+            toggles on the way to the shield. It stays on the locked session
+            screen, where it is what it actually is: shortcuts out to the
+            dialer, maps and your bank while everything else is shut. */}
+        {Platform.OS !== 'ios' && (onOpenEssentials || onOpenBlockedApps) && (
           <>
             <SectionHeader title="Manage" style={styles.section} />
             <Card padded={false} style={styles.list}>
@@ -238,10 +309,8 @@ export default function MyAppsScreen({
                   chevron
                 />
               )}
-              {onOpenEssentials && Platform.OS !== 'ios' && onOpenBlockedApps && (
-                <Divider inset={56} />
-              )}
-              {Platform.OS !== 'ios' && onOpenBlockedApps && (
+              {onOpenEssentials && onOpenBlockedApps && <Divider inset={56} />}
+              {onOpenBlockedApps && (
                 <Row
                   icon="lock"
                   title="All blocked apps"
@@ -262,6 +331,17 @@ const styles = StyleSheet.create({
   shrink: { flex: 1, minWidth: 0 },
   scroll: { paddingHorizontal: space.gutter, paddingTop: space.sm, paddingBottom: space.tabClearance },
   headerRow: { minHeight: 44 },
+  guardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  guardEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  guardDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: palette.accent },
+  guardDotOff: { backgroundColor: palette.textQuaternary },
+  guardEyebrow: { color: palette.textTertiary, fontSize: 11, fontWeight: '700', letterSpacing: 1.4 },
+  guardLine: { color: palette.text, fontSize: 16, fontWeight: '600', marginTop: 8, lineHeight: 22 },
+  guardBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 6 },
+  hardNext: { marginTop: space.lg },
+  hardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  hardTitle: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  hardWhy: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 6 },
   voice: { marginTop: space.base },
 
   blockCard: { marginTop: space.xl },
