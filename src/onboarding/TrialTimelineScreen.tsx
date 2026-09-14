@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -8,8 +8,10 @@ import Icon, { IconName } from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
 import { PurchasesPackage } from 'react-native-purchases';
 import {
+  PLAN_BAILOUTS,
   PRIVACY_POLICY_URL,
   TERMS_URL,
+  TRIAL_BAILOUTS,
   purchaseSubscription,
   restorePurchases,
 } from '../data/purchases';
@@ -26,6 +28,9 @@ type Plan = {
   price: string;
   per: string;
   bailouts: number;
+  /** Trial rows only: what lands when the first payment does, so the row can
+   *  say "2 now, 26 when it renews" instead of understating itself as "2". */
+  bailoutsOnRenew?: number;
   badge?: string;
   pkg?: PurchasesPackage;
   /** True for a row whose product carries a free-trial intro offer. The
@@ -132,59 +137,92 @@ const INCLUDED: { icon: IconName; title: string; desc: string; plan?: boolean }[
  *  the rows degrade to "unavailable" and the purchase falls through to the
  *  free plan, which `buy()` already handles when `pkg` is absent. */
 const FALLBACK_PLANS: Plan[] = [
-  { key: 'monthly', name: 'Monthly', note: 'Billed every month', price: '', per: '', bailouts: 2 },
-  { key: 'yearly', name: 'Yearly', note: 'Billed once a year', price: '', per: '', bailouts: 10 },
+  { key: 'monthly', name: 'Monthly', note: 'Billed every month', price: '', per: '', bailouts: PLAN_BAILOUTS.$rc_monthly },
+  { key: 'yearly', name: 'Yearly', note: 'Billed once a year', price: '', per: '', bailouts: PLAN_BAILOUTS.$rc_annual },
 ];
 
-/** How many bailouts each plan grants. Keyed by RevenueCat package
- *  identifier so the dashboard can reprice without touching this. */
-const PLAN_BAILOUTS: Record<string, number> = { $rc_monthly: 2, $rc_annual: 10 };
+/* Plan allowances live in `data/purchases` — they were duplicated across four
+   files and drifted into a ladder where yearly gave less than monthly. */
 
-/** Turns a RevenueCat offering into the rows this screen renders. A package
- *  with a free trial introductory offer becomes the "trial" row — the trial
- *  is an attribute of the product, not a separate SKU. */
+/**
+ * Turns a RevenueCat offering into the two rows this screen renders.
+ *
+ * Exactly two, always: **Monthly** billed from day one, and **Yearly** with
+ * the trial. The trial is not a third product — it is how the yearly plan
+ * starts — so it gets the yearly row rather than a row of its own beside a
+ * second, trial-less yearly. Three rows for two products made the yearly plan
+ * look like two competing offers and pushed the real decision (monthly or
+ * yearly) into third place.
+ *
+ * A monthly product carrying its own intro offer is deliberately rendered
+ * without it. The trial belongs to the plan we want people on; offering it on
+ * both makes it worth nothing on either.
+ *
+ * Apple 3.1.2(c): a row is titled by what it *bills*, never by the trial —
+ * "7-day free trial" as a heading makes the free period the identity and
+ * demotes the amount that will actually be charged. The trial stays as
+ * subordinate note copy underneath.
+ */
 function toPlans(pkgs: PurchasesPackage[]): Plan[] {
   const rows: Plan[] = [];
-  for (const pkg of pkgs) {
-    const p = pkg.product;
-    const annual = pkg.identifier === '$rc_annual';
-    const intro = p.introPrice;
-    const bailouts = PLAN_BAILOUTS[pkg.identifier] ?? 2;
-    if (intro && intro.price === 0) {
-      const unit = intro.periodUnit.toLowerCase();
-      const plural = intro.periodNumberOfUnits === 1 ? unit : `${unit}s`;
-      // Apple 3.1.2(c): the row is titled by what it *bills*, not by the
-      // trial. Naming it "7-day free trial" made the free period the row's
-      // identity and pushed the billed amount into a secondary position.
-      // The trial survives as subordinate note copy underneath.
-      rows.unshift({
-        key: `trial:${pkg.identifier}`,
-        name: annual ? 'Yearly' : 'Monthly',
-        note: `${intro.periodNumberOfUnits} ${plural} free first, then billed ${p.priceString}${annual ? ' a year' : ' a month'}. Cancel anytime.`,
-        price: p.priceString,
-        per: annual ? '/yr' : '/mo',
-        bailouts: 1,
-        badge: 'Start here',
-        pkg,
-        isTrial: true,
-        trialLabel: `${intro.periodNumberOfUnits} ${plural}`,
-        trialDays: unit.startsWith('week')
-          ? intro.periodNumberOfUnits * 7
-          : unit.startsWith('month')
-            ? intro.periodNumberOfUnits * 30
-            : intro.periodNumberOfUnits,
-      });
-    }
+
+  const monthly = pkgs.find((p) => p.identifier === '$rc_monthly');
+  const annual = pkgs.find((p) => p.identifier === '$rc_annual');
+
+  if (monthly) {
     rows.push({
-      key: pkg.identifier,
-      name: annual ? 'Yearly' : 'Monthly',
-      note: annual ? 'Billed once a year — best value' : 'Billed every month',
-      price: p.priceString,
-      per: annual ? '/yr' : '/mo',
-      bailouts,
-      pkg,
+      key: monthly.identifier,
+      name: 'Monthly',
+      note: 'Billed every month',
+      price: monthly.product.priceString,
+      per: '/mo',
+      bailouts: PLAN_BAILOUTS.$rc_monthly,
+      pkg: monthly,
     });
   }
+
+  if (annual) {
+    const p = annual.product;
+    const intro = p.introPrice;
+    const free = intro && intro.price === 0;
+    const unit = free ? intro.periodUnit.toLowerCase() : '';
+    const plural = free && intro.periodNumberOfUnits === 1 ? unit : `${unit}s`;
+
+    rows.push(
+      free
+        ? {
+            key: `trial:${annual.identifier}`,
+            name: 'Yearly',
+            note: `${intro.periodNumberOfUnits} ${plural} free first, then billed ${p.priceString} a year. Cancel anytime.`,
+            price: p.priceString,
+            per: '/yr',
+            bailouts: TRIAL_BAILOUTS,
+            bailoutsOnRenew: PLAN_BAILOUTS.$rc_annual,
+            badge: 'Start here',
+            pkg: annual,
+            isTrial: true,
+            trialLabel: `${intro.periodNumberOfUnits} ${plural}`,
+            trialDays: unit.startsWith('week')
+              ? intro.periodNumberOfUnits * 7
+              : unit.startsWith('month')
+                ? intro.periodNumberOfUnits * 30
+                : intro.periodNumberOfUnits,
+          }
+        : {
+            key: annual.identifier,
+            name: 'Yearly',
+            note: 'Billed once a year — best value',
+            price: p.priceString,
+            per: '/yr',
+            bailouts: PLAN_BAILOUTS.$rc_annual,
+            badge: 'Best value',
+            pkg: annual,
+          },
+    );
+  }
+
+  // Anything else in the offering (a lifetime SKU, an experiment) is ignored
+  // rather than rendered as a mystery third row.
   return rows;
 }
 
@@ -214,8 +252,45 @@ export default function TrialTimelineScreen({
     return live.length ? live : FALLBACK_PLANS;
   }, [offering]);
 
-  const [plan, setPlan] = useState(PLANS[0].key);
+  /**
+   * What is selected when the screen opens: the trial, if there is one.
+   *
+   * It used to be `PLANS[0]`, which since the two-row change is Monthly — so
+   * the screen opened with the paid-from-today plan chosen and the free trial
+   * sitting unselected underneath it, which is backwards for both sides. The
+   * trial is the offer; anyone who wants monthly can still tap it.
+   */
+  const defaultKey = useMemo(() => {
+    const trial = PLANS.find((p) => p.isTrial);
+    if (trial) return trial.key;
+    const annual = PLANS.find((p) => p.key.includes('annual') || p.key === 'yearly');
+    return (annual ?? PLANS[0]).key;
+  }, [PLANS]);
+
+  const [plan, setPlan] = useState(defaultKey);
   const [busy, setBusy] = useState(false);
+
+  /**
+   * Re-point the selection when the offering arrives.
+   *
+   * PLANS starts as FALLBACK_PLANS and is replaced once RevenueCat answers, so
+   * a key chosen against the fallback ('yearly') does not exist in the live
+   * rows ('trial:$rc_annual'). `selected` then silently fell back to PLANS[0]
+   * while `plan` still held the stale key — the highlighted row and the row
+   * that would actually be bought could disagree. Only re-points while the
+   * user is still on the default, so an explicit choice is never overwritten.
+   */
+  const settled = useRef(false);
+  useEffect(() => {
+    if (settled.current) return;
+    if (!PLANS.some((p) => p.key === plan)) setPlan(defaultKey);
+  }, [PLANS, defaultKey, plan]);
+
+  const choose = (key: string) => {
+    settled.current = true;
+    setPlan(key);
+  };
+
   const selected = PLANS.find((p) => p.key === plan) ?? PLANS[0];
 
   const buy = async () => {
@@ -298,7 +373,7 @@ export default function TrialTimelineScreen({
           {PLANS.map((p) => {
             const active = p.key === plan;
             return (
-              <Pressable key={p.key} onPress={() => setPlan(p.key)} style={[styles.plan, active && styles.planActive]}>
+              <Pressable key={p.key} onPress={() => choose(p.key)} style={[styles.plan, active && styles.planActive]}>
                 <View style={[styles.radio, active && styles.radioOn]}>
                   {active ? <Icon name="check" size={13} color="#062" strokeWidth={2.8} /> : null}
                 </View>
@@ -308,7 +383,9 @@ export default function TrialTimelineScreen({
                   <View style={styles.bailoutRow}>
                     <BailoutGlyph size={13} />
                     <Text style={styles.bailoutText}>
-                      {p.bailouts} bailout{p.bailouts === 1 ? '' : 's'} included
+                      {p.bailoutsOnRenew
+                        ? `${p.bailouts} now, ${p.bailoutsOnRenew} when it renews`
+                        : `${p.bailouts} bailout${p.bailouts === 1 ? '' : 's'} included`}
                     </Text>
                   </View>
                 </View>

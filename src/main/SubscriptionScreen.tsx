@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CustomerInfo } from 'react-native-purchases';
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
-import { restorePurchases, ENTITLEMENT_ID } from '../data/purchases';
+import { CustomerInfo } from 'react-native-purchases';
+import { restorePurchases, ENTITLEMENT_ID, PLAN_BAILOUTS } from '../data/purchases';
+import { FREE_EMERGENCY_TOKENS } from '../data/store';
 import { palette, space, radius } from '../design/tokens';
 
 /** Apple and Google both refuse to let an app cancel its own subscription —
@@ -245,7 +246,11 @@ function Row({
  * along: more bailouts, the guardian code, and more than one schedule.
  */
 const PERKS: { icon: React.ComponentProps<typeof Icon>['name']; title: string; desc: string }[] = [
-  { icon: 'key', title: '10 bailouts a year', desc: 'Topped up every renewal. Free plan keeps its 2 forever.' },
+  {
+    icon: 'key',
+    title: `${PLAN_BAILOUTS.$rc_annual} bailouts a year`,
+    desc: `Topped up every renewal. Monthly gets ${PLAN_BAILOUTS.$rc_monthly} a month; the free plan keeps its ${FREE_EMERGENCY_TOKENS} forever.`,
+  },
   { icon: 'shield', title: 'Guardian code', desc: 'Someone you trust holds the key to loosening Strict mode.' },
   { icon: 'calendar', title: 'Unlimited schedules', desc: 'Recurring windows that block on their own. Free plan gets one.' },
 ];
