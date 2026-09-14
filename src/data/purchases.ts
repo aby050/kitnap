@@ -189,3 +189,46 @@ export function purchasedBailoutCount(info: CustomerInfo | null | undefined): nu
     0,
   );
 }
+
+/**
+ * How many bailouts each plan includes, and the single place that decides it.
+ *
+ * These numbers lived in four files — TrialTimelineScreen's PLAN_BAILOUTS, a
+ * hardcoded `bailouts: 10` in PlanCompareScreen, its comparison table, and a
+ * feature bullet on SubscriptionScreen — and they had drifted into a ladder
+ * that punished the bigger commitment: monthly granted 2 a month (24 a year)
+ * while yearly granted 10 a year. The plan costing more per year gave less
+ * than half as many keys, which anyone doing the arithmetic would catch.
+ *
+ * The ladder now goes one way. Free is 1, once, forever. Monthly grants 2 a
+ * month; yearly grants 26 a year — two a month plus two spare — so the longer
+ * commitment is the better rate, which is the axis it is sold on.
+ */
+export const PLAN_BAILOUTS: Record<string, number> = {
+  $rc_monthly: 2,
+  $rc_annual: 26,
+};
+
+/**
+ * What a free trial grants up front.
+ *
+ * Deliberately not the full yearly allowance. A trial can be cancelled before
+ * it bills, so granting the whole year's keys on day one hands them to anyone
+ * who wants them free — and bailouts are the one thing in the app that has to
+ * stay scarce to mean anything. Two is enough to actually use the feature
+ * during the trial and decide whether it is worth paying for, which is what a
+ * trial is for. The year's 26 arrive when the first payment does, so a trial
+ * that converts is worth 2 + 26.
+ *
+ * It used to be 1, shown on a row directly beside "10" — which made the trial
+ * look like the worse deal for the very same product.
+ */
+export const TRIAL_BAILOUTS = 2;
+
+/** Plain-English allowance for the plan cards and the comparison table, so the
+ *  copy can never disagree with what the code actually grants. */
+export const planBailoutLabel = (packageId: string): string => {
+  const n = PLAN_BAILOUTS[packageId];
+  if (!n) return '';
+  return packageId === '$rc_annual' ? `${n} a year` : `${n} a month`;
+};

@@ -1,3 +1,4 @@
+import { PLAN_BAILOUTS } from '../data/purchases';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -92,7 +93,7 @@ export default function PaywallScreen({
 
           <Capability
             mark="key"
-            title="10 bailouts a year"
+            title={`${PLAN_BAILOUTS.$rc_annual} bailouts a year`}
             desc="Topped up every renewal. One leaves a locked session early."
           />
           <Capability

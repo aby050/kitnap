@@ -53,6 +53,9 @@ export type PersistedState = {
   /** Raw onboarding answers, kept after onboarding completes so later
    *  screens (recommendation, personalization) can still read them. */
   onboardingAnswers: Record<string, { value: string; label: string }>;
+  /** Categories the user asked to have blocked outright, by HARD_BLOCKS key.
+   *  Persisted so the shield can say *why* a thing is shut, in their words. */
+  hardBlocks: string[];
   progress: ProgressState;
   bedtime: BedtimeWindow;
   checkIns: CheckIn[];
@@ -93,7 +96,7 @@ export type PersistedState = {
 };
 
 /** Production starting grant. Do not raise this for shipping builds. */
-export const FREE_EMERGENCY_TOKENS = 2;
+export const FREE_EMERGENCY_TOKENS = 1;
 
 /** Schedules the free plan keeps. PlanCompareScreen has advertised "free: 1,
  *  Pro: Unlimited" since it was written; this is the number that makes that
@@ -307,6 +310,7 @@ export const DEFAULT_STATE: PersistedState = {
   guardian: null,
   account: null,
   onboardingAnswers: {},
+  hardBlocks: [],
   progress: EMPTY_PROGRESS,
   bedtime: DEFAULT_BEDTIME,
   checkIns: [],

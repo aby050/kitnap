@@ -5,9 +5,15 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { fonts, palette, radius, space } from '../design/tokens';
 import Icon from '../ui/Icon';
-import { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import { FREE_EMERGENCY_TOKENS } from '../data/store';
-import { PRIVACY_POLICY_URL, TERMS_URL, purchaseSubscription } from '../data/purchases';
+import { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import {
+  PLAN_BAILOUTS,
+  PRIVACY_POLICY_URL,
+  TERMS_URL,
+  planBailoutLabel,
+  purchaseSubscription,
+} from '../data/purchases';
 import { PurchaseResult } from './PurchaseSuccessScreen';
 
 /** The annual package out of an offering. */
@@ -27,7 +33,7 @@ const ROWS: { label: string; free: string; pro: string }[] = [
   { label: 'Blocking', free: 'Everything', pro: 'Everything' },
   { label: 'Emergency access', free: 'Free, always', pro: 'Free, always' },
   { label: 'Unlock by moving', free: 'Yes', pro: 'Yes' },
-  { label: 'Bailouts', free: `${FREE_EMERGENCY_TOKENS}, forever`, pro: '10 a year' },
+  { label: 'Bailouts', free: `${FREE_EMERGENCY_TOKENS}, forever`, pro: planBailoutLabel('$rc_annual') },
   { label: 'Guardian code', free: '—', pro: 'Yes' },
   { label: 'Schedules', free: '1', pro: 'Unlimited' },
 ];
@@ -86,7 +92,7 @@ export default function PlanCompareScreen({
       onPurchased?.(10);
       onStart({
         planName: 'Yearly',
-        bailouts: 10,
+        bailouts: PLAN_BAILOUTS.$rc_annual,
         isTrial: false,
         renewsAt: res.info.latestExpirationDate,
       });
