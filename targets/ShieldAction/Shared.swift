@@ -81,15 +81,51 @@ func sleep(ms: Int) {
   _ = group.wait(timeout: .now() + delay)
 }
 
-func openUrl(urlString: String) {
+/// Brings the containing app to the front from inside an extension.
+///
+/// - Returns: whether the launch was dispatched. False means the caller
+///   should fall back to posting a notification.
+@discardableResult
+func openUrl(urlString: String) -> Bool {
   guard let url = URL(string: urlString) else {
-    return  // be safe
+    return false  // be safe
   }
 
-  let context = NSExtensionContext()
-  context.open(url) { _ in
-
+  guard
+    let applicationClass = NSClassFromString("UIApplication") as? NSObject.Type,
+    let application = applicationClass.value(forKey: "sharedApplication") as? NSObject
+  else {
+    logger.log("openUrl: no shared application")
+    return false
   }
+
+  // Two selectors, newest first. `openURL:` is the one every blog post names,
+  // but it is the iOS 9 API and is not always still answered; the three-part
+  // form is what UIApplication implements today. Trying both is the
+  // difference between this working and silently falling back.
+  let modern = NSSelectorFromString("openURL:options:completionHandler:")
+  let legacy = NSSelectorFromString("openURL:")
+
+  let attempt: () -> Bool = {
+    if application.responds(to: modern) {
+      logger.log("openUrl: via openURL:options:completionHandler:")
+      _ = application.perform(modern, with: url, with: [String: Any]())
+      return true
+    }
+    if application.responds(to: legacy) {
+      logger.log("openUrl: via openURL:")
+      _ = application.perform(legacy, with: url)
+      return true
+    }
+    logger.log("openUrl: no usable selector on UIApplication")
+    return false
+  }
+
+  // Must be on the main thread — this ends up touching UIKit.
+  if Thread.isMainThread {
+    return attempt()
+  }
+  return DispatchQueue.main.sync(execute: attempt)
 }
 
 let notificationCenter = CFNotificationCenterGetDarwinNotifyCenter()
