@@ -7,6 +7,12 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
 import { FREE_SCHEDULE_LIMIT } from '../data/store';
 import { Schedule } from '../data/store';
+import {
+  SCHEDULE_PRESETS,
+  SchedulePreset,
+  matchesSlipWindow,
+  toSchedule,
+} from '../data/schedulePresets';
 import { fieldStyle, palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 
@@ -36,6 +42,7 @@ export default function ScheduleEditorScreen({
   onBack,
   isPro = false,
   onUpgrade,
+  slipWindow = null,
 }: {
   schedules: Schedule[];
   onChange: (next: Schedule[]) => void;
@@ -46,7 +53,23 @@ export default function ScheduleEditorScreen({
    *  true. This is the code catching up to the copy, not a new restriction. */
   isPro?: boolean;
   onUpgrade?: () => void;
+  /** The onboarding answer to "when does the phone usually win?" — used only
+   *  to mark which suggestion is the one they already told us about. */
+  slipWindow?: string | null;
 }) {
+  /** Suggestions not already in the list. Matched by id, so a preset the user
+   *  added and then renamed does not come back offering itself again. */
+  const available = SCHEDULE_PRESETS.filter((p) => !schedules.some((s) => s.id === p.id));
+
+  const addPreset = (preset: SchedulePreset) => {
+    // Free plan keeps one schedule — the same gate the manual add respects.
+    if (!isPro && schedules.length >= 1) {
+      onUpgrade?.();
+      return;
+    }
+    onChange([...schedules, toSchedule(preset)]);
+  };
+
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftStart, setDraftStart] = useState('');
@@ -206,6 +229,54 @@ export default function ScheduleEditorScreen({
         {schedules.length === 0 && (
           <Text style={styles.empty}>No recurring blocks yet. Add one for the hours that matter most.</Text>
         )}
+
+        {/* Suggested windows.
+            Writing a schedule from scratch means naming it, picking two times
+            and a day pattern before anything happens — five decisions to
+            express one thought ("stop me doomscrolling at midnight"). These
+            are that thought, one tap each. Only the ones not already added
+            appear, so the list empties as it is used rather than nagging.
+
+            The recommended flag is not a guess: onboarding asked when the
+            phone usually wins, and this is the preset covering that answer. */}
+        {available.length > 0 && (
+          <>
+            <Text style={styles.presetHead}>Suggested</Text>
+            {available.map((preset, i) => {
+              const recommended = matchesSlipWindow(preset, slipWindow);
+              return (
+                <Animated.View
+                  key={preset.id}
+                  entering={FadeInDown.delay(i * 60).duration(340)}
+                >
+                  <Pressable
+                    onPress={() => addPreset(preset)}
+                    style={[styles.presetRow, recommended && styles.presetRowOn]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.presetTitleRow}>
+                        <Text style={styles.name}>{preset.name}</Text>
+                        {recommended && (
+                          <View style={styles.presetBadge}>
+                            <Text style={styles.presetBadgeText}>FOR YOU</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.presetBlurb}>{preset.blurb}</Text>
+                      <Text style={styles.meta}>
+                        {preset.start} – {preset.end} · {preset.days}
+                      </Text>
+                    </View>
+                    <View style={styles.presetAdd}>
+                      <Icon name="plus" size={16} color={palette.accent} strokeWidth={2.4} />
+                    </View>
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
+            {schedules.length > 0 && <Text style={styles.presetHead}>Yours</Text>}
+          </>
+        )}
         {schedules.map((s, i) => (
           <Animated.View key={s.id} entering={FadeInDown.delay(i * 60).duration(340)} style={styles.row}>
             <Pressable onPress={() => startEdit(s)} style={{ flex: 1 }}>
@@ -238,6 +309,47 @@ const styles = StyleSheet.create({
   headerGlyph: { color: palette.text, fontSize: 19 },
   headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   addLink: { color: palette.accent, fontSize: 16, fontWeight: '700' },
+  presetHead: {
+    color: palette.textTertiary,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  presetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+    borderWidth: 1,
+    borderColor: palette.hairline,
+    borderRadius: 20,
+    padding: 17,
+    marginBottom: 10,
+  },
+  presetRowOn: { borderColor: palette.accentBorder, backgroundColor: palette.accentSoft },
+  presetTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  presetBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+  },
+  presetBadgeText: { color: palette.accent, fontSize: 9.5, fontWeight: '800', letterSpacing: 0.8 },
+  presetBlurb: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 5 },
+  presetAdd: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.accentSoft,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+  },
   scroll: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 110 },
   empty: { color: palette.textSecondary, fontSize: 14.5, lineHeight: 21, textAlign: 'center', marginTop: 40 },
   row: {
