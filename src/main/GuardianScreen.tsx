@@ -23,17 +23,37 @@ import { generateGuardianCode, hashGuardianCode, newSalt } from '../data/guardia
  *  shared. */
 export type Guardian = { enabled: boolean; name: string; contact: string; codeHash: string; codeSalt: string };
 
+/** The five doors the code stands in front of. Kept in sync by hand with
+ *  `requireGuardian` in MainApp — there is no way to derive it, since each
+ *  caller passes its own thunk, so it is written where the user reads it. */
+const GUARDED_ACTIONS = [
+  'Making unlocks easier',
+  'Unblocking an app',
+  'Deleting a schedule',
+  'Opening this Guardian screen',
+  'Deleting your account',
+];
+
 export default function GuardianScreen({
   initial,
   hoursReclaimed = 0,
   onBack,
   onSave,
+  onRequestDisable,
+  pendingReleaseLabel,
+  onCancelRelease,
 }: {
   initial?: Guardian | null;
   /** Drives the "this is all they'd see" preview. */
   hoursReclaimed?: number;
   onBack: () => void;
   onSave: (g: Guardian | null) => void;
+  /** Asked to turn Guardian off. Goes through the code, a bailout, or the
+   *  wait — never straight through. Absent means the old behaviour. */
+  onRequestDisable?: () => void;
+  /** e.g. "1 day 4 hours" while a removal is counting down. */
+  pendingReleaseLabel?: string | null;
+  onCancelRelease?: () => void;
 }) {
   const [enabled, setEnabled] = useState(initial?.enabled ?? false);
   const [name, setName] = useState(initial?.name ?? '');
@@ -52,9 +72,6 @@ export default function GuardianScreen({
    * `sent` stays for the guardian who is not in the room. It is weaker and
    * the screen says so rather than implying otherwise.
    */
-  const [mode, setMode] = useState<'theirs' | 'sent'>('theirs');
-  const [typed, setTyped] = useState('');
-  const [typedAgain, setTypedAgain] = useState('');
   const [busy, setBusy] = useState(false);
 
   const canGenerate = name.trim().length > 0;
@@ -67,29 +84,12 @@ export default function GuardianScreen({
     setPendingCode(code);
   };
 
-  const typedOk = /^\d{4,8}$/.test(typed) && typed === typedAgain;
-
-  /** Saves a code the guardian chose on this phone. The plaintext is hashed
-   *  and dropped; it is never rendered, so the owner has nothing to memorise
-   *  unless they watched over a shoulder. */
-  const saveTheirCode = async () => {
-    if (!typedOk || busy) return;
-    setBusy(true);
-    const salt = await newSalt();
-    const codeHash = await hashGuardianCode(typed, salt);
-    setBusy(false);
-    setTyped('');
-    setTypedAgain('');
-    setHasCode(true);
-    onSave({ enabled: true, name: name.trim(), contact: contact.trim(), codeHash, codeSalt: salt });
-  };
-
   const shareAndSave = async () => {
     if (!pendingCode) return;
     const trimmedName = name.trim();
     try {
       await Share.share({
-        message: `I've set you as my Guardian in Byre. If I ask you to unlock Strict mode, this is the code: ${pendingCode}\n\nOnly give it to me if you think I should really have it.`,
+        message: `I've made you my Guardian in Byre.\n\nThis code is the only way I can unblock apps, weaken my limits or delete my account:\n\n${pendingCode}\n\nI can't see it any more — you're the only one who has it. Only give it to me if you think I should really have it.`,
       });
     } catch {
       // Share sheet dismissed or failed — the code is still valid and can be
@@ -123,11 +123,48 @@ export default function GuardianScreen({
           </View>
           <Text style={styles.heroTitle}>A friend holds the code</Text>
           <Text style={styles.heroBody}>
-            We can't stop you disabling this in Settings — nobody can, on iOS. So instead, weakening Strict
-            mode requires a code that only your guardian has. You send it to them yourself; Byre never sees
+            We can't stop you disabling this in Settings — nobody can, on iOS. So instead, the five ways
+            out of Byre need a code only your guardian has. You send it to them yourself; Byre never sees
             it and never delivers it.
           </Text>
         </Animated.View>
+
+        {/* What the code actually guards.
+            This list exists because the feature was impossible to reason
+            about without it: the code gates five different actions scattered
+            across the app, and until you hit one there was nothing that said
+            so. A gate you can't predict reads as an obstacle; a gate you
+            agreed to in advance reads as the promise it is. */}
+        <View style={styles.guardsCard}>
+          <Text style={styles.guardsTitle}>What needs the code</Text>
+          {GUARDED_ACTIONS.map((g) => (
+            <View key={g} style={styles.guardsRow}>
+              <Icon name="lock" size={14} color={palette.accent} strokeWidth={2} />
+              <Text style={styles.guardsText}>{g}</Text>
+            </View>
+          ))}
+          <Text style={styles.guardsFoot}>
+            Everything else stays yours. Tightening a rule, adding a block or starting a session never
+            asks for anything.
+          </Text>
+        </View>
+
+        {/* A removal already in flight. Shown before the toggle, because it
+            is the answer to the question someone arriving here is asking. */}
+        {!!pendingReleaseLabel && (
+          <View style={styles.releaseCard}>
+            <Text style={styles.releaseTitle}>Guardian ends in {pendingReleaseLabel}</Text>
+            <Text style={styles.releaseBody}>
+              It keeps working until then. Enter the code any time to keep it, or spend a bailout to
+              end it now.
+            </Text>
+            {!!onCancelRelease && (
+              <Pressable onPress={onCancelRelease} hitSlop={8}>
+                <Text style={styles.releaseCancel}>Keep my guardian</Text>
+              </Pressable>
+            )}
+          </View>
+        )}
 
         <View style={styles.toggleRow}>
           <View style={{ flex: 1 }}>
@@ -137,12 +174,21 @@ export default function GuardianScreen({
           <Toggle
             value={enabled}
             onValueChange={(v) => {
-              setEnabled(v);
+              // Switching it OFF is the escape hatch that used to make every
+              // other guard decorative: five doors behind a code, and one
+              // unguarded toggle that opened all of them. Turning it on is
+              // free; turning it off goes through `onRequestDisable`, which
+              // asks for the code — or, failing that, starts the wait.
               if (!v) {
+                if (onRequestDisable) {
+                  onRequestDisable();
+                  return; // Stays on until that actually succeeds.
+                }
                 onSave(null);
                 setHasCode(false);
                 setPendingCode(null);
               }
+              setEnabled(v);
             }}
           />
         </View>
@@ -168,91 +214,34 @@ export default function GuardianScreen({
 
             <View style={{ height: 20 }} />
 
-            {/* Which way the code gets set. Ordered deliberately: the strong
-                one first, and named for what actually happens rather than
-                for a feature. */}
-            <View style={styles.modeRow}>
-              {(
-                [
-                  { key: 'theirs', label: 'They’re with me', sub: 'They type it. You never see it.' },
-                  { key: 'sent', label: 'Send it to them', sub: 'You’ll see the code too.' },
-                ] as const
-              ).map((m) => (
-                <Pressable
-                  key={m.key}
-                  onPress={() => setMode(m.key)}
-                  style={[styles.modeTile, mode === m.key && styles.modeTileOn]}
-                >
-                  <Text style={[styles.modeLabel, mode === m.key && styles.modeLabelOn]}>
-                    {m.label}
-                  </Text>
-                  <Text style={[styles.modeSub, mode === m.key && styles.modeSubOn]}>{m.sub}</Text>
-                </Pressable>
-              ))}
-            </View>
+            {/* One code, generated once, shared once.
+                The old screen offered two ways to set it, including letting
+                the guardian type their own. Both are gone: this code is now
+                the *only* key to the feature, so there must be exactly one
+                path that produces it, and the app must be the thing that
+                produces it. A code the owner chose is a code the owner
+                remembers, and a guardian who guards a number you already know
+                guards nothing.
 
-            <View style={{ height: 16 }} />
-
-            {mode === 'theirs' ? (
-              <Animated.View entering={FadeInDown.duration(300)}>
-                <Text style={styles.handoverNote}>
-                  Hand {name.trim() || 'them'} your phone. They pick 4–8 digits and type it twice.
-                  It is hidden as they type and never shown again — so you cannot memorise it, which
-                  is the whole point.
-                </Text>
-                <View style={{ height: 12 }} />
-                <TextInput
-                  value={typed}
-                  onChangeText={setTyped}
-                  placeholder="Their code"
-                  placeholderTextColor={palette.textTertiary}
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  secureTextEntry
-                  maxLength={8}
-                />
-                <View style={{ height: 10 }} />
-                <TextInput
-                  value={typedAgain}
-                  onChangeText={setTypedAgain}
-                  placeholder="Type it again"
-                  placeholderTextColor={palette.textTertiary}
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  secureTextEntry
-                  maxLength={8}
-                />
-                {typed.length > 0 && !typedOk && (
-                  <Text style={styles.mismatch}>
-                    {typed.length < 4
-                      ? 'At least four digits.'
-                      : typed !== typedAgain
-                        ? 'Those do not match.'
-                        : 'Digits only.'}
-                  </Text>
-                )}
-                <View style={{ height: 14 }} />
-                <GradientButton
-                  label={busy ? 'One moment…' : 'Save their code'}
-                  onPress={typedOk && !busy ? saveTheirCode : () => {}}
-                />
-              </Animated.View>
-            ) : pendingCode ? (
+                It is shown exactly once, here, and never again — only the
+                salted hash is kept. Losing it is survivable: three bailouts
+                remove the lock. That is the emergency exit, and it costs
+                enough to stay an emergency. */}
+            {pendingCode ? (
               <Animated.View entering={FadeInDown.duration(300)} style={styles.codeCard}>
-                <Text style={styles.codeLabel}>Their code</Text>
+                <Text style={styles.codeLabel}>Their code — shown once</Text>
                 <Text style={styles.codeValue}>{pendingCode}</Text>
                 <Text style={styles.codeHint}>
-                  Send this to {name.trim() || 'them'} now. You can see it too, so this is the weaker
-                  of the two ways — if you think you will be tempted to remember it, hand them the
-                  phone instead.
+                  Send this to {name.trim() || 'them'} now. Byre keeps no copy you can look up, and
+                  this screen will not show it again. If it is lost, three bailouts remove the lock.
                 </Text>
                 <View style={{ height: 14 }} />
                 <GradientButton label={`Share with ${name.trim() || 'them'}`} onPress={shareAndSave} />
               </Animated.View>
             ) : (
               <GradientButton
-                label={busy ? 'One moment…' : hasCode ? 'Generate a new code' : 'Generate their code'}
-                onPress={busy ? () => {} : generate}
+                label={busy ? 'One moment…' : hasCode ? 'Generate a new code' : 'Generate the code'}
+                onPress={busy || !canGenerate ? () => {} : generate}
               />
             )}
             {busy && <ActivityIndicator color={palette.text} style={{ marginTop: 10 }} />}
@@ -289,6 +278,31 @@ export default function GuardianScreen({
 }
 
 const styles = StyleSheet.create({
+  releaseCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.accentBorder,
+    padding: space.lg,
+    marginBottom: space.lg,
+    gap: 8,
+  },
+  releaseTitle: { color: palette.text, fontSize: 15.5, fontWeight: '800' },
+  releaseBody: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19 },
+  releaseCancel: { color: palette.accent, fontSize: 14, fontWeight: '700', marginTop: 4 },
+  guardsCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.hairline,
+    padding: space.lg,
+    marginBottom: space.lg,
+    gap: 10,
+  },
+  guardsTitle: { color: palette.text, fontSize: 15, fontWeight: '700' },
+  guardsRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  guardsText: { color: palette.textSecondary, fontSize: 14, flex: 1 },
+  guardsFoot: { color: palette.textTertiary, fontSize: 12.5, lineHeight: 18, marginTop: 4 },
   container: { flex: 1, backgroundColor: 'transparent' },
   modeRow: { flexDirection: 'row', gap: 10 },
   modeTile: {
