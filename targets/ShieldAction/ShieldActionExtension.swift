@@ -118,7 +118,13 @@ func handleShieldAction(
     let url = configForSelectedAction["url"] as? String
 
     if type == "openUrl" {
-      openUrl(urlString: url ?? "device-activity://")
+      // Falls back to a notification when the launch can't be dispatched, so
+      // this button is never dead — see `openUrl` in Shared.swift.
+      if !openUrl(urlString: url ?? "device-activity://"),
+        let payload = configForSelectedAction["fallbackNotification"] as? [String: Any] {
+        logger.log("openUrl failed — posting fallback notification")
+        sendNotification(contents: payload, placeholders: placeholders)
+      }
     }
 
     if type == "openUrlWithDispatch" {
