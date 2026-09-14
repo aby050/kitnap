@@ -40,7 +40,8 @@ import PersistentBackground from './src/components/PersistentBackground';
 import { IntensityKey, ThemeKey } from './src/data/themes';
 import { EMPTY_GOAL, GoalData } from './src/data/goal';
 import { clearState, DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
-import { QUESTION_CHUNKS } from './src/onboarding/questions';
+import { HARD_BLOCKS, QUESTION_CHUNKS } from './src/onboarding/questions';
+import { setAdultContentFilter } from './src/data/iosScreenTime';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
 import { estimateDailyHours, recommendSetup, scheduleFromSlipWindow } from './src/data/setupPlan';
 import { hydrateAmbienceCache, prefetchAmbience } from './src/data/ambiencePrefetch';
@@ -228,7 +229,38 @@ export default function App() {
     };
     Linking.getInitialURL().then(handleUrl);
     const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
-    return () => sub.remove();
+
+    // iOS only: Apple's shield button cannot open Byre — no extension can
+    // launch its container — so the ShieldAction extension posts a banner
+    // carrying `byre://unlock` instead, and this is what makes tapping it
+    // land on the Gate rather than on whatever screen Byre was last showing.
+    // Without this the notification opens the app and abandons the user.
+    let disposeNotifications: (() => void) | undefined;
+    if (Platform.OS === 'ios') {
+      import('expo-notifications')
+        .then((Notifications) => {
+          const onResponse = (res: { notification: { request: { content: { data?: unknown } } } }) => {
+            const data = res.notification.request.content.data as { url?: string } | undefined;
+            if (data?.url) handleUrl(data.url);
+          };
+          // A tap that cold-started Byre has already been delivered by the
+          // time this listener attaches, so ask for it explicitly.
+          Notifications.getLastNotificationResponseAsync().then((res) => {
+            if (res) onResponse(res);
+          });
+          const nSub = Notifications.addNotificationResponseReceivedListener(onResponse);
+          disposeNotifications = () => nSub.remove();
+        })
+        .catch(() => {
+          // Notifications unavailable — the shield banner simply opens Byre
+          // on its last screen, which is the old behaviour.
+        });
+    }
+
+    return () => {
+      sub.remove();
+      disposeNotifications?.();
+    };
   }, []);
 
   const patch = (partial: Partial<PersistedState>) => setPersisted((s) => ({ ...s, ...partial }));
@@ -237,6 +269,21 @@ export default function App() {
   // reads, then hand over. Shared by the Welcome step and the dev skip so the
   // two can't drift into leaving different state behind.
   const completeOnboarding = () => {
+    // What they asked to have gone completely, as HARD_BLOCKS keys rather
+    // than the labels the question rendered — copy can change, the keys and
+    // the behaviour hanging off them cannot.
+    const picked = (answers.hardBlock?.value ?? '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    const hardBlocks = HARD_BLOCKS.filter((h) => picked.includes(h.label)).map((h) => h.key);
+
+    // Adult content is the one category iOS can enforce itself, through
+    // Apple's own web filter — every browser, no app list to keep up to date,
+    // and no challenge to pass. Applied here rather than on first block
+    // because the user asked for it to be *gone*, not gated.
+    if (hardBlocks.includes('adult')) setAdultContentFilter(true, 'onboarding');
+
     patch({
       onboardingComplete: true,
       themeKey,
@@ -244,6 +291,7 @@ export default function App() {
       futureSelfMessage,
       goal,
       onboardingAnswers: answers,
+      hardBlocks,
     });
     setStage('app');
   };

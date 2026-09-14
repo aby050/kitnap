@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 export type AppUsage = { packageName: string; totalTimeInForeground: number; lastTimeUsed: number };
 
@@ -27,11 +27,47 @@ export async function checkUsageAccessPermission(): Promise<boolean> {
   }
 }
 
-/** Deep-links into Settings > Usage Access — this is a "special" Android
- *  permission with no runtime prompt, so the user has to grant it there. */
-export function openUsageAccessSettings() {
-  if (!native) return;
-  native.showUsageAccessSettings('');
+/**
+ * Deep-links into Settings › Usage access — a "special" Android permission
+ * with no runtime prompt, so the user has to grant it there themselves.
+ *
+ * Three routes, tried in order, because one is not enough. The library's
+ * `showUsageAccessSettings` is a bare `ACTION_USAGE_ACCESS_SETTINGS` intent,
+ * and on MIUI/HyperOS (and some other OEM skins) that activity is not
+ * exported the way AOSP exports it — the intent resolves to nothing and the
+ * tap does *absolutely nothing*, with no error to catch. A permission button
+ * that silently does nothing is indistinguishable from a broken app.
+ *
+ * So: the library first, then the same intent via `Linking.sendIntent`, then
+ * this app's own settings page, which exists on every device ever shipped and
+ * is one tap from the special-access list. Getting the user *near* the switch
+ * beats leaving them on a dead button.
+ */
+export async function openUsageAccessSettings() {
+  if (Platform.OS !== 'android') return;
+
+  if (native) {
+    try {
+      native.showUsageAccessSettings('');
+      return;
+    } catch {
+      // Falls through — but note the silent case this cannot catch: the
+      // intent resolving to nothing throws nothing at all.
+    }
+  }
+
+  try {
+    await Linking.sendIntent('android.settings.USAGE_ACCESS_SETTINGS');
+    return;
+  } catch {
+    // No such activity on this ROM.
+  }
+
+  try {
+    await Linking.openSettings();
+  } catch {
+    // Nothing more we can do from here; the UI still shows the manual path.
+  }
 }
 
 export async function queryDailyUsage(startMs: number, endMs: number): Promise<AppUsage[]> {
