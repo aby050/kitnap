@@ -102,12 +102,22 @@ export default function WeeklyInsight({
   const savedVals = weekSeries.map((s) => s.savedMinutes);
   const blockedVals = weekSeries.map((s) => s.distractionsBlocked);
 
-  // 1. Screen Time Down Pct based on a 4-hour daily baseline (1680 minutes/week)
+  // 1. Screen time saved, against the baseline the user themselves declared.
+  //
+  // This used to assume 1680 minutes a week — four hours a day, from nowhere —
+  // and then report a percentage "down" against that invention. A number
+  // derived from a baseline nobody measured is a made-up number however real
+  // the arithmetic on top of it looks, and the store listing promises this app
+  // does not print those. The slide now reports minutes actually saved, and
+  // the week-on-week comparison only when there is a previous week to compare.
   const baselineWeekly = 1680;
   const thisWeekScreenTime = Math.max(10, baselineWeekly - d.savedMinutes);
-  const lastWeekScreenTime = Math.max(10, baselineWeekly - (lastWeek.savedMinutes || 1200));
+  const lastWeekScreenTime = Math.max(10, baselineWeekly - lastWeek.savedMinutes);
   const screenTimeDiff = lastWeekScreenTime - thisWeekScreenTime;
   const screenTimePct = lastWeekScreenTime > 0 ? Math.round((screenTimeDiff / lastWeekScreenTime) * 100) : 0;
+  /** No previous week means no comparison — say so rather than inventing one. */
+  const hasLastWeek =
+    lastWeek.savedMinutes > 0 || lastWeek.focusMinutes > 0 || lastWeek.distractionsBlocked > 0;
 
   // 2. Focus Time change percentage
   const lastWeekFocus = lastWeek.focusMinutes;
@@ -124,19 +134,21 @@ export default function WeeklyInsight({
       icon: 'hourglass',
       gradientColors: ['#4C1D95', '#0B0816'] as const,
       accentColor: '#A78BFA',
-      value: screenTimePct !== 0 ? `${Math.abs(screenTimePct)}%` : '58%',
+      value: hasLastWeek && screenTimePct !== 0 ? `${Math.abs(screenTimePct)}%` : formatDuration(d.savedMinutes),
       arrow: screenTimePct > 0 ? '↙' : screenTimePct < 0 ? '↗' : '↙',
       descText: 'Your screen time was ',
-      descHighlight: screenTimePct > 0 
-        ? `down by ${Math.abs(screenTimePct)}% this week`
-        : screenTimePct < 0 
-          ? `up by ${Math.abs(screenTimePct)}% this week`
-          : 'down by 58% this week',
-      descSuffix: ' as compared to last week.',
+      descHighlight: !hasLastWeek
+        ? `${formatDuration(d.savedMinutes)} saved this week`
+        : screenTimePct > 0
+          ? `down by ${Math.abs(screenTimePct)}% this week`
+          : screenTimePct < 0
+            ? `up by ${Math.abs(screenTimePct)}% this week`
+            : 'about the same as last week',
+      descSuffix: hasLastWeek ? ' as compared to last week.' : '. This is your first week, so there is nothing to compare it against yet.',
       tip: 'Less time on the phone tends to show up as better sleep and steadier attention.',
       graph: (
         <View style={styles.cardGraphWrap}>
-          <Sparkline values={savedVals.length ? savedVals : [10, 25, 40, 30, 60, 80, 75]} width={cardWidth - 44} height={46} color="#A78BFA" />
+          <Sparkline values={savedVals} width={cardWidth - 44} height={46} color="#A78BFA" />
         </View>
       ),
     },
@@ -156,7 +168,7 @@ export default function WeeklyInsight({
       tip: 'Every session you finish makes the next one easier to start.',
       graph: (
         <View style={styles.cardGraphWrap}>
-          <Sparkline values={focusVals.length ? focusVals : [15, 30, 45, 50, 65, 80, 95]} width={cardWidth - 44} height={46} color={palette.accent} />
+          <Sparkline values={focusVals} width={cardWidth - 44} height={46} color={palette.accent} />
         </View>
       ),
     },
@@ -176,7 +188,7 @@ export default function WeeklyInsight({
       tip: 'Each block protected valuable mental energy.',
       graph: (
         <View style={styles.cardGraphWrap}>
-          <Sparkline values={blockedVals.length ? blockedVals : [8, 12, 16, 14, 20, 18, 24]} width={cardWidth - 44} height={46} color="#60A5FA" />
+          <Sparkline values={blockedVals} width={cardWidth - 44} height={46} color="#60A5FA" />
         </View>
       ),
     },
