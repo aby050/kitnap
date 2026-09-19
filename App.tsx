@@ -45,7 +45,13 @@ import { setAdultContentFilter } from './src/data/iosScreenTime';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
 import { estimateDailyHours, recommendSetup, scheduleFromSlipWindow } from './src/data/setupPlan';
 import { hydrateAmbienceCache, prefetchAmbience } from './src/data/ambiencePrefetch';
-import { MonitoringLevel, setBlockedPackages, setMonitoringLevel } from './modules/device-permissions';
+import {
+  MonitoringLevel,
+  setBlockedPackages,
+  setMonitoringLevel,
+  setPausedPackages,
+  setPauseSeconds,
+} from './modules/device-permissions';
 import { effectiveBlockedPackages } from './src/data/scheduleEnforcer';
 import { usePurchases } from './src/data/usePurchases';
 import { purchasedBailoutCount } from './src/data/purchases';
@@ -200,13 +206,23 @@ export default function App() {
   // in case the service was restarted while Byre was away.
   useEffect(() => {
     if (!loaded) return;
-    const sync = () => setBlockedPackages(effectiveBlockedPackages(persisted.blockedPackages));
+    const sync = () => {
+      setBlockedPackages(effectiveBlockedPackages(persisted.blockedPackages));
+      // The pause list rides along on the same sync. It is read by the same
+      // service on the same event, and letting the two drift apart would mean
+      // an app could be both blocked and paused — which the service resolves
+      // in favour of blocked, but which should never arise in the first place.
+      setPausedPackages(
+        persisted.pausedPackages.filter((p) => !persisted.blockedPackages.includes(p)),
+      );
+      setPauseSeconds(persisted.pauseSeconds);
+    };
     sync();
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') sync();
     });
     return () => sub.remove();
-  }, [loaded, persisted.blockedPackages]);
+  }, [loaded, persisted.blockedPackages, persisted.pausedPackages, persisted.pauseSeconds]);
 
   // Battery/responsiveness follows the same intensity dial the user already
   // sets for unlock friction — no separate setting to expose, and it stays

@@ -99,6 +99,46 @@ class DevicePermissionsModule : Module() {
       ctx.startActivity(intent)
     }
 
+    /** The lines the overlay shows. Written whenever the shield is configured
+     *  in JS, read by the accessibility service in the moment a block fires —
+     *  see ShieldCopyStore for why the cover cannot simply ask. */
+    Function("setShieldCopy") { title: String, body: String, cta: String ->
+      val ctx = appContext.reactContext ?: return@Function null
+      ShieldCopyStore.set(ctx, title, body, cta)
+      null
+    }
+
+    /** Takes the cover down from JS — after a passed challenge, or when the
+     *  user unblocks the app they are standing in front of. */
+    Function("hideShieldOverlay") {
+      val ctx = appContext.reactContext ?: return@Function null
+      ShieldOverlay.hide(ctx)
+      null
+    }
+
+    /** Apps that get a pause instead of a block — see PausedPackagesStore for
+     *  why this is a separate list rather than a flag on the blocked one. */
+    Function("setPausedPackages") { packages: List<String> ->
+      val ctx = appContext.reactContext ?: return@Function null
+      PausedPackagesStore.set(ctx, packages)
+      null
+    }
+
+    /** How long the pause lasts, in seconds. Clamped to 3-30 by the store. */
+    Function("setPauseSeconds") { seconds: Int ->
+      val ctx = appContext.reactContext ?: return@Function null
+      PausedPackagesStore.setSeconds(ctx, seconds)
+      null
+    }
+
+    /** The line under the countdown. Written from JS so the pause can speak in
+     *  the same voice as everything else, despite drawing before RN exists. */
+    Function("setPauseCopy") { line: String ->
+      val ctx = appContext.reactContext ?: return@Function null
+      PauseCopyStore.set(ctx, line)
+      null
+    }
+
     // Called from JS whenever the blocked-apps list changes (and once on
     // every app start) so ByreAccessibilityService always checks against
     // the current list, not whatever was blocked at install time.

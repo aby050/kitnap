@@ -48,10 +48,47 @@ class ByreAccessibilityService : AccessibilityService() {
 
     val pkg = event?.packageName?.toString() ?: return
     if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-    if (pkg == packageName) return // never trigger on ourselves
+    if (pkg == packageName) {
+      // Byre's own window. This includes the overlay we just added — adding a
+      // window fires TYPE_WINDOW_STATE_CHANGED attributed to *us*, so hiding
+      // here tore the cover down a few milliseconds after drawing it. The
+      // shield fired correctly and then deleted itself, which looked exactly
+      // like the block never happening.
+      //
+      // Nothing needs hiding on this path anyway: the cover comes down when a
+      // different, unblocked app comes forward (below), when a grant is
+      // earned (JS calls hideShieldOverlay), or when its own button is
+      // pressed. Byre's UI coming to the front is not a reason to unblock
+      // anything.
+      return
+    }
 
     val blocked = BlockedPackagesStore.get(applicationContext)
-    if (!blocked.contains(pkg)) return
+    if (!blocked.contains(pkg)) {
+      // Moved to something unblocked: take the cover down so it can never be
+      // left hanging over an app the user is allowed to use.
+      ShieldOverlay.hide(applicationContext)
+
+      // Not blocked, but possibly watched. The pause is the lighter answer
+      // for apps nobody decided to open — see PauseOverlay. Checked after
+      // blocked, never both: an app is one or the other.
+      val paused = PausedPackagesStore.get(applicationContext)
+      if (paused.contains(pkg) && !PauseOverlay.isPassed(pkg)) {
+        PauseOverlay.show(
+          applicationContext,
+          pkg,
+          PausedPackagesStore.seconds(applicationContext),
+          PauseCopyStore.line(applicationContext),
+        )
+      } else {
+        PauseOverlay.hide(applicationContext)
+      }
+      return
+    }
+
+    // Blocked outranks paused: if a pause was up when the user crossed into a
+    // blocked app, it has no business staying on top of the shield.
+    PauseOverlay.hide(applicationContext)
 
     // A grant the user has already earned. Re-showing the shield here is what
     // made a passed challenge feel like it never took: the user finished the
@@ -59,6 +96,9 @@ class ByreAccessibilityService : AccessibilityService() {
     // again. The window is checked, not trusted forever — once it lapses the
     // next foreground event shields as usual.
     if (GrantStore.isGranted(applicationContext)) {
+      // A grant that started while the cover was up has to take it down, or
+      // the user earns their way in and lands back on the shield.
+      ShieldOverlay.hide(applicationContext)
       lastPackage = pkg
       lastTriggerAt = System.currentTimeMillis()
       return
@@ -72,17 +112,20 @@ class ByreAccessibilityService : AccessibilityService() {
     lastPackage = pkg
     lastTriggerAt = now
 
-    Log.d("ByreAccessibility", "Blocked app opened: $pkg — bringing Byre to front")
+    Log.d("ByreAccessibility", "Blocked app opened: $pkg — covering it")
 
-    val intent = Intent(
-      Intent.ACTION_VIEW,
-      Uri.parse("byre://shield?package=$pkg"),
-    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-    try {
-      startActivity(intent)
-    } catch (e: Exception) {
-      Log.e("ByreAccessibility", "Failed to launch shield intent", e)
-    }
+    // Cover it in this frame rather than launching a task. ShieldOverlay falls
+    // back to the deep link by itself when the overlay permission is missing,
+    // so this path is the same strength as before at worst and instant at
+    // best — see its doc comment for why the activity launch was the weaker
+    // of the two.
+    ShieldOverlay.show(
+      applicationContext,
+      pkg,
+      ShieldCopyStore.title(applicationContext),
+      ShieldCopyStore.body(applicationContext),
+      ShieldCopyStore.cta(applicationContext),
+    )
   }
 
   private fun applyMonitoringLevelIfChanged() {

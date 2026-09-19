@@ -4,11 +4,14 @@
 
   <application>
 
-    <!-- Stub service: declared and toggleable in system Settings so the
-         "Accessibility" permission check has something real to point at.
-         It currently only logs foreground-app change events — it does NOT
-         yet draw the Shield overlay or block anything. That's the next
-         real chunk of work, not implemented here. -->
+    <!-- The blocker. Watches for foreground-app changes and, when a blocked
+         package comes to the front, puts the shield over it — see
+         ByreAccessibilityService for the debounce and grant handling.
+
+         (This comment used to describe a stub that only logged events. It was
+         written before the service was implemented and never updated, which
+         is worse than no comment at all: it cost a later reader a wrong
+         conclusion about what the app does.) -->
     <service
       android:name="expo.modules.devicepermissions.ByreAccessibilityService"
       android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
@@ -21,8 +24,10 @@
         android:resource="@xml/byre_accessibility_service_config" />
     </service>
 
-    <!-- Stub notification listener — declared so the toggle is real; does
-         not yet act on notifications from distracting apps. -->
+    <!-- Notification listener. Still a stub: it logs the posting package and
+         nothing else. Either it suppresses notifications from blocked apps or
+         it should not be declared at all — Play treats this as a sensitive
+         permission and asks for a justification we currently cannot give. -->
     <service
       android:name="expo.modules.devicepermissions.ByreNotificationListenerService"
       android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"

@@ -56,6 +56,12 @@ export type PersistedState = {
   /** Categories the user asked to have blocked outright, by HARD_BLOCKS key.
    *  Persisted so the shield can say *why* a thing is shut, in their words. */
   hardBlocks: string[];
+  /** Android only: apps that get a countdown rather than a block. The middle
+   *  setting between "blocked" and "fine" — see PauseOverlay on the native
+   *  side. Empty on iOS, which gives no way to interpose on an app launch. */
+  pausedPackages: string[];
+  /** How long that pause runs, in seconds. */
+  pauseSeconds: number;
   progress: ProgressState;
   bedtime: BedtimeWindow;
   checkIns: CheckIn[];
@@ -311,6 +317,8 @@ export const DEFAULT_STATE: PersistedState = {
   account: null,
   onboardingAnswers: {},
   hardBlocks: [],
+  pausedPackages: [],
+  pauseSeconds: 6,
   progress: EMPTY_PROGRESS,
   bedtime: DEFAULT_BEDTIME,
   checkIns: [],

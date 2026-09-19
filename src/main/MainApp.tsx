@@ -54,6 +54,8 @@ import {
   grantedUntil as androidGrantedUntil,
   startSessionNotification,
   stopSessionNotification,
+  setShieldCopy,
+  hideShieldOverlay,
 } from 'device-permissions';
 import { momentLine } from '../data/moments';
 import { useTodayUsage } from '../data/useTodayUsage';
@@ -383,6 +385,11 @@ export default function MainApp({
   const startGrant = (minutes: number): boolean => {
     if (Platform.OS !== 'ios') {
       grantAndroidAccess(minutes);
+      // The Android cover is drawn by the accessibility service, which only
+      // re-evaluates on the next foreground event — so a grant earned while
+      // it is up has to take it down here, or the user passes the challenge
+      // and is handed straight back to the shield.
+      hideShieldOverlay();
       return true;
     }
     if (hasBlockedSelection()) {
@@ -849,6 +856,17 @@ export default function MainApp({
       theme.lines[0] ?? 'Take a moment.',
       goal.line ? `You said you wanted ${goal.line}.` : undefined,
     );
+    // Android's cover is drawn in Kotlin before RN is running, so it cannot
+    // read any of this at the moment it appears — push the current lines to
+    // disk here, where the shield is already being configured, and the two
+    // platforms say the same thing.
+    setShieldCopy(
+      theme.lines[0] ?? 'Not this one.',
+      goal.line
+        ? `You said you wanted ${goal.line}.`
+        : 'You asked Byre to keep this shut.',
+      'Let me in',
+    );
     // Blocking is always on now, so "is a shield active?" is true for the
     // whole life of the app and can no longer mean "the user just hit one" —
     // routing straight to the Gate on that would trap every launch. What
@@ -1134,6 +1152,20 @@ export default function MainApp({
     if (ov === 'blockedApps')
       return (
         <BlockedAppsScreen
+          /* Android only: iOS has no way to interpose on an app launch, so
+             the whole section is absent rather than present and inert. */
+          pausedPackages={Platform.OS === 'android' ? persisted.pausedPackages : undefined}
+          onChangePaused={
+            Platform.OS === 'android'
+              ? (next) => onPatch({ pausedPackages: next })
+              : undefined
+          }
+          pauseSeconds={persisted.pauseSeconds}
+          onChangePauseSeconds={
+            Platform.OS === 'android'
+              ? (seconds) => onPatch({ pauseSeconds: seconds })
+              : undefined
+          }
           blockedPackages={blockedPackages}
           onChange={(next) => {
             /* Adding is free; taking something off is the loosening. Guarding

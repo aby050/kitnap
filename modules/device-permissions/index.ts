@@ -9,6 +9,11 @@ type Native = {
   openNotificationListenerSettings(): void;
   setBlockedPackages(packages: string[]): void;
   grantTemporaryAccess?(grantMinutes: number): void;
+  setShieldCopy?(title: string, body: string, cta: string): void;
+  setPausedPackages?(packages: string[]): void;
+  setPauseSeconds?(seconds: number): void;
+  setPauseCopy?(line: string): void;
+  hideShieldOverlay?(): void;
   endGrantNow?(): void;
   getGrantedUntil?(): number;
   setMonitoringLevel(level: string): void;
@@ -68,6 +73,41 @@ export const grantedUntil = (): number => native?.getGrantedUntil?.() ?? 0;
  *  to appear), 'strict' checks almost immediately (worse battery, snappiest
  *  detection). See MonitoringConfigStore.kt for the exact numbers. */
 export const setMonitoringLevel = (level: MonitoringLevel) => native?.setMonitoringLevel(level);
+
+/**
+ * The words on the Android cover.
+ *
+ * The overlay is drawn in Kotlin so it can appear in the same frame the
+ * blocked app does — which means it cannot ask React Native what to say,
+ * because RN may not be running. This pushes the current lines down to disk
+ * so the block screen still sounds like the rest of the app instead of like a
+ * system dialog. No-op on iOS, where Apple's own shield owns that surface.
+ */
+export const setShieldCopy = (title: string, body: string, cta: string) =>
+  native?.setShieldCopy?.(title, body, cta);
+
+/** Takes the Android cover down — after a passed challenge, or when the app
+ *  underneath stops being blocked. Harmless if nothing is showing. */
+export const hideShieldOverlay = () => native?.hideShieldOverlay?.();
+
+/**
+ * Apps that get a few seconds of nothing instead of a block.
+ *
+ * The setting between "blocked" and "fine": a paused app still opens, after a
+ * countdown with a way back offered from the first frame. It is for the apps
+ * nobody decides to open — the reach is automatic, and the pause is what makes
+ * the next moment a choice. Android only; iOS gives no way to interpose on an
+ * app launch.
+ */
+export const setPausedPackages = (packages: string[]) =>
+  native?.setPausedPackages?.(packages);
+
+/** Length of that pause, in seconds. Clamped to 3–30 natively. */
+export const setPauseSeconds = (seconds: number) => native?.setPauseSeconds?.(seconds);
+
+/** The line under the countdown. A question, not a statistic — see
+ *  PauseCopyStore for why a scold is the one thing that must not go here. */
+export const setPauseCopy = (line: string) => native?.setPauseCopy?.(line);
 
 /** `icon` is a PNG data URI on Android and always empty on iOS, which never
  *  exposes installed-app icons to third-party apps. */

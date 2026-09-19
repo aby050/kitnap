@@ -21,6 +21,10 @@ export default function BlockedAppsScreen({
   appModes,
   onChangeModes,
   defaultMode,
+  pausedPackages = [],
+  onChangePaused,
+  pauseSeconds = 6,
+  onChangePauseSeconds,
   onBack,
 }: {
   blockedPackages: string[];
@@ -29,6 +33,11 @@ export default function BlockedAppsScreen({
   appModes?: Record<string, IntensityKey>;
   onChangeModes?: (next: Record<string, IntensityKey>) => void;
   defaultMode?: IntensityKey;
+  /** Android only: apps that get a countdown instead of a block. */
+  pausedPackages?: string[];
+  onChangePaused?: (packages: string[]) => void;
+  pauseSeconds?: number;
+  onChangePauseSeconds?: (seconds: number) => void;
   onBack: () => void;
 }) {
   const modeFor = (pkg: string): IntensityKey => appModes?.[pkg] ?? defaultMode ?? 'steady';
@@ -46,6 +55,18 @@ export default function BlockedAppsScreen({
     } else {
       onChange([...blockedPackages, packageName]);
     }
+  };
+
+  /** An app is blocked or paused, never both — the native service resolves a
+   *  conflict in favour of blocked, but the UI should never create one. */
+  const togglePause = (packageName: string) => {
+    if (!onChangePaused) return;
+    if (pausedPackages.includes(packageName)) {
+      onChangePaused(pausedPackages.filter((p) => p !== packageName));
+      return;
+    }
+    if (blockedPackages.includes(packageName)) onChange(blockedPackages.filter((p) => p !== packageName));
+    onChangePaused([...pausedPackages, packageName]);
   };
 
   const addCustom = () => {
@@ -112,6 +133,62 @@ export default function BlockedAppsScreen({
           ))}
         </View>
 
+        {/* The setting between "blocked" and "fine".
+            Most of what people open compulsively is not something they have
+            decided to stop opening — it is a reach with no thought in it. A
+            challenge there is too much friction and gets the whole app turned
+            off; nothing at all is too little. A countdown with a way out is
+            the honest middle, and it is Android-only because iOS gives no way
+            to interpose on an app launch at all. */}
+        {!!onChangePaused && (
+          <>
+            <Text style={styles.sectionLabel}>Slow it down</Text>
+            <Text style={styles.pauseIntro}>
+              These still open — after {pauseSeconds} seconds of nothing, and a way back out. For
+              the ones you open without deciding to.
+            </Text>
+            <View style={styles.group}>
+              {DEFAULT_BLOCKED_APPS.map((app, i) => (
+                <View key={`pause-${app.packageName}`} style={[styles.row, i > 0 && styles.rowBorder]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowTitle}>{app.name}</Text>
+                    <Text style={styles.rowSub}>
+                      {blockedPackages.includes(app.packageName)
+                        ? 'Blocked — turn this on to pause instead'
+                        : pausedPackages.includes(app.packageName)
+                          ? `Pauses for ${pauseSeconds}s`
+                          : 'Opens normally'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={pausedPackages.includes(app.packageName)}
+                    onValueChange={() => togglePause(app.packageName)}
+                    trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              ))}
+            </View>
+
+            {!!onChangePauseSeconds && (
+              <View style={styles.pauseRow}>
+                <Text style={styles.rowTitle}>How long</Text>
+                <View style={styles.stepper}>
+                  {[4, 6, 10, 15].map((n) => (
+                    <Pressable
+                      key={n}
+                      onPress={() => onChangePauseSeconds(n)}
+                      style={[styles.step, pauseSeconds === n && styles.stepOn]}
+                    >
+                      <Text style={[styles.stepText, pauseSeconds === n && styles.stepTextOn]}>{n}s</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
         {customPackages.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>Custom</Text>
@@ -163,6 +240,24 @@ const styles = StyleSheet.create({
   notice: { backgroundColor: 'rgba(255,213,79,0.08)', borderRadius: 16, padding: 14, marginBottom: 8 },
   noticeText: { color: 'rgba(255,213,79,0.9)', fontSize: 12.5, lineHeight: 18 },
   sectionLabel: { color: palette.textTertiary, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginTop: 20, marginBottom: 10 },
+  pauseIntro: { color: palette.textSecondary, fontSize: 13, lineHeight: 19, marginTop: -4, marginBottom: 12 },
+  pauseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  stepper: { flexDirection: 'row', gap: 6 },
+  step: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  stepOn: { borderColor: palette.accentBorder, backgroundColor: palette.accentSoft },
+  stepText: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
+  stepTextOn: { color: palette.accent, fontWeight: '700' },
   group: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 20, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
   rowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
