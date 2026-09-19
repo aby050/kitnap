@@ -772,6 +772,22 @@ export default function MainApp({
   const [checkIns, setCheckIns] = useState(persisted.checkIns);
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>(persisted.progressPhotos);
   const [blockedPackages, setBlockedPackagesState] = useState<string[]>(persisted.blockedPackages);
+
+  /**
+   * Is there actually anything being held back right now?
+   *
+   * "Your timed access is over, distracting apps are blocked again" is a lie
+   * on a phone with an empty blocklist and no session running — it announced
+   * a consequence that did not exist, which is the fastest way to teach
+   * someone to ignore this app's notifications. A grant can still be taken
+   * out in that state (the emergency button does not check first), so the
+   * check belongs on the announcement rather than on the grant.
+   */
+  const somethingIsBlocked = useCallback(() => {
+    if (Platform.OS === 'ios') return hasBlockedSelection();
+    return blockedPackages.length > 0 || timerRunning;
+  }, [blockedPackages, timerRunning]);
+
   const [blockedAppModes, setBlockedAppModes] = useState(persisted.blockedAppModes ?? {});
   const [essentials, setEssentials] = useState<Record<EssentialKey, boolean>>(
     persisted.essentials ?? DEFAULT_STATE.essentials,
@@ -1207,7 +1223,10 @@ export default function MainApp({
           setGrantExpiresAt(null);
         }}
         onMinimize={() => {
-          if (grantExpiresAt) void scheduleGrantEndedNotification(grantExpiresAt);
+          // Nothing blocked means nothing to announce the return of.
+          if (grantExpiresAt && somethingIsBlocked()) {
+            void scheduleGrantEndedNotification(grantExpiresAt);
+          }
           setBlock(null);
         }}
       />
@@ -1808,7 +1827,7 @@ export default function MainApp({
           onExpire={() => {
             setGrantExpiresAt(null);
             void cancelGrantEndedNotification();
-            alertGrantEnded();
+            if (somethingIsBlocked()) alertGrantEnded();
           }}
           onPress={() => setBlock(grantIsEmergency ? 'emergency' : 'grant')}
         />
