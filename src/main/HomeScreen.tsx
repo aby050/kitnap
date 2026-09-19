@@ -255,13 +255,11 @@ export default function HomeScreen({
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Brand header */}
         <View style={styles.headerRow}>
-          {Platform.OS === 'ios' && (
-            <View style={styles.statusPill}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>Blocking on</Text>
-            </View>
-          )}
-          <View style={styles.headerRight}>
+          {/* Key left, profile right, with the status pill between them.
+              These used to share one right-hand group, which on Android —
+              where the iOS-only pill isn't rendered — left both icons
+              huddled in the same corner. */}
+          <View style={styles.headerLeft}>
             <View style={styles.bailoutIconWrap}>
               {/* The app's own Bailout mark, not the icon set's generic key.
                   Every other surface that talks about bailouts draws this
@@ -279,8 +277,14 @@ export default function HomeScreen({
                 </View>
               )}
             </View>
-            <IconButton name="user" onPress={onOpenProfile} accessibilityLabel="Open profile" bordered />
           </View>
+          {Platform.OS === 'ios' && (
+            <View style={styles.statusPill}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusText}>Blocking on</Text>
+            </View>
+          )}
+          <IconButton name="user" onPress={onOpenProfile} accessibilityLabel="Open profile" bordered />
         </View>
 
         {/* Voice line */}
@@ -651,7 +655,7 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: palette.accent },
   statusText: { color: palette.text, fontSize: 12.5, fontWeight: '700' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   bailoutIconWrap: { position: 'relative' },
   bailoutBadge: {
     position: 'absolute',

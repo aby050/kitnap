@@ -63,8 +63,17 @@ class ByreAccessibilityService : AccessibilityService() {
       return
     }
 
-    val blocked = BlockedPackagesStore.get(applicationContext)
-    if (!blocked.contains(pkg)) {
+    // Lockdown inverts the rule: everything is blocked unless it is on the
+    // short allowlist. Evaluated before the blocklist because during a
+    // lockdown the user's own app selection is beside the point.
+    val lockdown = LockdownStore.isOn(applicationContext)
+    val blocked = if (lockdown) {
+      !LockdownStore.allowed(applicationContext).contains(pkg)
+    } else {
+      BlockedPackagesStore.get(applicationContext).contains(pkg)
+    }
+
+    if (!blocked) {
       // Moved to something unblocked: take the cover down so it can never be
       // left hanging over an app the user is allowed to use.
       ShieldOverlay.hide(applicationContext)
@@ -123,6 +132,7 @@ class ByreAccessibilityService : AccessibilityService() {
       applicationContext,
       pkg,
       ShieldCopyStore.title(applicationContext),
+      ShieldCopyStore.emphasis(applicationContext),
       ShieldCopyStore.body(applicationContext),
       ShieldCopyStore.cta(applicationContext),
     )

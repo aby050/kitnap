@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ProgressPhoto, nextPhotoDue } from '../data/progressPhotos';
+import { ProgressPhoto, daysUntilNextPhoto, nextPhotoDue } from '../data/progressPhotos';
 import { formatPrettyDate } from '../data/progress';
 import { palette, space, radius, gradients } from '../design/tokens';
 import Icon from '../ui/Icon';
@@ -23,7 +23,8 @@ export default function ProgressPhotosScreen({
   onBack: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const due = nextPhotoDue(photos, firstOpenDate);
+  const due = nextPhotoDue(photos);
+  const waitDays = daysUntilNextPhoto(photos);
   const first = photos[0] ?? null;
   const latest = photos.length > 1 ? photos[photos.length - 1] : null;
 
@@ -107,10 +108,22 @@ export default function ProgressPhotosScreen({
             )}
             <Icon name="camera" size={19} color={enabled ? '#04140c' : palette.textTertiary} strokeWidth={2} />
             <Text style={[styles.captureText, !enabled && styles.captureTextDisabled]}>
-              {busy ? 'Opening camera…' : due ? (photos.length === 0 ? 'Take your first photo' : "Take this week's photo") : 'Come back next week'}
+              {busy
+                ? 'Opening camera…'
+                : due
+                  ? photos.length === 0
+                    ? 'Take your first photo'
+                    : "Take this week's photo"
+                  : waitDays === 1
+                    ? 'Next photo tomorrow'
+                    : `Next photo in ${waitDays} days`}
             </Text>
           </Pressable>
-          {!due && <Text style={styles.hint}>One check-in per week keeps this meaningful instead of a chore.</Text>}
+          {!due && (
+            <Text style={styles.hint}>
+              One check-in per week keeps this meaningful instead of a chore.
+            </Text>
+          )}
 
           {photos.length > 0 && (
             <>

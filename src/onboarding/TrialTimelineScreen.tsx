@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
@@ -228,6 +228,10 @@ function toPlans(pkgs: PurchasesPackage[]): Plan[] {
 
 /** Deliberately no weekly plan, and the reminder promise is stated on the
  *  paywall itself — surprise charges are the single fastest route to a 1★. */
+/** Where a subscription is actually managed, per store. */
+const STORE_ACCOUNT =
+  Platform.OS === 'ios' ? 'Apple Account settings' : 'Google Play subscriptions';
+
 export default function TrialTimelineScreen({
   onStart,
   offering,
@@ -469,10 +473,14 @@ export default function TrialTimelineScreen({
         {/* Guideline 3.1.2 disclosure. The plan's title, length and price are
             on the row above; this states the renewal terms, and the two links
             below are required to be in the binary next to the purchase. */}
+        {/* The store the user is actually buying from. This said "Apple
+            Account settings" on both platforms, which on Android told people
+            to cancel somewhere that does not exist on their phone — and each
+            store requires its own name in this disclosure anyway. */}
         <Text style={styles.legal}>
           {selected.isTrial
-            ? `Free for ${selected.trialLabel}, then it renews at ${selected.price}${selected.per} unless you turn off auto-renew at least 24 hours before the trial ends. Manage or cancel any time in your Apple Account settings.`
-            : `Renews automatically ${selected.per === '/yr' ? 'each year' : 'each month'} at the price shown unless you turn off auto-renew at least 24 hours before the period ends. Manage or cancel any time in your Apple Account settings.`}
+            ? `Free for ${selected.trialLabel}, then it renews at ${selected.price}${selected.per} unless you turn off auto-renew at least 24 hours before the trial ends. Manage or cancel any time in your ${STORE_ACCOUNT}.`
+            : `Renews automatically ${selected.per === '/yr' ? 'each year' : 'each month'} at the price shown unless you turn off auto-renew at least 24 hours before the period ends. Manage or cancel any time in your ${STORE_ACCOUNT}.`}
         </Text>
         {/* A way past the paywall.
             Without this, a purchase that fails — no network, a declined card,

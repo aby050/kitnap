@@ -142,6 +142,12 @@ export default function HoldButton({
     }, delay);
   }, [holdMs]);
 
+  // The ramp is a self-rescheduling timeout, so nothing stops it on its own.
+  // Unmounting mid-press used to leave it running forever — the screen would
+  // change under the finger (the timer's always-on face does exactly this)
+  // and the phone would keep buzzing with no button left to let go of.
+  useEffect(() => stopTicks, [stopTicks]);
+
   const finish = useCallback(() => {
     stopTicks();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});

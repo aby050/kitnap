@@ -5,6 +5,7 @@ import { EMPTY_PROGRESS, ProgressState, rollStreakForToday, seedProgressFromLega
 import { BedtimeWindow, DEFAULT_BEDTIME } from './bedtime';
 import { CheckIn } from './checkin';
 import { ProgressPhoto } from './progressPhotos';
+import { SoundKey } from './sounds';
 import { DEFAULT_BLOCKED_PACKAGES } from './blockedApps';
 import { EssentialKey } from './gateQuestions';
 import { ActivitySessionResult } from '../shield/activity/types';
@@ -73,6 +74,10 @@ export type PersistedState = {
    *  keeps behaving exactly as it did before any app was set individually. */
   blockedAppModes: Record<string, IntensityKey>;
   session: FocusSession | null;
+  /** The clip that plays while a session runs, or null for silence.
+   *  Null is the default on purpose: an app that starts making noise the
+   *  first time you use it is one people mute permanently. */
+  sessionSound: SoundKey | null;
   /** Which essential categories stay reachable during a block. */
   essentials: Record<EssentialKey, boolean>;
   /** Waiting Room: which gate families may appear. Absent means all of them.
@@ -327,6 +332,7 @@ export const DEFAULT_STATE: PersistedState = {
   blockedPackages: DEFAULT_BLOCKED_PACKAGES,
   blockedAppModes: {},
   session: null,
+  sessionSound: null,
   essentials: { call: true, payment: true, maps: true, health: true },
   gateReflections: [],
   schedules: DEFAULT_SCHEDULES,

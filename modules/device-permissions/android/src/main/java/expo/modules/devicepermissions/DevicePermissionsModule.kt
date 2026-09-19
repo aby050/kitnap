@@ -48,6 +48,43 @@ class DevicePermissionsModule : Module() {
       isPowerSaveMode(context)
     }
 
+    /**
+     * Total lockdown for the duration of a session: everything shielded
+     * except calls, the launcher, System UI, Settings, SMS and alarms.
+     * Settings deliberately stays reachable — see LockdownStore.
+     */
+    Function("setLockdown") { on: Boolean ->
+      val ctx = appContext.reactContext ?: return@Function false
+      LockdownStore.set(ctx, on)
+      // A lockdown that just ended must not leave a shield hanging over an app
+      // the user is allowed back into.
+      if (!on) ShieldOverlay.hide(ctx)
+      true
+    }
+
+    Function("isLockdownOn") {
+      val ctx = appContext.reactContext ?: return@Function false
+      LockdownStore.isOn(ctx)
+    }
+
+    /** Usage access, read from the appop rather than a third-party bridge. */
+    Function("hasUsageAccess") {
+      val ctx = appContext.reactContext ?: return@Function false
+      UsageAccess.isGranted(ctx)
+    }
+
+    Function("openUsageAccessSettings") {
+      val ctx = appContext.reactContext ?: return@Function false
+      UsageAccess.openSettings(ctx)
+      true
+    }
+
+    /** Per-app foreground time over a window, newest-heaviest first. */
+    Function("queryUsageStats") { startMs: Double, endMs: Double ->
+      val ctx = appContext.reactContext ?: return@Function emptyList<Map<String, Any>>()
+      UsageAccess.query(ctx, startMs.toLong(), endMs.toLong())
+    }
+
     Function("canDrawOverlays") {
       val ctx = appContext.reactContext ?: return@Function false
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -102,9 +139,9 @@ class DevicePermissionsModule : Module() {
     /** The lines the overlay shows. Written whenever the shield is configured
      *  in JS, read by the accessibility service in the moment a block fires —
      *  see ShieldCopyStore for why the cover cannot simply ask. */
-    Function("setShieldCopy") { title: String, body: String, cta: String ->
+    Function("setShieldCopy") { title: String, emphasis: String, body: String, cta: String ->
       val ctx = appContext.reactContext ?: return@Function null
-      ShieldCopyStore.set(ctx, title, body, cta)
+      ShieldCopyStore.set(ctx, title, emphasis, body, cta)
       null
     }
 

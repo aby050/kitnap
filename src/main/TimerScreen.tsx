@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  BackHandler,
   Dimensions,
   Linking,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -39,15 +41,34 @@ import { Ambience } from '../data/ambiences';
 import BlockedListSheet from '../components/BlockedListSheet';
 import BlockedSelection from '../components/BlockedSelection';
 import EmergencyDialer from '../components/EmergencyDialer';
+import SessionSoundCard from '../components/SessionSoundCard';
 import { ESSENTIALS, EssentialKey } from '../data/gateQuestions';
 import { hasBlockedSelection } from '../data/iosScreenTime';
 import { FocusSession } from '../data/store';
+import { SoundKey } from '../data/sounds';
 import { fonts, gradients, motion, palette, radius, space, type } from '../design/tokens';
 import Toggle from '../design/Toggle';
 
 const { width } = Dimensions.get('window');
 
 // Duration bounds — adjusted in 15-minute steps by the ± controls.
+/** Idle time before the locked screen steps back to the always-on face.
+ *
+ *  Was three seconds, matching the apps this imitates, and that turned out to
+ *  be unusable: three seconds is shorter than reading the screen, so it kept
+ *  blacking out mid-decision and every tap to get the controls back started
+ *  the countdown again. Thirty seconds means it only arrives once the phone
+ *  has genuinely been put down, which is the only moment it is wanted. */
+const DIM_AFTER_MS = 7000;
+/** The ring on the always-on face: the accent at the same weight as the
+ *  digits, over a track dark enough to read as unlit. */
+const AOD_RING = 'rgba(111,227,169,0.38)';
+const AOD_TRACK = 'rgba(255,255,255,0.05)';
+
+/** How far down the timer itself goes. Not zero — the whole point is that it
+ *  stays readable from across a desk without lighting the room. */
+const DIM_OPACITY = 0.35;
+
 const SLIDER_MIN = 5;
 const SLIDER_MAX = 720;
 const SLIDER_STEP = 15;
@@ -87,6 +108,9 @@ export default function TimerScreen({
   onOpenTokenInfo,
   blockedPackages = [],
   onUpdateBlockedPackages,
+  onDimChange,
+  sessionSound = null,
+  onChangeSessionSound,
 }: {
   initialMinutes?: number;
   /** The live session, owned by MainApp and persisted. Held here as an end
@@ -114,6 +138,13 @@ export default function TimerScreen({
   onOpenTokenInfo?: () => void;
   blockedPackages?: string[];
   onUpdateBlockedPackages?: (packages: string[]) => void;
+  /** The always-on face is up. The tab bar lives above this screen, so only
+   *  the parent can get it out of the way — a lit tab bar across the bottom
+   *  of an otherwise black page defeats the point of the black page. */
+  onDimChange?: (dimmed: boolean) => void;
+  /** The clip under the running session, or null for silence. */
+  sessionSound?: SoundKey | null;
+  onChangeSessionSound?: (key: SoundKey | null) => void;
 }) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showAppSelectModal, setShowAppSelectModal] = useState(false);
@@ -122,6 +153,25 @@ export default function TimerScreen({
   // anywhere reveals them and they fade back out, so a locked screen stays calm
   // without hiding the way out.
   const [chromeVisible, setChromeVisible] = useState(true);
+  /**
+   * Untouched for a while, so the screen steps back.
+   *
+   * A locked session is meant to be put down, not watched. Full-brightness
+   * white digits burning an OLED panel for three hours is both a battery
+   * complaint waiting to happen and the opposite of what the session is for,
+   * so the UI fades to a dim clock and — deliberately — nothing here holds a
+   * wake lock. The phone sleeps on its own schedule, and the countdown
+   * carries on where it costs nothing: the ongoing chronometer notification,
+   * which the system ticks down itself and which Samsung's always-on display
+   * renders without the app running at all.
+   */
+  const [dimmed, setDimmed] = useState(false);
+  useEffect(() => onDimChange?.(dimmed), [dimmed, onDimChange]);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** A finger is down somewhere on the locked screen. The always-on face must
+   *  not take over mid-gesture: it replaces the tree under the touch, which
+   *  cancels the press without ever delivering a release. */
+  const [touching, setTouching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Category toggle states (mirrored into the parent's blockedPackages on start).
@@ -391,16 +441,166 @@ export default function TimerScreen({
     return { opacity: Math.max(0, 1 - t * 2.2) };
   });
 
+  /** Wakes the screen back up and restarts the countdown to dim. */
+  const rouse = useCallback(() => {
+    setDimmed(false);
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => {
+      setDimmed(true);
+      setChromeVisible(false);
+    }, DIM_AFTER_MS);
+  }, []);
+
+  // Only while locked. Dimming the setup screen mid-decision would be hostile,
+  // and the sheets that open over the session (bailout, locked apps) are real
+  // interaction — the timer restarts whenever one of them is up.
+  useEffect(() => {
+    if (!running || showLockedApps || showEssentials || unlockTarget || showCancelConfirm || touching) {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+      idleTimer.current = null;
+      setDimmed(false);
+      return;
+    }
+    rouse();
+    return () => {
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+      idleTimer.current = null;
+    };
+  }, [running, showLockedApps, showEssentials, unlockTarget, showCancelConfirm, touching, rouse]);
+
+  /**
+   * Back does not leave a running session.
+   *
+   * Home is already handled: the launcher is off the lockdown allowlist, so
+   * pressing it lands on the shield. Back was the hole left over — it walks
+   * out of the activity entirely, and Android then shows the launcher without
+   * ever firing a window change this app could answer. Swallowing it while a
+   * session runs is what makes the two exits agree.
+   *
+   * The sheets get first refusal, so back still closes whatever is open on
+   * top before it stops meaning anything at all.
+   */
+  useEffect(() => {
+    if (!running) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (unlockTarget) {
+        setUnlockTarget(null);
+        return true;
+      }
+      if (showLockedApps) {
+        setShowLockedApps(false);
+        return true;
+      }
+      if (showEssentials) {
+        setShowEssentials(false);
+        return true;
+      }
+      if (showCancelConfirm) {
+        setShowCancelConfirm(false);
+        return true;
+      }
+      // Nothing open: the session is the screen, and there is nowhere back to.
+      rouse();
+      return true;
+    });
+    return () => sub.remove();
+  }, [running, unlockTarget, showLockedApps, showEssentials, showCancelConfirm, rouse]);
+
+  /**
+   * No wake lock. Deliberately.
+   *
+   * An earlier pass held the screen on to imitate an always-on display. That
+   * is not what the apps this copies actually do: they show the dim face and
+   * then let the phone sleep on its own timeout, and the face is what you land
+   * on again when you unlock. Real AOD belongs to the OEM and no app draws on
+   * it, so holding the panel awake bought an imitation nobody asked for at the
+   * only real battery cost in the feature.
+   *
+   * The countdown keeps running regardless: it is a deadline, not a ticking
+   * counter, and the ongoing chronometer notification is what shows on the
+   * lock screen while the app is asleep.
+   */
+
   // ─────────────────────────────────────────────────────────────
   // Locked full-screen mode — running can't be paused or backed out
   // of for free. The only exit is Bailout, which is confirmed explicitly.
   // ─────────────────────────────────────────────────────────────
   if (running) {
+    /**
+     * The always-on face.
+     *
+     * A real black page over everything, not the whole UI turned translucent.
+     * Fading the live screen still leaves every card, ring and button faintly
+     * lit across the whole panel, which on OLED is the expensive part and
+     * reads as a dimmed app rather than a clock. This draws nothing but the
+     * time, so almost every pixel is genuinely off.
+     */
+    if (dimmed) {
+      return (
+        <>
+        {/* Nothing but the time. The signal and battery icons are the phone
+            talking, and this page exists to be the only thing on the panel —
+            they also sit in the one strip that stays lit on an otherwise
+            black screen. */}
+        <StatusBar hidden animated />
+        <Pressable
+          style={styles.aod}
+          onPress={() => {
+            rouse();
+            setChromeVisible(true);
+          }}
+          accessibilityLabel="Wake the timer"
+        >
+          {/* The ring comes along. It is the one part of the timer that says
+              how much is left without being read, which is exactly what a
+              glance from across a room needs — and at this opacity a thin arc
+              costs almost nothing on an OLED panel. */}
+          <Ring
+            progress={progress}
+            size={240}
+            thickness={3}
+            /* Dimmed to match the digits, and the track dropped to near-black
+               rather than the usual hairline: on this page an unlit track is
+               a full circle of lit pixels for no information. */
+            color={AOD_RING}
+            track={AOD_TRACK}
+          >
+            <Text style={styles.aodTime}>
+              {lcdLeft}
+              <Text style={styles.aodColon}>:</Text>
+              {lcdRight}
+            </Text>
+            <Text style={styles.aodLabel}>{label.toUpperCase()}</Text>
+          </Ring>
+        </Pressable>
+        </>
+      );
+    }
+
     return (
       <Screen edges={['top', 'bottom']}>
+        {/* Full screen for the length of the session — the status bar is one
+            more thing to look at, and glancing at it is how a session ends
+            early. It comes straight back when the timer does. */}
+        <StatusBar hidden animated />
         <Pressable
           style={styles.lockedRoot}
-          onPress={() => setChromeVisible((v) => !v)}
+          // Touch start/end rather than press: a hold that never completes
+          // still has to count as "the user is here", and onPress alone fires
+          // only at the end of a successful tap.
+          onTouchStart={() => setTouching(true)}
+          onTouchEnd={() => {
+            setTouching(false);
+            rouse();
+          }}
+          onTouchCancel={() => {
+            setTouching(false);
+            rouse();
+          }}
+          onPress={() => {
+            rouse();
+            setChromeVisible((v) => !v);
+          }}
           accessibilityLabel={chromeVisible ? 'Hide controls' : 'Show controls'}
         >
 
@@ -432,6 +632,24 @@ export default function TimerScreen({
                 in was the one where Emergency did least.
                 It now calls the same handler as everywhere else; the
                 essentials sheet stays reachable from inside the grant. */}
+            {/* The one ordinary way out of a locked session.
+                During a session every app is shielded except the dialer, so
+                this is the door that makes that survivable: it opens the
+                dialer and nothing else. It does not lift the block, spend a
+                Bailout or touch the daily emergency allowance — placing a call
+                is not an emergency, and charging for one would push people
+                toward the red button for something routine. */}
+            <Pill
+              label="Call"
+              icon="phone"
+              onPress={() => {
+                Linking.openURL('tel:').catch(() => {
+                  // No dialer (a tablet, mostly) — the essentials sheet at
+                  // least explains what is still reachable.
+                  setShowEssentials(true);
+                });
+              }}
+            />
             <Pill
               label="Emergency"
               icon="phone"
@@ -451,6 +669,19 @@ export default function TimerScreen({
               <Text style={[type.unit, styles.unitLine]}>{showHours ? 'hours · minutes' : 'minutes · seconds'}</Text>
             </Ring>
             {motivationLine ? <Text style={[type.callout, styles.lockedMotivation]}>{motivationLine}</Text> : null}
+
+            {/* Sound rides with the chrome. It is a control, and the point of
+                hiding the chrome is to leave nothing but the time — a card
+                that stayed up would be the one bright thing on an otherwise
+                bare screen. The audio itself keeps playing either way. */}
+            {onChangeSessionSound && (
+              <View
+                style={[styles.soundSlot, !chromeVisible && styles.chromeHidden]}
+                pointerEvents={chromeVisible ? 'auto' : 'none'}
+              >
+                <SessionSoundCard soundKey={sessionSound} onChange={onChangeSessionSound} />
+              </View>
+            )}
 
             {/* What's being held back, as real icons — tap for the full list. */}
             {Platform.OS === 'ios' && (
@@ -1110,6 +1341,34 @@ const styles = StyleSheet.create({
 
   // ── Locked mode ──
   lockedRoot: { flex: 1 },
+  soundSlot: { alignSelf: 'stretch', paddingHorizontal: space.gutter, marginTop: space.base },
+  /* True black, not a themed near-black: on OLED #000 switches the pixel off
+     entirely, which is the whole reason this is affordable to leave running. */
+  aod: {
+    flex: 1,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aodTime: {
+    color: '#ffffff',
+    opacity: DIM_OPACITY,
+    /* Sized to sit inside the 240pt ring rather than to fill the screen —
+       at 72 the four digits ran under the arc on both sides. */
+    fontSize: 52,
+    fontWeight: '200',
+    letterSpacing: 1,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
+  },
+  aodColon: { opacity: 0.55 },
+  aodLabel: {
+    color: '#ffffff',
+    opacity: DIM_OPACITY * 0.5,
+    fontSize: 11,
+    letterSpacing: 3,
+    marginTop: 14,
+  },
   // Bottom-centre slot for the end-session control. Absolute so it stays put
   // regardless of how tall the ring and its caption end up on a given device.
   cornerLeft: { position: 'absolute', top: space.sm, left: space.gutter, zIndex: 5 },

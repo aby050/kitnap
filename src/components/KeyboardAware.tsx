@@ -7,15 +7,21 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * Keeps a focused field above the keyboard.
  *
- * Android already handles this — the manifest sets `adjustResize`, so the
- * window shrinks and layout reflows on its own. iOS does nothing by default:
- * the keyboard slides over the screen and whatever you're typing in ends up
- * underneath it. Hence `behavior: 'padding'` on iOS and nothing on Android,
- * which would otherwise double up and squash the layout.
+ * This used to do nothing on Android, on the grounds that `adjustResize` in
+ * the manifest already shrank the window. That stopped being true: the app is
+ * edge-to-edge (`edgeToEdgeEnabled=true`), and an edge-to-edge window is NOT
+ * resized when the keyboard opens — the IME simply draws over the bottom of
+ * the layout. The manifest flag is still there and still ignored, so text
+ * inputs low on a screen (the onboarding name and illness questions, most
+ * visibly) ended up underneath the keyboard with no way to scroll to them.
+ *
+ * So `padding` on both platforms now. It does not double up, precisely
+ * because nothing else is adjusting anything any more.
  *
  * `KeyboardAware` is for screens with no scroll view of their own; screens
  * that already scroll should wrap their existing ScrollView in
@@ -39,11 +45,17 @@ export function KeyboardAvoider({
   /** Extra points to lift by, for a header sitting above the avoided area. */
   offset?: number;
 }) {
+  const insets = useSafeAreaInsets();
+  // The keyboard height Android reports is measured from the true bottom of
+  // the screen, which under edge-to-edge is behind the navigation bar. A
+  // SafeAreaView has already reserved that strip, so padding by the full
+  // reported height lifts the content one nav-bar too far.
+  const androidInset = Platform.OS === 'android' ? insets.bottom : 0;
   return (
     <KeyboardAvoidingView
       style={[styles.fill, style]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={offset}
+      behavior="padding"
+      keyboardVerticalOffset={offset - androidInset}
     >
       {children}
     </KeyboardAvoidingView>

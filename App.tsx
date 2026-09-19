@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -308,6 +308,13 @@ export default function App() {
       goal,
       onboardingAnswers: answers,
       hardBlocks,
+      // A photo taken during setup IS the first weekly photo. It used to live
+      // only on the goal (where the shield reads it), so Progress photos
+      // opened on "No photos yet" the day after the user took one, and the
+      // week-1-vs-latest comparison had nothing to compare against.
+      ...(goal.photoUri
+        ? { progressPhotos: [{ date: new Date().toISOString(), uri: goal.photoUri }] }
+        : null),
     });
     setStage('app');
   };
@@ -591,16 +598,6 @@ export default function App() {
             />
           )}
 
-          {/* Dev-only shortcut past the funnel while working on the main app.
-              __DEV__-gated deliberately: in a release build this would let a
-              user skip the permission asks and the app picker and land in a
-              main screen with nothing actually guarded. Top-left because the
-              Expo dev-tools bubble parks itself over the right-hand corners. */}
-          {__DEV__ && stage !== 'loading' && stage !== 'app' && (
-            <Pressable onPress={completeOnboarding} style={styles.devSkip} hitSlop={10}>
-              <Text style={styles.devSkipLabel}>Skip →</Text>
-            </Pressable>
-          )}
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -609,17 +606,4 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  devSkip: {
-    position: 'absolute',
-    top: 58,
-    left: 16,
-    zIndex: 100,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.20)',
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  devSkipLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: '600' },
 });

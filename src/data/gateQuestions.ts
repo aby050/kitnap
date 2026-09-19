@@ -218,6 +218,16 @@ export function challengeFilterFromHealth(raw: string | undefined | null): Chall
   const v = raw.trim().toLowerCase();
   if (v.length === 0 || NOT_LIMITED.has(v)) return empty;
 
+  /* "No illness", "no injuries", "nothing, all healthy" — a denial that
+   * happens to contain the very words this function scans for. The exact-match
+   * NOT_LIMITED set above cannot catch these, because they are phrased freely,
+   * and every one of them used to read as a declared condition and silently
+   * demote a Strict user to breathing exercises forever. A leading negation
+   * with no "but" after it means exactly what it says. */
+  if (/^(no|none|nope|nil|nothing|not)\b/.test(v) && !/\b(but|except|however|apart from|other than)\b/.test(v)) {
+    return empty;
+  }
+
   const wholeBody = [
     'wheelchair', 'paralysis', 'paralysed', 'paralyzed', 'paraplegic', 'quadriplegic',
     'immobile', "can't walk", 'cannot walk', 'crutches', 'walker',

@@ -9,7 +9,7 @@ type Native = {
   openNotificationListenerSettings(): void;
   setBlockedPackages(packages: string[]): void;
   grantTemporaryAccess?(grantMinutes: number): void;
-  setShieldCopy?(title: string, body: string, cta: string): void;
+  setShieldCopy?(title: string, emphasis: string, body: string, cta: string): void;
   setPausedPackages?(packages: string[]): void;
   setPauseSeconds?(seconds: number): void;
   setPauseCopy?(line: string): void;
@@ -22,9 +22,21 @@ type Native = {
   startSessionNotification?(endsAt: number, label: string, blockedCount: number): boolean;
   stopSessionNotification?(): boolean;
   isPowerSaveMode?(): boolean;
+  setLockdown?(on: boolean): boolean;
+  isLockdownOn?(): boolean;
+  hasUsageAccess?(): boolean;
+  openUsageAccessSettings?(): boolean;
+  queryUsageStats?(startMs: number, endMs: number): UsageRow[];
 };
 
 export type MonitoringLevel = 'gentle' | 'balanced' | 'strict';
+
+export type UsageRow = {
+  packageName: string;
+  totalTimeInForeground: number;
+  lastTimeUsed: number;
+  appName: string;
+};
 
 let native: Native | null = null;
 if (Platform.OS === 'android') {
@@ -83,8 +95,14 @@ export const setMonitoringLevel = (level: MonitoringLevel) => native?.setMonitor
  * so the block screen still sounds like the rest of the app instead of like a
  * system dialog. No-op on iOS, where Apple's own shield owns that surface.
  */
-export const setShieldCopy = (title: string, body: string, cta: string) =>
-  native?.setShieldCopy?.(title, body, cta);
+/** `emphasis` is the half of the line set in the accent — pass '' for a line
+ *  that reads better unbroken. */
+export const setShieldCopy = (
+  title: string,
+  emphasis: string,
+  body: string,
+  cta: string,
+) => native?.setShieldCopy?.(title, emphasis, body, cta);
 
 /** Takes the Android cover down — after a passed challenge, or when the app
  *  underneath stops being blocked. Harmless if nothing is showing. */
@@ -133,3 +151,24 @@ export const stopSessionNotification = () => native?.stopSessionNotification?.()
 
 /** True while the OS is in battery saver. */
 export const isPowerSaveMode = (): boolean => native?.isPowerSaveMode?.() ?? false;
+
+/**
+ * Everything shielded except calls, the launcher, System UI, Settings, SMS
+ * and alarms — for the length of a session. Settings stays reachable on
+ * purpose: a lock the user cannot switch off from their own device is a trap,
+ * not a commitment.
+ */
+export const setLockdown = (on: boolean): boolean => native?.setLockdown?.(on) ?? false;
+
+export const isLockdownOn = (): boolean => native?.isLockdownOn?.() ?? false;
+
+/** Usage access, straight from the appop — see UsageAccess.kt for why this
+ *  replaced the npm package that used to answer it. */
+export const hasUsageAccess = (): boolean => native?.hasUsageAccess?.() ?? false;
+
+/** True when a Settings screen was actually launched. */
+export const openUsageAccessSettings = (): boolean =>
+  native?.openUsageAccessSettings?.() ?? false;
+
+export const queryUsageStatsNative = (startMs: number, endMs: number): UsageRow[] =>
+  native?.queryUsageStats?.(startMs, endMs) ?? [];

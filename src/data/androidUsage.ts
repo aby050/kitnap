@@ -1,4 +1,10 @@
 import { Linking, Platform } from 'react-native';
+import {
+  devicePermissionsAvailable,
+  hasUsageAccess,
+  openUsageAccessSettings as openUsageAccessNative,
+  queryUsageStatsNative,
+} from 'device-permissions';
 
 export type AppUsage = { packageName: string; totalTimeInForeground: number; lastTimeUsed: number };
 
@@ -16,9 +22,22 @@ if (Platform.OS === 'android') {
   }
 }
 
-export const usageStatsAvailable = () => Platform.OS === 'android' && native !== null;
+/**
+ * Usage data is reachable at all.
+ *
+ * Our own Expo module is the real provider now (see below); the old package
+ * is kept only as a fallback for a build where the module is missing.
+ */
+export const usageStatsAvailable = () =>
+  Platform.OS === 'android' && (devicePermissionsAvailable() || native !== null);
 
 export async function checkUsageAccessPermission(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  // Our own module first. The third-party one is unavailable entirely under
+  // the New Architecture (its @ReactMethod annotations fail TurboModule
+  // interop parsing), so asking it first meant every check answered "no" on a
+  // device that had already granted access.
+  if (devicePermissionsAvailable()) return hasUsageAccess();
   if (!native) return false;
   try {
     return !!(await native.checkForPermission());
@@ -46,6 +65,11 @@ export async function checkUsageAccessPermission(): Promise<boolean> {
 export async function openUsageAccessSettings() {
   if (Platform.OS !== 'android') return;
 
+  // Our own module resolves the intent before firing it and falls back to this
+  // app's settings page, which is the same dance as below but without the
+  // silent-no-op case.
+  if (devicePermissionsAvailable() && openUsageAccessNative()) return;
+
   if (native) {
     try {
       native.showUsageAccessSettings('');
@@ -71,6 +95,13 @@ export async function openUsageAccessSettings() {
 }
 
 export async function queryDailyUsage(startMs: number, endMs: number): Promise<AppUsage[]> {
+  if (devicePermissionsAvailable()) {
+    const rows = queryUsageStatsNative(startMs, endMs);
+    if (rows.length > 0) return rows;
+    // Empty is a real answer (a fresh day, or access not granted) — don't fall
+    // through to a package that cannot load anyway.
+    return [];
+  }
   if (!native) return [];
   try {
     const result = await native.queryUsageStats(native.EventFrequency.INTERVAL_DAILY, startMs, endMs);

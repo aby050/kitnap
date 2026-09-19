@@ -15,6 +15,7 @@ import {
 } from '../data/schedulePresets';
 import { fieldStyle, palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
+import ProGateDialog from '../components/ProGateDialog';
 
 /** "09:00" <-> a Date carrying that time (today's date, ignored). The picker
  *  needs a real Date; the rest of the app only ever stores "HH:MM" strings. */
@@ -70,6 +71,7 @@ export default function ScheduleEditorScreen({
     onChange([...schedules, toSchedule(preset)]);
   };
 
+  const [showProGate, setShowProGate] = useState(false);
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [draftName, setDraftName] = useState('');
   const [draftStart, setDraftStart] = useState('');
@@ -110,16 +112,9 @@ export default function ScheduleEditorScreen({
     // Editing what you already have is never blocked — only adding a second.
     if (!exists && !isPro && schedules.length >= FREE_SCHEDULE_LIMIT) {
       setEditing(null);
-      Alert.alert(
-        'One schedule on the free plan',
-        'Byre Pro adds as many recurring windows as you want. Your existing schedule keeps working either way.',
-        onUpgrade
-          ? [
-              { text: 'Not now', style: 'cancel' },
-              { text: 'See plans', onPress: onUpgrade },
-            ]
-          : [{ text: 'OK' }],
-      );
+      // Styled like the rest of the app rather than a platform alert — see
+      // ProGateDialog.
+      setShowProGate(true);
       return;
     }
     onChange(exists ? schedules.map((s) => (s.id === next.id ? next : s)) : [...schedules, next]);
@@ -291,6 +286,18 @@ export default function ScheduleEditorScreen({
           </Animated.View>
         ))}
       </ScrollView>
+
+      <ProGateDialog
+        visible={showProGate}
+        title="One schedule on the free plan"
+        body="Byre Pro adds as many recurring windows as you want. Your existing schedule keeps working either way."
+        icon="calendar"
+        onDismiss={() => setShowProGate(false)}
+        onSeePlans={() => {
+          setShowProGate(false);
+          onUpgrade?.();
+        }}
+      />
     </SafeAreaView>
   );
 }

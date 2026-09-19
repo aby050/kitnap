@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Svg, { Circle, Path, Rect, Line } from 'react-native-svg';
@@ -11,7 +11,18 @@ import Icon from '../ui/Icon';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_PACKAGES } from '../data/blockedApps';
 
-type Entry = { id: string; name: string; tint: string; group?: string; expandable?: boolean };
+type Entry = {
+  id: string;
+  name: string;
+  tint: string;
+  group?: string;
+  expandable?: boolean;
+  /** The app's real launcher icon as a PNG data URI, straight from the
+   *  package manager. Android hands these over; iOS never does, and the
+   *  curated list below has no icons either, so both fall back to the drawn
+   *  marks and then to a monogram. */
+  icon?: string;
+};
 
 const DEFAULT_ENTRIES: Entry[] = [
   { id: 'all', name: 'All Apps & Categories', tint: '#2f3640' },
@@ -39,7 +50,13 @@ const DEFAULT_ENTRIES: Entry[] = [
   { id: 'gmail', name: 'Gmail', tint: '#ea4335', group: 'productivity' },
 ];
 
-function AppIconSvg({ id, label }: { id: string; label: string }) {
+function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: string }) {
+  // A real launcher icon beats anything drawn here — this screen exists to let
+  // someone recognise their own apps, and a wall of coloured letters is the
+  // one thing that makes that hard.
+  if (icon) {
+    return <Image source={{ uri: icon }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />;
+  }
   switch (id) {
     case 'all':
       return (
@@ -261,7 +278,8 @@ export default function AppPickerScreen({
                   id: app.packageName,
                   name: app.label,
                   tint: categoryTints[cat] || '#7f8c8d',
-                  group: cat
+                  group: cat,
+                  icon: app.icon || undefined
                 });
               });
             });
@@ -426,7 +444,7 @@ export default function AppPickerScreen({
                     style={styles.rowRightContent}
                   >
                     <View style={[styles.appIcon, { backgroundColor: e.tint }]}>
-                      <AppIconSvg id={e.id} label={e.name} />
+                      <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
                     </View>
                   
                     <Text style={styles.appName}>{e.name}</Text>
@@ -465,7 +483,7 @@ export default function AppPickerScreen({
           <View style={styles.selectedStrip}>
             {selectedEntries.slice(0, SELECTED_STRIP_MAX).map((e) => (
               <View key={e.id} style={[styles.selectedChip, { backgroundColor: e.tint }]}>
-                <AppIconSvg id={e.id} label={e.name} />
+                <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
               </View>
             ))}
             {selectedAppCount > SELECTED_STRIP_MAX ? (

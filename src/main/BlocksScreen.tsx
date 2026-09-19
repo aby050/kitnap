@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Image,
   Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
+import { getInstalledApps } from 'device-permissions';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
@@ -16,16 +20,26 @@ import { AppLimit } from '../data/store';
 import Icon from '../ui/Icon';
 import Toggle from '../design/Toggle';
 
-// Default distraction apps we can choose to add limits to
-const AVAILABLE_APPS = [
-  { name: 'Instagram', packageName: 'com.instagram.android' },
-  { name: 'Facebook', packageName: 'com.facebook.katana' },
-  { name: 'TikTok', packageName: 'com.zhiliaoapp.musically' },
-  { name: 'X (Twitter)', packageName: 'com.twitter.android' },
-  { name: 'YouTube', packageName: 'com.google.android.youtube' },
-  { name: 'Snapchat', packageName: 'com.snapchat.android' },
-  { name: 'Reddit', packageName: 'com.reddit.frontpage' },
+/**
+ * Packages worth offering first, when they are actually installed.
+ *
+ * This list is a ranking, not the menu. The menu used to BE this list, which
+ * meant the picker offered seven apps whether or not the phone had them and
+ * could not offer anything it did had — someone limiting a game, a shopping
+ * app or a news reader had no way to say so. Now the picker shows what is
+ * installed, and these simply sort to the top.
+ */
+const SUGGESTED_FIRST = [
+  'com.instagram.android',
+  'com.facebook.katana',
+  'com.zhiliaoapp.musically',
+  'com.twitter.android',
+  'com.google.android.youtube',
+  'com.snapchat.android',
+  'com.reddit.frontpage',
 ];
+
+type InstalledApp = { packageName: string; label: string; icon?: string };
 
 const SHORTS_APPS = [
   { name: 'YouTube Shorts', iconType: 'yt_shorts' },
@@ -34,7 +48,16 @@ const SHORTS_APPS = [
   { name: 'Facebook Reels', iconType: 'fb_reels' },
 ];
 
-function AppIcon({ type, size = 38 }: { type: string; size?: number }) {
+function AppIcon({ type, size = 38, uri }: { type: string; size?: number; uri?: string }) {
+  /* The real launcher icon whenever the package manager gave us one. The
+   * hand-drawn brand marks below are a fallback for iOS (where installed-app
+   * icons are never exposed) and for anything that failed to rasterise — they
+   * were never meant to stand in for the user's actual apps, and a wall of
+   * approximated logos is both worse to recognise and a trademark question
+   * nobody needs. */
+  if (uri) {
+    return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size * 0.24 }} />;
+  }
   switch (type) {
     case 'Facebook':
     case 'com.facebook.katana':
@@ -182,6 +205,47 @@ export default function BlocksScreen({
 }: BlocksScreenProps) {
   const [selectedApp, setSelectedApp] = useState<{ name: string; packageName: string } | null>(null);
   const [showAddList, setShowAddList] = useState(false);
+  const [installed, setInstalled] = useState<InstalledApp[] | null>(null);
+  const [query, setQuery] = useState('');
+
+  /* What is actually on the phone, with the icons the package manager draws.
+   * Loaded once: it is a few hundred rows with a small PNG each, and the
+   * picker is opened far more often than apps are installed. */
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      setInstalled([]);
+      return;
+    }
+    let cancelled = false;
+    getInstalledApps()
+      .then((apps) => {
+        if (!cancelled) setInstalled(apps);
+      })
+      .catch(() => {
+        if (!cancelled) setInstalled([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const iconFor = (packageName: string) =>
+    installed?.find((a) => a.packageName === packageName)?.icon || undefined;
+
+  /* Familiar names first, then everything else alphabetically — so the apps
+   * most people came here to limit are reachable without typing, and the rest
+   * are still reachable at all. */
+  const pickerApps = useMemo(() => {
+    const apps = installed ?? [];
+    const q = query.trim().toLowerCase();
+    const matched = q ? apps.filter((a) => a.label.toLowerCase().includes(q)) : apps;
+    return [...matched].sort((a, b) => {
+      const ra = SUGGESTED_FIRST.indexOf(a.packageName);
+      const rb = SUGGESTED_FIRST.indexOf(b.packageName);
+      if (ra !== rb) return (ra < 0 ? 999 : ra) - (rb < 0 ? 999 : rb);
+      return a.label.localeCompare(b.label);
+    });
+  }, [installed, query]);
 
   const openAppConfig = (appName: string, packageName: string) => {
     setSelectedApp({ name: appName, packageName });
@@ -212,11 +276,17 @@ export default function BlocksScreen({
     return appLimits.find((l) => l.packageName === packageName);
   };
 
-  // Suggestions to display if they are not already active
-  const suggestions = [
-    { name: 'Facebook', packageName: 'com.facebook.katana' },
-    { name: 'Instagram', packageName: 'com.instagram.android' },
-  ];
+  /* Suggested rows are now drawn from what is installed rather than named in
+   * source: offering a limit for Facebook on a phone without Facebook was an
+   * empty row that could never do anything. */
+  const suggestions = useMemo(
+    () =>
+      SUGGESTED_FIRST.map((pkg) => (installed ?? []).find((a) => a.packageName === pkg))
+        .filter((a): a is InstalledApp => !!a)
+        .slice(0, 3)
+        .map((a) => ({ name: a.label, packageName: a.packageName })),
+    [installed],
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -249,7 +319,7 @@ export default function BlocksScreen({
               style={[styles.appRow, styles.appRowActive]}
               onPress={() => openAppConfig(limit.appName, limit.packageName)}
             >
-              <AppIcon type={limit.packageName} />
+              <AppIcon type={limit.packageName} uri={iconFor(limit.packageName)} />
               <View style={styles.appRowMiddle}>
                 <Text style={styles.appName}>{limit.appName}</Text>
                 <Text style={styles.appLimitText}>{formatMinutes(limit.limitMinutes)}</Text>
@@ -275,7 +345,7 @@ export default function BlocksScreen({
                 style={[styles.appRow, styles.appRowMock]}
                 onPress={() => openAppConfig(sug.name, sug.packageName)}
               >
-                <AppIcon type={sug.packageName} />
+                <AppIcon type={sug.packageName} uri={iconFor(sug.packageName)} />
                 <View style={styles.appRowMiddle}>
                   <Text style={styles.appName}>{sug.name}</Text>
                   <Text style={styles.appLimitTextMock}>No limit set</Text>
@@ -342,26 +412,72 @@ export default function BlocksScreen({
           <Pressable style={styles.dropdownOverlay} onPress={() => setShowAddList(false)}>
             <View style={styles.dropdownContainer}>
               <Text style={styles.dropdownTitle}>Choose an App</Text>
-              {(Platform.OS === 'android' ? AVAILABLE_APPS : []).map((app) => {
-                const limitExists = getLimitFor(app.packageName);
-                return (
-                  <Pressable
-                    key={app.packageName}
-                    style={[styles.dropdownItem, limitExists && styles.dropdownItemDisabled]}
-                    onPress={() => {
-                      if (!limitExists) {
-                        setShowAddList(false);
-                        openAppConfig(app.name, app.packageName);
-                      }
-                    }}
-                  >
-                    <AppIcon type={app.packageName} size={28} />
-                    <Text style={[styles.dropdownText, limitExists && { color: 'rgba(255,255,255,0.25)' }]}>
-                      {app.name} {limitExists ? '(Limit exists)' : ''}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+
+              {/* Searchable, because a phone has hundreds of apps and a list
+                  the user has to scroll to the bottom of is a list they give
+                  up on. Stopping the tap from closing the sheet: the overlay
+                  behind dismisses on press, and a tap in the field is a press. */}
+              <Pressable onPress={() => {}}>
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search apps"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={styles.dropdownSearch}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+              </Pressable>
+
+              {installed === null ? (
+                <View style={styles.dropdownEmpty}>
+                  <ActivityIndicator color={palette.accent} />
+                </View>
+              ) : pickerApps.length === 0 ? (
+                <View style={styles.dropdownEmpty}>
+                  <Text style={styles.dropdownEmptyText}>
+                    {Platform.OS === 'android'
+                      ? query
+                        ? `Nothing matching "${query}".`
+                        : 'No apps found. Byre needs usage access to read what is installed.'
+                      : 'iOS does not let apps see what else is installed. Use the Screen Time picker instead.'}
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  style={styles.dropdownScroll}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  {pickerApps.map((app) => {
+                    const limitExists = getLimitFor(app.packageName);
+                    return (
+                      <Pressable
+                        key={app.packageName}
+                        style={[styles.dropdownItem, limitExists && styles.dropdownItemDisabled]}
+                        onPress={() => {
+                          if (limitExists) return;
+                          setShowAddList(false);
+                          setQuery('');
+                          openAppConfig(app.label, app.packageName);
+                        }}
+                      >
+                        <AppIcon type={app.packageName} size={28} uri={app.icon} />
+                        <Text
+                          style={[
+                            styles.dropdownText,
+                            limitExists && { color: 'rgba(255,255,255,0.25)' },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {app.label}
+                          {limitExists ? ' · limit set' : ''}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              )}
             </View>
           </Pressable>
         </Modal>
@@ -774,6 +890,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
     gap: 12,
+  },
+  dropdownSearch: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: palette.text,
+    fontSize: 15,
+    marginBottom: 8,
+  },
+  /* Capped so the sheet cannot grow past the screen once the list is a few
+     hundred apps long. */
+  dropdownScroll: { maxHeight: 360 },
+  dropdownEmpty: { paddingVertical: 28, alignItems: 'center', paddingHorizontal: 12 },
+  dropdownEmptyText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13.5,
+    textAlign: 'center',
+    lineHeight: 19,
   },
   dropdownItemDisabled: {
     opacity: 0.45,

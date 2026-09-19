@@ -54,10 +54,17 @@ import {
   grantedUntil as androidGrantedUntil,
   startSessionNotification,
   stopSessionNotification,
+  setLockdown,
   setShieldCopy,
   hideShieldOverlay,
 } from 'device-permissions';
 import { momentLine } from '../data/moments';
+import { pickShieldMessage } from '../data/shieldMessages';
+import { SoundKey } from '../data/sounds';
+import { GateKey, missingBlockingPermissions } from '../data/permissionGate';
+import PermissionBoardingPassScreen from '../onboarding/PermissionBoardingPassScreen';
+import NoBailoutConfirm from '../components/NoBailoutConfirm';
+import ProGateDialog from '../components/ProGateDialog';
 import { useTodayUsage } from '../data/useTodayUsage';
 import ScreenTimeDiagnostics from './ScreenTimeDiagnostics';
 import { EssentialKey } from '../data/gateQuestions';
@@ -356,6 +363,69 @@ export default function MainApp({
   // silently end the lock) and survive the app being killed.
   const [session, setSession] = useState<FocusSession | null>(persisted.session ?? null);
   const timerRunning = !!session && session.endsAt > Date.now();
+  /** The timer's always-on face is up, so the tab bar gets out of its way. */
+  const [timerDimmed, setTimerDimmed] = useState(false);
+  /** A Pro-only feature the user just reached for. */
+  const [proGate, setProGate] = useState<
+    { title: string; body: string; icon?: IconName } | null
+  >(null);
+  /**
+   * Where the plans screen should go when it closes.
+   *
+   * It used to always return to 'subscription', which is why backing out of
+   * plans landed the user in Settings no matter where they came from — they
+   * opened plans from Blocked and were returned somewhere they had never
+   * been. Recorded at the moment plans is opened instead.
+   */
+  const [plansReturn, setPlansReturn] = useState<Overlay>('subscription');
+  /** Remembered across sessions: someone who picked rain last time wants rain
+   *  again, and re-choosing it every session is the kind of small friction
+   *  that gets a feature abandoned. */
+  const [sessionSound, setSessionSound] = useState<SoundKey | null>(
+    persisted.sessionSound ?? null,
+  );
+
+  /**
+   * Lockdown is a flag held natively, outside the JS runtime, so it survives
+   * the app being force-killed — which is exactly the case that could leave a
+   * phone shielding everything with no session left to end it. Reconciled on
+   * every start against the session that actually exists: no session, no
+   * lockdown, whatever the flag said.
+   */
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    setLockdown(timerRunning);
+  }, [timerRunning]);
+
+  /**
+   * A running session whose enforcement has gone away.
+   *
+   * startSession checks permissions before it locks anything, but a session
+   * outlives the process: it is restored from disk on launch, and that path
+   * never asked. So a grant revoked in Settings — or never given, on a phone
+   * where the app was reinstalled — produced the worst version of this app:
+   * a countdown, a lockdown flag set natively, and an accessibility service
+   * switched off, which is to say a timer running over nothing at all.
+   *
+   * Checked on every foreground too, since that is when someone comes back
+   * from having just turned it off.
+   */
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !timerRunning) return;
+    let cancelled = false;
+    const check = async () => {
+      const missing = await missingBlockingPermissions();
+      if (!cancelled && missing.length > 0) setGateKeys(missing);
+    };
+    void check();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void check();
+    });
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, [timerRunning]);
 
 
   /** The one place that knows how a grant is expressed on each platform:
@@ -503,7 +573,46 @@ export default function MainApp({
     setRoom({ ambience, endsAt });
   };
 
+  /**
+   * A session the user asked for that is waiting on a permission grant.
+   * Held rather than dropped, so granting lands them in the lock they wanted
+   * instead of back on Home wondering what happened to their tap.
+   */
+  const [pendingStart, setPendingStart] = useState<
+    { minutes: number; label: string; hardMode: boolean } | null
+  >(null);
+  const [gateKeys, setGateKeys] = useState<GateKey[] | null>(null);
+  /** A session held back by the no-bailout warning rather than a permission. */
+  const [noBailoutStart, setNoBailoutStart] = useState<
+    { minutes: number; label: string; hardMode: boolean } | null
+  >(null);
+
   const startSession = (minutes: number, label: string, hardMode: boolean) => {
+    // Ask before locking, not after. Onboarding can be cut short or a grant
+    // revoked in Settings later; starting anyway would draw a countdown over
+    // a block that was never actually in place.
+    void (async () => {
+      const missing = await missingBlockingPermissions();
+      if (missing.length > 0) {
+        setPendingStart({ minutes, label, hardMode });
+        setGateKeys(missing);
+        return;
+      }
+      // Starting with nothing in hand means there is genuinely no way out
+      // until the timer ends — Bailouts ARE the way out. That is a fair thing
+      // to commit to, and an unfair thing to discover afterwards, so it is
+      // said plainly before the lock rather than at the moment someone needs
+      // to leave. Hard mode is excluded: it has its own, louder confirmation,
+      // and no Bailout would help there anyway.
+      if (emergencyTokens <= 0 && !hardMode) {
+        setNoBailoutStart({ minutes, label, hardMode });
+        return;
+      }
+      reallyStartSession(minutes, label, hardMode);
+    })();
+  };
+
+  const reallyStartSession = (minutes: number, label: string, hardMode: boolean) => {
     const next: FocusSession = {
       endsAt: Date.now() + minutes * 60 * 1000,
       totalSec: minutes * 60,
@@ -529,7 +638,14 @@ export default function MainApp({
     // the Lock Screen, in the Dynamic Island and on the always-on display.
     const blockedCount = getSelectionCounts()?.apps ?? blockedPackages.length;
     if (Platform.OS === 'ios') startLiveTimer(next.endsAt, label, blockedCount);
-    else startSessionNotification(next.endsAt, label, blockedCount);
+    else {
+      startSessionNotification(next.endsAt, label, blockedCount);
+      // For the length of the session, everything is shielded except calls
+      // (plus launcher, System UI, Settings, SMS and alarms — see
+      // LockdownStore). iOS has no equivalent: Family Controls shields the
+      // selection the user authorised and nothing wider.
+      setLockdown(true);
+    }
   };
 
   const endSession = () => {
@@ -540,6 +656,9 @@ export default function MainApp({
     if (Platform.OS === 'ios') enforcePersistentBlock();
     endLiveTimer();
     stopSessionNotification();
+    // Back to the ordinary blocklist. Left on, this would shield the whole
+    // device indefinitely.
+    setLockdown(false);
   };
   const [timerPreset, setTimerPreset] = useState<TimerPreset>({ minutes: 25, label: 'Focus Timer', autoStart: false });
   // Once verified this session, Settings stays unlocked until the app is reloaded.
@@ -596,17 +715,21 @@ export default function MainApp({
    *  Pro gate and the "reaching Guardian needs the code" rule cannot drift
    *  between them — an unguarded third door would have made the other two
    *  pointless. */
-  const openGuardian = () =>
-    isPro
-      ? requireGuardian(() => setOverlay('guardian'), 'settings', 'settings')
-      : Alert.alert(
-          'Guardian is part of Byre Pro',
-          'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
-          [
-            { text: 'Not now', style: 'cancel' },
-            { text: 'See plans', onPress: () => setOverlay('subscription') },
-          ],
-        );
+  const openGuardian = () => {
+    if (isPro) {
+      requireGuardian(() => setOverlay('guardian'), 'settings', 'settings');
+      return;
+    }
+    // Styled rather than Alert.alert — see ProGateDialog. "See plans" goes to
+    // the plans themselves, not to the Settings screen that lists a row
+    // leading to them: the user asked to see prices, so show prices.
+    setProGate({
+      title: 'Guardian is part of Byre Pro',
+      body:
+        'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
+      icon: 'shield',
+    });
+  };
 
   /** Runs whatever was waiting behind the code and returns to where it came
    *  from. Shared by the code path and the bailout path so the two can never
@@ -851,21 +974,34 @@ export default function MainApp({
   // check whether a shield is currently active and, if so, skip straight to
   // the Gate — the "I need it" step already happened on Apple's screen.
   useEffect(() => {
+    // Android's cover is drawn in Kotlin before RN is running, so it cannot
+    // read any of this at the moment it appears — push the current lines to
+    // disk so the two platforms say the same thing.
+    //
+    // This used to sit below an `if (Platform.OS !== 'ios') return`, which
+    // meant it never ran on Android at all: every block on the platform the
+    // overlay exists for showed ShieldCopyStore's plain install defaults, and
+    // the rotating voice, the theme and the user's own stated reason reached
+    // exactly nobody.
+    if (Platform.OS === 'android') {
+      // Seeded by the day, not the render: the cover is written to disk here
+      // and read by the service later, so it should read the same all day
+      // rather than depending on whenever Byre last happened to be open.
+      const line = pickShieldMessage(themeKey, Math.floor(Date.now() / 86400000));
+      setShieldCopy(
+        line.lead,
+        line.emphasis ?? '',
+        goal.line
+          ? `You said you wanted ${goal.line}.`
+          : 'You asked Byre to keep this shut.',
+        'Let me in',
+      );
+      return;
+    }
     if (Platform.OS !== 'ios') return;
     configureShield(
       theme.lines[0] ?? 'Take a moment.',
       goal.line ? `You said you wanted ${goal.line}.` : undefined,
-    );
-    // Android's cover is drawn in Kotlin before RN is running, so it cannot
-    // read any of this at the moment it appears — push the current lines to
-    // disk here, where the shield is already being configured, and the two
-    // platforms say the same thing.
-    setShieldCopy(
-      theme.lines[0] ?? 'Not this one.',
-      goal.line
-        ? `You said you wanted ${goal.line}.`
-        : 'You asked Byre to keep this shut.',
-      'Let me in',
     );
     // Blocking is always on now, so "is a shield active?" is true for the
     // whole life of the app and can no longer mean "the user just hit one" —
@@ -1338,7 +1474,10 @@ export default function MainApp({
           bailouts={emergencyTokens}
           onBack={() => setOverlay('settings')}
           onBuyBailouts={() => setOverlay('emergencyTokens')}
-          onUpgrade={() => setOverlay('plans')}
+          onUpgrade={() => {
+            setPlansReturn('subscription');
+            setOverlay('plans');
+          }}
         />
       );
     /* Plans, reachable from Settings.
@@ -1369,8 +1508,8 @@ export default function MainApp({
         <TrialTimelineScreen
           offering={offering}
           onPurchased={onPurchasedPlan}
-          onStart={() => setOverlay('subscription')}
-          onClose={() => setOverlay('subscription')}
+          onStart={() => setOverlay(plansReturn)}
+          onClose={() => setOverlay(plansReturn)}
         />
       );
     if (ov === 'blockScreens')
@@ -1398,7 +1537,11 @@ export default function MainApp({
           }}
           onBack={() => setOverlay(null)}
           isPro={isPro}
-          onUpgrade={() => setOverlay('subscription')}
+          onUpgrade={() => {
+            // Prices, and then back to the schedules the user was editing.
+            setPlansReturn('schedules');
+            setOverlay('plans');
+          }}
         />
       );
     if (ov === 'account')
@@ -1599,13 +1742,27 @@ export default function MainApp({
               onOpenShield={openUnlockFlow}
               onEmergency={openEmergencyAccess}
               onOpenTokenInfo={() => setOverlay('emergencyTokens')}
+              onDimChange={setTimerDimmed}
+              sessionSound={sessionSound}
+              /* Session sound is built and working, but parked: without
+                 `onChangeSessionSound` the card does not render and nothing
+                 plays. Restore this handler to bring it back — the reason it
+                 is off is the background-audio declaration it would need
+                 (see SessionSoundCard's note on the 2.5.4 rejection).
+              onChangeSessionSound={(key) => {
+                setSessionSound(key);
+                onPatch({ sessionSound: key });
+              }} */
             />
           )}
         </ScreenSwap>
 
-        {/* A running session takes the whole screen — the point of a locked
-            block is that there is nowhere else to go. */}
-        {!timerRunning && (
+        {/* A running session takes the whole screen. There is one way out of
+            the timer and it is the call button on the timer itself; a tab bar
+            beside it would be a second, quieter one. Also hidden behind the
+            always-on face, where a lit bar across the bottom of a black page
+            just looks broken. */}
+        {!timerRunning && !timerDimmed && (
           <TabBar
             tabs={TABS}
             active={tab}
@@ -1639,6 +1796,71 @@ export default function MainApp({
           }}
           onPress={() => setBlock(grantIsEmergency ? 'emergency' : 'grant')}
         />
+      )}
+      {/* No Bailouts in hand. Said before the lock, not when they try to
+          leave — "you cannot get out until this ends" is a commitment someone
+          should make knowingly. Both ways out are offered: buy a Bailout, or
+          start anyway with eyes open. */}
+      {/* Pro gates, in the app's own voice rather than the platform's. */}
+      <ProGateDialog
+        visible={!!proGate}
+        title={proGate?.title ?? ''}
+        body={proGate?.body ?? ''}
+        icon={proGate?.icon}
+        onDismiss={() => setProGate(null)}
+        onSeePlans={() => {
+          setProGate(null);
+          // Straight to the prices, and back to whatever screen asked.
+          setPlansReturn(overlay ?? null);
+          setOverlay('plans');
+        }}
+      />
+      {noBailoutStart && (
+        <NoBailoutConfirm
+          visible
+          balance={emergencyTokens}
+          onGet={() => {
+            setNoBailoutStart(null);
+            setOverlay('emergencyTokens');
+          }}
+          onStartAnyway={() => {
+            const held = noBailoutStart;
+            setNoBailoutStart(null);
+            if (held) reallyStartSession(held.minutes, held.label, held.hardMode);
+          }}
+          onDismiss={() => setNoBailoutStart(null)}
+        />
+      )}
+      {/* The pre-flight permission ask. Over everything, because a half-granted
+          app that lets you keep tapping around is exactly how a session gets
+          started with nothing behind it. On continue the gate re-checks rather
+          than trusting that the Settings trip worked — the user can always
+          back out of one — and only the grants that are actually in place let
+          the held session through. */}
+      {gateKeys && (
+        <View style={StyleSheet.absoluteFill}>
+          <PermissionBoardingPassScreen
+            only={gateKeys}
+            onContinue={() => {
+              void (async () => {
+                const held = pendingStart;
+                const stillMissing = await missingBlockingPermissions();
+                setGateKeys(null);
+                setPendingStart(null);
+                if (held && stillMissing.length === 0) {
+                  reallyStartSession(held.minutes, held.label, held.hardMode);
+                } else if (held) {
+                  // They skipped past a grant. Saying so beats starting a lock
+                  // that cannot lock, and beats the tap appearing to do nothing.
+                  Alert.alert(
+                    'Not locked',
+                    'Byre still needs that permission before it can hold anything back. Nothing was started — grant it and try again.',
+                  );
+                }
+              })();
+            }}
+          />
+        </View>
       )}
       {/* Over everything, including the tab bar: a room is the whole screen
           or it is not a room. Dismissing it only closes the view — the block
