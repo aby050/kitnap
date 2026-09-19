@@ -102,11 +102,13 @@ export default function AccountScreen({
           <View style={{ marginBottom: 8 }}>
             <Icon name="lock" size={20} color={palette.text} strokeWidth={1.8} />
           </View>
-          <Text style={styles.syncTitle}>Cloud sync — coming soon</Text>
+          {/* A statement of what the app does today, not a promise about a
+              feature. It used to be headed "coming soon", which is a roadmap
+              the user cannot hold anyone to. */}
+          <Text style={styles.syncTitle}>Everything stays on this phone</Text>
           <Text style={styles.syncBody}>
-            Signing in only saves an identity on this device — your progress still lives here, not on a
-            server. Cross-device sync is still coming, and will be opt-in and end-to-end encrypted when it
-            ships.
+            Signing in saves an identity on this device and nothing else. Your progress, blocked apps and
+            history are stored here, never on a server — which also means they are gone if you uninstall.
           </Text>
         </View>
       </ScrollView>

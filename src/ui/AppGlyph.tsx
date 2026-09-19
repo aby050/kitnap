@@ -1,7 +1,8 @@
 import React from 'react';
-import { Image, ImageSourcePropType, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image, ImageSourcePropType, Platform, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { palette, radius } from '../design/tokens';
 import BrandGlyph, { hasBrandGlyph } from './BrandGlyph';
+import { installedIcon, useInstalledApps } from '../data/installedApps';
 
 /**
  * A neutral, dignified stand-in for an app's icon.
@@ -64,11 +65,22 @@ export default function AppGlyph({
   const [bg, fg] = TILE_TINTS[hashIndex(packageName || name, TILE_TINTS.length)];
   const label = monogram(name);
 
-  const image: ImageSourcePropType | null = uri ? { uri } : (source ?? null);
+  /* Resolve the real icon here rather than making every caller do it.
+   * Passing `uri` down from each screen meant most screens simply did not,
+   * and the same phone drew approximated logos on one screen and the genuine
+   * launcher icons on the next. Subscribing to the shared cache costs a
+   * render when it first lands and nothing after that. */
+  useInstalledApps();
+  const resolved = uri ?? installedIcon(packageName);
 
-  // No OS icon and no bundled asset — fall back to a drawn brand mark before
-  // resorting to initials, so a curated list reads as apps rather than "IN/SN".
-  if (!image && hasBrandGlyph(packageName)) {
+  const image: ImageSourcePropType | null = resolved ? { uri: resolved } : (source ?? null);
+
+  /* No OS icon and no bundled asset. On Android that now means the app is
+   * genuinely not installed, so a drawn brand mark would be depicting
+   * something that is not on this phone — the monogram is the honest answer
+   * there. iOS never exposes icons at all, so the curated marks still earn
+   * their place. */
+  if (!image && Platform.OS !== 'android' && hasBrandGlyph(packageName)) {
     return (
       <View style={[{ width: size, height: size }, style]}>
         <BrandGlyph packageName={packageName} size={size} />

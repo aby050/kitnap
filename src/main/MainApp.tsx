@@ -1355,6 +1355,22 @@ export default function MainApp({
             else apply();
           }}
           onBack={() => setOverlay(null)}
+          /* A limit only means anything for an app that is otherwise open.
+             The screen needs to know which apps are already shut all day so
+             it can say so instead of offering a setting that would do
+             nothing. */
+          blockedPackages={blockedPackages}
+          onUnblock={(pkg) =>
+            requireGuardian(
+              () => {
+                const next = blockedPackages.filter((p) => p !== pkg);
+                setBlockedPackagesState(next);
+                onPatch({ blockedPackages: next });
+              },
+              'blocks',
+              'blockedApps',
+            )
+          }
         />
       );
     if (ov === 'emergencyTokens')

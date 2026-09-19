@@ -4,6 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import BlockedSelection from '../components/BlockedSelection';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
+import { installedLabel, useInstalledApps } from '../data/installedApps';
 import { HARD_BLOCKS } from '../onboarding/questions';
 import { getIntensity, IntensityKey } from '../data/themes';
 import {
@@ -23,6 +24,11 @@ import { palette, radius, space, type } from '../design/tokens';
 /** Package name → friendly label, falling back to the last path segment so a
  *  custom-added package still reads as something rather than raw reverse-DNS. */
 function appLabel(packageName: string): string {
+  // What the launcher calls it, first — that is the name on the user's own
+  // home screen, and it is right for every package rather than the handful
+  // the curated list happens to know.
+  const real = installedLabel(packageName);
+  if (real) return real;
   const known = DEFAULT_BLOCKED_APPS.find((a) => a.packageName === packageName);
   if (known) return known.name;
   const parts = packageName.split('.');
@@ -121,6 +127,9 @@ export default function MyAppsScreen({
     name: appLabel(pkg),
     icon: DEFAULT_BLOCKED_APPS.find((a) => a.packageName === pkg)?.icon,
   }));
+  // Subscribe so the rows re-render once the launcher names and icons land;
+  // appLabel/AppGlyph read the cache synchronously.
+  useInstalledApps();
   const strictnessLabel = getIntensity(intensityKey).name;
 
   return (
@@ -129,21 +138,20 @@ export default function MyAppsScreen({
         <View style={styles.headerRow} />
         <Editorial lead="Decide once," emphasis="stay out of reach." style={styles.voice} />
 
-        {/* Primary entry — Android only. Its destination (BlocksScreen) is
-            per-app minute limits plus a "Block Shorts" / "Block Websites"
-            section that's permanently stuck on "Soon": Screen Time has no
-            way to block one feature inside an app (Shorts rides the same
-            surface as YouTube itself), and per-app minute limits aren't
-            something Family Controls exposes either — only whole-app
-            blocking, which the real picker below already does. Showing this
-            card on iOS was promising two things that don't exist. */}
+        {/* Primary entry — Android only. Its destination is per-app daily
+            minute limits, which Family Controls does not expose on iOS; the
+            picker below is the whole-app blocking that works on both.
+            The "Block Shorts" and "Block Websites" rows this card used to
+            advertise are gone: Screen Time cannot block one feature inside an
+            app (Shorts rides the same surface as YouTube itself), so they
+            were permanently-disabled rows promising something unbuildable. */}
         {Platform.OS !== 'ios' && (
           <Card tone="accent" onPress={onOpenBlocks} style={styles.blockCard}>
             <Row
               icon="sliders"
               iconColor={palette.accent}
               title="Block apps & limits"
-              subtitle="Set daily limits, block Shorts, restrict websites."
+              subtitle="Set a daily minute limit for any app."
               chevron
             />
           </Card>

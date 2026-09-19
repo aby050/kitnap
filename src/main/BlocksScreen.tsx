@@ -11,7 +11,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { getInstalledApps } from 'device-permissions';
+import AppGlyph from '../ui/AppGlyph';
+import { InstalledApp, useInstalledApps } from '../data/installedApps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
@@ -39,150 +40,17 @@ const SUGGESTED_FIRST = [
   'com.reddit.frontpage',
 ];
 
-type InstalledApp = { packageName: string; label: string; icon?: string };
 
-const SHORTS_APPS = [
-  { name: 'YouTube Shorts', iconType: 'yt_shorts' },
-  { name: 'IG Reels', iconType: 'ig_reels' },
-  { name: 'Snapchat Spotlight', iconType: 'snap_spotlight' },
-  { name: 'Facebook Reels', iconType: 'fb_reels' },
-];
-
-function AppIcon({ type, size = 38, uri }: { type: string; size?: number; uri?: string }) {
-  /* The real launcher icon whenever the package manager gave us one. The
-   * hand-drawn brand marks below are a fallback for iOS (where installed-app
-   * icons are never exposed) and for anything that failed to rasterise — they
-   * were never meant to stand in for the user's actual apps, and a wall of
-   * approximated logos is both worse to recognise and a trademark question
-   * nobody needs. */
-  if (uri) {
-    return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size * 0.24 }} />;
-  }
-  switch (type) {
-    case 'Facebook':
-    case 'com.facebook.katana':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#1877F2', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.52, fontWeight: '800', marginTop: size * 0.08 }]}>f</Text>
-        </View>
-      );
-    case 'Instagram':
-    case 'com.instagram.android':
-      return (
-        <View style={[styles.brandIcon, { width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }]}>
-          <LinearGradient
-            colors={['#C13584', '#E1306C', '#F77737']}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={{
-            width: size * 0.44,
-            height: size * 0.44,
-            borderRadius: size * 0.12,
-            borderWidth: 1.5,
-            borderColor: 'white',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <View style={{
-              width: size * 0.16,
-              height: size * 0.16,
-              borderRadius: size * 0.08,
-              borderWidth: 1.5,
-              borderColor: 'white'
-            }} />
-          </View>
-        </View>
-      );
-    case 'TikTok':
-    case 'com.zhiliaoapp.musically':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#000000', width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: '#333' }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.45, fontWeight: '800', color: '#00f2fe' }]}>d</Text>
-        </View>
-      );
-    case 'YouTube':
-    case 'com.google.android.youtube':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#FF0000', width: size, height: size, borderRadius: size / 2 }]}>
-          <Icon name="play" size={size * 0.4} color="#FFFFFF" />
-        </View>
-      );
-    case 'Snapchat':
-    case 'com.snapchat.android':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#FFFC00', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.5, color: '#000', fontWeight: '800' }]}>S</Text>
-        </View>
-      );
-    case 'Reddit':
-    case 'com.reddit.frontpage':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#FF4500', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.5, fontWeight: '800' }]}>R</Text>
-        </View>
-      );
-    case 'X (Twitter)':
-    case 'com.twitter.android':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#000000', width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: '#222' }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.4, fontWeight: '800' }]}>𝕏</Text>
-        </View>
-      );
-    case 'yt_shorts':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#FF0000', width: size, height: size, borderRadius: size / 2 }]}>
-          <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="white">
-            <Path d="M17.771 9.697l-1.985-1.166 1.996-1.171c2.158-1.266 2.871-4.04 1.591-6.176-1.279-2.136-4.082-2.842-6.241-1.575l-10.793 6.337c-1.611.946-2.527 2.766-2.316 4.6.21 1.833 1.513 3.376 3.284 3.864l2.254.622-2.265 1.33c-2.158 1.267-2.871 4.041-1.591 6.177 1.28 2.135 4.083 2.841 6.241 1.574l10.792-6.337c1.611-.947 2.527-2.767 2.317-4.601-.211-1.833-1.514-3.376-3.285-3.864zM10 14.5v-5l4.5 2.5-4.5 2.5z"/>
-          </Svg>
-        </View>
-      );
-    case 'ig_reels':
-      return (
-        <View style={[styles.brandIcon, { width: size, height: size, borderRadius: size / 2, overflow: 'hidden' }]}>
-          <LinearGradient
-            colors={['#C13584', '#E1306C', '#F77737']}
-            style={StyleSheet.absoluteFill}
-          />
-          <Svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="white" style={{ alignSelf: 'center', marginTop: size * 0.1 }}>
-            <Rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="white" strokeWidth="2" />
-            <Path d="M2 8h20M2 16h20M8 2v20M16 2v20" stroke="white" strokeWidth="1.5" />
-            <Path d="M10 10l5 2.5-5 2.5v-5z" fill="white" />
-          </Svg>
-        </View>
-      );
-    case 'snap_spotlight':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#FFFC00', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.5, color: '#000', fontWeight: '800' }]}>S</Text>
-        </View>
-      );
-    case 'fb_reels':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#1877F2', width: size, height: size, borderRadius: size / 2 }]}>
-          <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="white">
-            <Path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/>
-          </Svg>
-        </View>
-      );
-    case 'websites':
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#2C2C2E', width: size, height: size, borderRadius: size / 2 }]}>
-          <Svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
-            <Circle cx="12" cy="12" r="10" />
-            <Path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10M12 2a15.3 15.3 0 0 0-4 10 15.3 15.3 0 0 0 4 10M2 12h20" />
-          </Svg>
-        </View>
-      );
-    default:
-      return (
-        <View style={[styles.brandIcon, { backgroundColor: '#3A3A3C', width: size, height: size, borderRadius: size / 2 }]}>
-          <Text style={[styles.brandText, { fontSize: size * 0.4, fontWeight: '800' }]}>
-            {(type || '?').charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      );
-  }
-}
+/**
+ * App icons come from the launcher, via the shared installed-apps cache.
+ *
+ * What was here was a switch statement that hand-drew Facebook, Instagram,
+ * TikTok, X, Reddit and a few others as coloured circles and letters. It could
+ * only ever depict the brands someone had hardcoded, it looked nothing like
+ * the icons on the user's own home screen, and redistributing an approximated
+ * trademark is a problem nobody needed. AppGlyph resolves the real icon and
+ * falls back to a neutral monogram tile.
+ */
 
 // Convert minutes to pretty label (e.g. 80 -> "1h 20m Limit")
 function formatMinutes(minutes: number): string {
@@ -196,56 +64,62 @@ interface BlocksScreenProps {
   appLimits: AppLimit[];
   onSaveLimits: (limits: AppLimit[]) => void;
   onBack: () => void;
+  /** Apps already shut all day. A daily limit cannot apply to these. */
+  blockedPackages?: string[];
+  /** Take an app off the blocklist so a limit can apply to it instead. */
+  onUnblock?: (packageName: string) => void;
 }
 
 export default function BlocksScreen({
   appLimits = [],
   onSaveLimits,
   onBack,
+  blockedPackages = [],
+  onUnblock,
 }: BlocksScreenProps) {
   const [selectedApp, setSelectedApp] = useState<{ name: string; packageName: string } | null>(null);
   const [showAddList, setShowAddList] = useState(false);
-  const [installed, setInstalled] = useState<InstalledApp[] | null>(null);
+  const installed = useInstalledApps();
   const [query, setQuery] = useState('');
-
-  /* What is actually on the phone, with the icons the package manager draws.
-   * Loaded once: it is a few hundred rows with a small PNG each, and the
-   * picker is opened far more often than apps are installed. */
-  useEffect(() => {
-    if (Platform.OS !== 'android') {
-      setInstalled([]);
-      return;
-    }
-    let cancelled = false;
-    getInstalledApps()
-      .then((apps) => {
-        if (!cancelled) setInstalled(apps);
-      })
-      .catch(() => {
-        if (!cancelled) setInstalled([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const iconFor = (packageName: string) =>
-    installed?.find((a) => a.packageName === packageName)?.icon || undefined;
 
   /* Familiar names first, then everything else alphabetically — so the apps
    * most people came here to limit are reachable without typing, and the rest
    * are still reachable at all. */
+  const blockedSet = useMemo(() => new Set(blockedPackages), [blockedPackages]);
+
+  /** Blocked apps that the user might have expected to limit instead. */
+  const blockedShown = useMemo(
+    () =>
+      blockedPackages
+        .map((pkg) => (installed ?? []).find((a) => a.packageName === pkg))
+        .filter((a): a is InstalledApp => !!a)
+        .slice(0, 6),
+    [blockedPackages, installed],
+  );
+
   const pickerApps = useMemo(() => {
     const apps = installed ?? [];
     const q = query.trim().toLowerCase();
-    const matched = q ? apps.filter((a) => a.label.toLowerCase().includes(q)) : apps;
+    /* Apps that already have a limit are not offered again. Listing them
+     * greyed out was clutter that grew with every limit set, and "Add app"
+     * showing Instagram when Instagram is already in the list above is just
+     * the screen contradicting itself — editing an existing limit is what the
+     * row above is for. */
+    const limited = new Set(appLimits.map((l) => l.packageName));
+    /* Neither already-limited apps nor already-blocked ones. Offering a daily
+     * limit for an app that is shut all day is offering a setting that cannot
+     * do anything — which is exactly what made this screen confusing. */
+    const available = apps.filter(
+      (a) => !limited.has(a.packageName) && !blockedSet.has(a.packageName),
+    );
+    const matched = q ? available.filter((a) => a.label.toLowerCase().includes(q)) : available;
     return [...matched].sort((a, b) => {
       const ra = SUGGESTED_FIRST.indexOf(a.packageName);
       const rb = SUGGESTED_FIRST.indexOf(b.packageName);
       if (ra !== rb) return (ra < 0 ? 999 : ra) - (rb < 0 ? 999 : rb);
       return a.label.localeCompare(b.label);
     });
-  }, [installed, query]);
+  }, [installed, query, appLimits, blockedSet]);
 
   const openAppConfig = (appName: string, packageName: string) => {
     setSelectedApp({ name: appName, packageName });
@@ -282,10 +156,15 @@ export default function BlocksScreen({
   const suggestions = useMemo(
     () =>
       SUGGESTED_FIRST.map((pkg) => (installed ?? []).find((a) => a.packageName === pkg))
-        .filter((a): a is InstalledApp => !!a)
+        .filter(
+          (a): a is InstalledApp =>
+            !!a &&
+            !appLimits.some((l) => l.packageName === a.packageName) &&
+            !blockedSet.has(a.packageName),
+        )
         .slice(0, 3)
         .map((a) => ({ name: a.label, packageName: a.packageName })),
-    [installed],
+    [installed, appLimits, blockedSet],
   );
 
   return (
@@ -302,13 +181,22 @@ export default function BlocksScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
-        {/* App Limits Section */}
+        {/* App Limits Section.
+            The sentence is not decoration. "Limit" was doing a lot of unspoken
+            work on this screen: blocked and limited are different states — one
+            is shut all day, the other is open until you have had your ration —
+            and nothing said so, which made an "Add" button next to an app you
+            had already blocked read as a bug. */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>App Limits</Text>
+          <Text style={styles.sectionTitle}>Daily limits</Text>
           <Pressable onPress={() => setShowAddList(true)} style={styles.addAppTextBtn}>
             <Text style={styles.addAppText}>+ Add App</Text>
           </Pressable>
         </View>
+        <Text style={styles.sectionBlurb}>
+          A limit lets you use an app normally until you have spent your minutes for the day. After
+          that it shuts until tomorrow.
+        </Text>
 
         {/* Dynamic App Limits List */}
         <View style={styles.listContainer}>
@@ -319,7 +207,7 @@ export default function BlocksScreen({
               style={[styles.appRow, styles.appRowActive]}
               onPress={() => openAppConfig(limit.appName, limit.packageName)}
             >
-              <AppIcon type={limit.packageName} uri={iconFor(limit.packageName)} />
+              <AppGlyph name={limit.appName} packageName={limit.packageName} size={38} />
               <View style={styles.appRowMiddle}>
                 <Text style={styles.appName}>{limit.appName}</Text>
                 <Text style={styles.appLimitText}>{formatMinutes(limit.limitMinutes)}</Text>
@@ -345,7 +233,7 @@ export default function BlocksScreen({
                 style={[styles.appRow, styles.appRowMock]}
                 onPress={() => openAppConfig(sug.name, sug.packageName)}
               >
-                <AppIcon type={sug.packageName} uri={iconFor(sug.packageName)} />
+                <AppGlyph name={sug.name} packageName={sug.packageName} size={38} />
                 <View style={styles.appRowMiddle}>
                   <Text style={styles.appName}>{sug.name}</Text>
                   <Text style={styles.appLimitTextMock}>No limit set</Text>
@@ -361,49 +249,34 @@ export default function BlocksScreen({
           })}
         </View>
 
-        {/* Block Shorts Section */}
-        <View style={[styles.sectionRow, { marginTop: 32 }]}>
-          <View style={styles.titleWithBadge}>
-            <Text style={styles.sectionTitle}>Block Shorts</Text>
-            <View style={styles.proBadge}>
-              <Text style={styles.proText}>PRO</Text>
+        {blockedShown.length > 0 && (
+          <>
+            <View style={[styles.sectionRow, { marginTop: 30 }]}>
+              <Text style={styles.sectionTitle}>Blocked all day</Text>
             </View>
-          </View>
-        </View>
+            <Text style={styles.sectionBlurb}>
+              These are shut whenever you reach for them, so a daily limit would have nothing to
+              count. Unblock one to put it on a limit instead.
+            </Text>
 
-        <View style={styles.listContainer}>
-          {SHORTS_APPS.map((app) => (
-            <View key={app.name} style={styles.solidCardRow}>
-              <AppIcon type={app.iconType} />
-              <Text style={styles.solidCardName}>{app.name}</Text>
-              {/* Pro feature, not built yet — honest "coming soon" rather
-                  than a button that silently does nothing when tapped. */}
-              <View style={[styles.actionBtnAdd, styles.actionBtnDisabled]}>
-                <Text style={styles.actionTextDisabled}>Soon</Text>
-              </View>
+            <View style={styles.listContainer}>
+              {blockedShown.map((app) => (
+                <View key={app.packageName} style={[styles.appRow, styles.appRowActive]}>
+                  <AppGlyph name={app.label} packageName={app.packageName} size={38} />
+                  <View style={styles.appRowMiddle}>
+                    <Text style={styles.appName}>{app.label}</Text>
+                    <Text style={styles.appLimitTextMock}>Blocked all day</Text>
+                  </View>
+                  {onUnblock && (
+                    <Pressable onPress={() => onUnblock(app.packageName)} style={styles.actionBtnAdd}>
+                      <Text style={styles.actionTextAdd}>Unblock</Text>
+                    </Pressable>
+                  )}
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-
-        {/* Other Blocks Section */}
-        <View style={[styles.sectionRow, { marginTop: 32 }]}>
-          <View style={styles.titleWithBadge}>
-            <Text style={styles.sectionTitle}>Other blocks</Text>
-            <View style={styles.proBadge}>
-              <Text style={styles.proText}>PRO</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.listContainer}>
-          <View style={styles.solidCardRow}>
-            <AppIcon type="websites" />
-            <Text style={styles.solidCardName}>Block Websites</Text>
-            <View style={[styles.actionBtnAdd, styles.actionBtnDisabled]}>
-              <Text style={styles.actionTextDisabled}>Soon</Text>
-            </View>
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Select App to Add Modal */}
@@ -449,33 +322,22 @@ export default function BlocksScreen({
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
                 >
-                  {pickerApps.map((app) => {
-                    const limitExists = getLimitFor(app.packageName);
-                    return (
-                      <Pressable
-                        key={app.packageName}
-                        style={[styles.dropdownItem, limitExists && styles.dropdownItemDisabled]}
-                        onPress={() => {
-                          if (limitExists) return;
-                          setShowAddList(false);
-                          setQuery('');
-                          openAppConfig(app.label, app.packageName);
-                        }}
-                      >
-                        <AppIcon type={app.packageName} size={28} uri={app.icon} />
-                        <Text
-                          style={[
-                            styles.dropdownText,
-                            limitExists && { color: 'rgba(255,255,255,0.25)' },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {app.label}
-                          {limitExists ? ' · limit set' : ''}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                  {pickerApps.map((app) => (
+                    <Pressable
+                      key={app.packageName}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setShowAddList(false);
+                        setQuery('');
+                        openAppConfig(app.label, app.packageName);
+                      }}
+                    >
+                      <AppGlyph name={app.label} packageName={app.packageName} size={28} />
+                      <Text style={styles.dropdownText} numberOfLines={1}>
+                        {app.label}
+                      </Text>
+                    </Pressable>
+                  ))}
                 </ScrollView>
               )}
             </View>
@@ -557,7 +419,7 @@ function AppLimitModal({
           {/* Sheet Header */}
           <View style={styles.sheetHeader}>
             <View style={styles.sheetHeaderLeft}>
-              <AppIcon type={app.packageName} size={30} />
+              <AppGlyph name={app.name} packageName={app.packageName} size={30} />
               <Text style={styles.sheetTitle}>{app.name} limit</Text>
             </View>
             <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
@@ -568,8 +430,14 @@ function AppLimitModal({
           {/* Scrollable sheet options */}
           <ScrollView contentContainerStyle={styles.sheetScroll} showsVerticalScrollIndicator={false}>
             {/* Limit Selector Row */}
+            {/* "Limit / 1h" said nothing about what happens at 1h, or over
+                what period. Naming the period in the label is most of the
+                explanation, and costs a word. */}
             <Pressable onPress={() => setShowLimitPicker(!showLimitPicker)} style={styles.sheetRow}>
-              <Text style={styles.sheetLabel}>Limit</Text>
+              <View style={styles.sheetLabelWrap}>
+                <Text style={styles.sheetLabel}>Minutes per day</Text>
+                <Text style={styles.sheetHint}>Then it shuts until tomorrow</Text>
+              </View>
               <Text style={styles.sheetValue}>{getLimitLabel()}</Text>
             </Pressable>
 
@@ -595,7 +463,10 @@ function AppLimitModal({
 
             {/* Emergency usage counter */}
             <View style={styles.sheetRow}>
-              <Text style={styles.sheetLabel}>No. of emergency use</Text>
+              <View style={styles.sheetLabelWrap}>
+                <Text style={styles.sheetLabel}>Emergency opens</Text>
+                <Text style={styles.sheetHint}>Times you can get in after the limit</Text>
+              </View>
               <View style={styles.counterContainer}>
                 <Pressable
                   onPress={() => setEmergencyUses(Math.max(0, emergencyUses - 1))}
@@ -617,7 +488,10 @@ function AppLimitModal({
 
             {/* Show reminders */}
             <Pressable onPress={() => setShowReminders(!showReminders)} style={styles.sheetRow}>
-              <Text style={styles.sheetLabel}>Show reminders before limit</Text>
+              <View style={styles.sheetLabelWrap}>
+                <Text style={styles.sheetLabel}>Warn me near the limit</Text>
+                <Text style={styles.sheetHint}>A nudge before it runs out</Text>
+              </View>
               <Text style={styles.sheetValue}>{showReminders ? 'Yes' : 'No'}</Text>
             </Pressable>
 
@@ -890,6 +764,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
     gap: 12,
+  },
+  sheetLabelWrap: { flex: 1, paddingRight: 12, gap: 2 },
+  sheetHint: { color: 'rgba(255,255,255,0.42)', fontSize: 12 },
+  sectionBlurb: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 13,
+    lineHeight: 18.5,
+    paddingHorizontal: 4,
+    marginTop: -4,
+    marginBottom: 14,
   },
   dropdownSearch: {
     backgroundColor: 'rgba(255,255,255,0.06)',
