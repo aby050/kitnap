@@ -11,7 +11,7 @@ import { brandMark } from './brandMark';
  */
 export type MarkTone = 'brand' | 'dark';
 
-const ASPECT = 1313 / 1274;
+const ASPECT = 1275 / 1092;
 
 export default function ByreMark({
   size = 64,
