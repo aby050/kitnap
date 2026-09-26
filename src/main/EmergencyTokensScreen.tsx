@@ -15,6 +15,9 @@ const PACK_COPY: Record<string, { label: string; desc: string; qty: number }> = 
   bailout_key: { label: 'Single', desc: 'One way out, when you need it.', qty: 1 },
   bailout_key3: { label: 'Three', desc: 'Covers a bad week.', qty: 3 },
   bailout_key10: { label: 'Ten', desc: 'Stop thinking about it.', qty: 10 },
+  phonewise_bailout_key: { label: 'Single', desc: 'One way out, when you need it.', qty: 1 },
+  phonewise_bailout_key3: { label: 'Three', desc: 'Covers a bad week.', qty: 3 },
+  phonewise_bailout_key10: { label: 'Ten', desc: 'Stop thinking about it.', qty: 10 },
 };
 
 /** Keys drawn on a card, capped so ten doesn't become a wall of glyphs. */

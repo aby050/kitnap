@@ -47,6 +47,12 @@ export const BAILOUT_PRODUCTS: Record<string, number> = {
   // `bailout_key` (not `bailout_key1`) and `bailout_key10` (not `_key5`) —
   // a mismatch here doesn't error, it just means the product is never found
   // and the pack silently never appears.
+  // iOS (Phonewise). Product ids are unique across an Apple account for
+  // ever, so the Byre ids below could not be reused on the new app.
+  phonewise_bailout_key: 1,
+  phonewise_bailout_key3: 3,
+  phonewise_bailout_key10: 10,
+  // Google Play, where the listing (and so its product ids) is unchanged.
   bailout_key: 1,
   bailout_key3: 3,
   bailout_key10: 10,
