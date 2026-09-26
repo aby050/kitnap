@@ -56,7 +56,7 @@ const HEATMAP_WEEKS = 10;
 const STAT_TINTS = {
   streak: '#E9B23E',
   score: palette.accent,
-  saved: '#6FE3A9',
+  saved: '#2CF28B',
 } as const;
 
 /** The signature headline figure — big tabular numerals with small dim units,

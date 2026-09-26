@@ -62,7 +62,7 @@ const { width } = Dimensions.get('window');
 const DIM_AFTER_MS = 7000;
 /** The ring on the always-on face: the accent at the same weight as the
  *  digits, over a track dark enough to read as unlit. */
-const AOD_RING = 'rgba(111,227,169,0.38)';
+const AOD_RING = 'rgba(23,211,208,0.38)';
 const AOD_TRACK = 'rgba(255,255,255,0.05)';
 
 /** How far down the timer itself goes. Not zero — the whole point is that it

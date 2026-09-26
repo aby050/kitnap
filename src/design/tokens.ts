@@ -37,28 +37,27 @@ const SCHEMES = {
        four-stop gradient at small sizes where that shows. */
     chartGood: ['#C7E4FF', '#6E8CF5', '#3355D4', '#0F3B73'],
   },
-  /** The Phonewise mark's own mint — the app's original scheme. */
+  /** The Phonewise mark's own colours — sky blue rising through teal to mint. */
   green: {
-    accent: '#6FE3A9',
-    accentPressed: '#5AD095',
-    accentSoft: 'rgba(111,227,169,0.12)',
-    accentBorder: 'rgba(111,227,169,0.26)',
-    accentRamp: 'rgba(111,227,169,0.38)',
-    accentRampMid: '#B9D97A',
-    onLight: '#07301F',
-    secondary: '#9FEFC9',
-    onSecondary: '#0B5638',
+    accent: '#17D3D0',
+    accentPressed: '#12BAB8',
+    accentSoft: 'rgba(23,211,208,0.12)',
+    accentBorder: 'rgba(23,211,208,0.26)',
+    accentRamp: 'rgba(23,211,208,0.38)',
+    accentRampMid: '#2CF28B',
+    onLight: '#032A2E',
+    secondary: '#8FF5C4',
+    onSecondary: '#06453F',
     surface: '#0B0B0D',
     surfaceRaised: '#131317',
     surfaceHigh: '#1C1C21',
-    // Same ramp shape as blue — flat hold, steep climb, lightening tail — so
-    // the two schemes feel like one app in two colourways rather than two
-    // different gradients that happen to share a screen.
-    ground: ['#08100C', '#08100C', '#0A2418', '#0C3D28', '#0E6642', '#12A87C', '#2FC795', '#5FDDB1'],
-    rise: ['rgba(8,16,12,0)', 'rgba(10,36,24,0.75)', 'rgba(12,61,40,0.9)', 'rgba(14,102,66,0.95)', 'rgba(18,168,124,0.97)', 'rgba(47,199,149,0.98)', 'rgba(95,221,177,1)'],
-    bloom: ['rgba(111,227,169,0.22)', 'rgba(111,227,169,0.05)', 'rgba(0,0,0,0)'],
-    accentFill: ['#8BEFBC', '#4FCB92'],
-    chartGood: ['#D6FCEA', '#6FE3A9', '#2FA97B', '#0C3D28'],
+    // The logo's own ramp — blue at the base, mint at the crown — on the same
+    // flat-hold, steep-climb shape as the blue scheme.
+    ground: ['#060C10', '#060C10', '#07202C', '#073A4E', '#08699A', '#08A9F4', '#17D3D0', '#2CF28B'],
+    rise: ['rgba(6,12,16,0)', 'rgba(7,32,44,0.75)', 'rgba(7,58,78,0.9)', 'rgba(8,105,154,0.95)', 'rgba(8,169,244,0.97)', 'rgba(23,211,208,0.98)', 'rgba(44,242,139,1)'],
+    bloom: ['rgba(23,211,208,0.22)', 'rgba(23,211,208,0.05)', 'rgba(0,0,0,0)'],
+    accentFill: ['#5FE8E0', '#08A9F4'],
+    chartGood: ['#D2FBF4', '#17D3D0', '#08A9F4', '#073A4E'],
   },
 } as const;
 
