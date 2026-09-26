@@ -7,7 +7,7 @@ import { fonts, palette, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 
 const SUPPORT_EMAIL = 'moksha.rva@gmail.com';
-const SITE_URL = 'https://byre.rvastudio.in';
+const SITE_URL = 'https://phonewise.rvastudio.in';
 
 /**
  * About and contact, written into the app rather than fetched.
@@ -61,7 +61,7 @@ export default function AboutScreen({ onBack }: { onBack: () => void }) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.brand}>
           <ByreMark size={96} />
-          <Text style={styles.name}>Byre</Text>
+          <Text style={styles.name}>Phonewise</Text>
           <Text style={styles.version}>
             Version {version}
             {build ? ` (${build})` : ''}
@@ -69,7 +69,7 @@ export default function AboutScreen({ onBack }: { onBack: () => void }) {
         </View>
 
         <Text style={styles.blurb}>
-          Most blockers let you out the moment you push. Byre asks for something instead — a few
+          Most blockers let you out the moment you push. Phonewise asks for something instead — a few
           real press-ups, counted on camera, or a code only a friend has. The block is the resting
           state, not a mode you have to remember to switch on.
         </Text>
@@ -83,14 +83,14 @@ export default function AboutScreen({ onBack }: { onBack: () => void }) {
             onPress={() =>
               Linking.openURL(
                 `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-                  `Byre ${version}${build ? ` (${build})` : ''}`,
+                  `Phonewise ${version}${build ? ` (${build})` : ''}`,
                 )}`,
               )
             }
           />
           <LinkRow
             mark="globe"
-            title="byre.rvastudio.in"
+            title="phonewise.rvastudio.in"
             sub="Help, updates and the full story"
             onPress={() => Linking.openURL(SITE_URL)}
             last

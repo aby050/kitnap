@@ -218,7 +218,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
             <Text style={styles.reflectLead}>you said you reach for it when you're</Text>
             <Text style={styles.reflectAnswer}>{reachAnswer}</Text>
             <Text style={styles.reflectTail}>
-              Not because you decided to. That's the moment Byre steps into.
+              Not because you decided to. That's the moment Phonewise steps into.
             </Text>
             <View style={{ height: 28 }} />
             <GradientButton label="Continue" onPress={next} />
@@ -230,7 +230,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
             <Text style={styles.reflectLead}>and that you'd rather be</Text>
             <Text style={styles.reflectAnswer}>{ratherAnswer}</Text>
             <Text style={styles.reflectTail}>
-              Byre won't promise you that time back — nobody can measure that
+              Phonewise won't promise you that time back — nobody can measure that
               honestly. It just puts a real lock between you and the app, so
               the reach costs you something.
             </Text>
@@ -287,7 +287,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
               {notifSub === 0 ? (
                 <Text style={styles.heading}>You open {primaryApp.name} without deciding to.</Text>
               ) : (
-                <Text style={styles.heading}>Byre takes the screen.</Text>
+                <Text style={styles.heading}>Phonewise takes the screen.</Text>
               )}
               <View style={{ height: 30 }} />
               <View style={styles.phoneStage}>
@@ -346,7 +346,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
                   /* Was a staged OS notification reading "Time to go
                    * outside". Two things wrong with it: a device frame around
                    * a mocked push is the most copied beat in this category,
-                   * and Byre does not send a nudge you can swipe away. What
+                   * and Phonewise does not send a nudge you can swipe away. What
                    * the phone shows now is what the phone will actually
                    * show — the shield, full bleed, in its own voice. */
                   <View style={styles.shieldFill}>
@@ -374,7 +374,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
 
         {step === 6 && (
             <Animated.View entering={FadeInUp.duration(400)} style={styles.recapBlock}>
-              {/* Was "Byre will get you back <N> years of your life" — the
+              {/* Was "Phonewise will get you back <N> years of your life" — the
                   same invented reclaimedYears figure as the removed beats,
                   in the strongest possible mood ("will"). The setup below it
                   is real and already states itself; the headline now names

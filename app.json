@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Byre",
+    "name": "Phonewise",
     "slug": "byre",
     "scheme": [
-      "byre",
+      "phonewise",
       "device-activity"
     ],
     "version": "1.0.0",
@@ -11,7 +11,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "bundleIdentifier": "com.abhay.byre",
+      "bundleIdentifier": "com.abhay.phonewise",
       "appleTeamId": "RG96N3U9GH",
       "supportsTablet": false,
       "buildNumber": "12",
@@ -29,14 +29,14 @@
           "whatsapp"
         ],
         "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "Byre never records audio. The camera library it uses declares this; nothing in the app asks for your microphone.",
-        "NSPhotoLibraryUsageDescription": "Only if you choose to save a progress photo. Byre never reads your photo library.",
-        "NSLocalNetworkUsageDescription": "Used only when running Byre from a development machine. The App Store build never connects to your local network."
+        "NSMicrophoneUsageDescription": "Phonewise never records audio. The camera library it uses declares this; nothing in the app asks for your microphone.",
+        "NSPhotoLibraryUsageDescription": "Only if you choose to save a progress photo. Phonewise never reads your photo library.",
+        "NSLocalNetworkUsageDescription": "Used only when running Phonewise from a development machine. The App Store build never connects to your local network."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#020C09",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -87,7 +87,7 @@
         "react-native-device-activity",
         {
           "appleTeamId": "RG96N3U9GH",
-          "appGroup": "group.com.abhay.byre"
+          "appGroup": "group.com.abhay.phonewise"
         }
       ],
       "./plugins/withShieldOpenApp.js",
@@ -110,32 +110,32 @@
             "ios": {
               "appExtensions": [
                 {
-                  "bundleIdentifier": "com.abhay.byre.ShieldConfiguration",
+                  "bundleIdentifier": "com.abhay.phonewise.ShieldConfiguration",
                   "targetName": "ShieldConfiguration",
                   "entitlements": {
                     "com.apple.developer.family-controls": true,
                     "com.apple.security.application-groups": [
-                      "group.com.abhay.byre"
+                      "group.com.abhay.phonewise"
                     ]
                   }
                 },
                 {
-                  "bundleIdentifier": "com.abhay.byre.ShieldAction",
+                  "bundleIdentifier": "com.abhay.phonewise.ShieldAction",
                   "targetName": "ShieldAction",
                   "entitlements": {
                     "com.apple.developer.family-controls": true,
                     "com.apple.security.application-groups": [
-                      "group.com.abhay.byre"
+                      "group.com.abhay.phonewise"
                     ]
                   }
                 },
                 {
-                  "bundleIdentifier": "com.abhay.byre.ActivityMonitorExtension",
+                  "bundleIdentifier": "com.abhay.phonewise.ActivityMonitorExtension",
                   "targetName": "ActivityMonitorExtension",
                   "entitlements": {
                     "com.apple.developer.family-controls": true,
                     "com.apple.security.application-groups": [
-                      "group.com.abhay.byre"
+                      "group.com.abhay.phonewise"
                     ]
                   }
                 }

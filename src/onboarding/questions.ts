@@ -61,7 +61,7 @@ export const SLIP_WINDOWS = [
 ] as const;
 
 export const RETURNING_NEW = 'I’m new here';
-export const RETURNING_EXISTING = 'I’ve used Byre before';
+export const RETURNING_EXISTING = 'I’ve used Phonewise before';
 
 /**
  * Whether to ask new-or-returning at all.
@@ -108,7 +108,7 @@ export const HARD_BLOCKS: { key: string; label: string; why: string }[] = [
   {
     key: 'adult',
     label: 'Adult sites',
-    why: 'You asked for this one to be gone, not negotiable. Byre uses the filter built into iOS, so it holds in every browser — there is no challenge to pass and no timer to wait out.',
+    why: 'You asked for this one to be gone, not negotiable. Phonewise uses the filter built into iOS, so it holds in every browser — there is no challenge to pass and no timer to wait out.',
   },
   {
     key: 'gambling',
@@ -136,7 +136,7 @@ export const QUESTIONS: Question[] = [
         {
           id: 'returning',
           kind: 'choice',
-          prompt: 'Have you used **Byre** before?',
+          prompt: 'Have you used **Phonewise** before?',
           options: [RETURNING_NEW, RETURNING_EXISTING],
         },
       ] as Question[])
@@ -178,7 +178,7 @@ export const QUESTIONS: Question[] = [
    * Asked, never inferred.
    *
    * The obvious product instinct is to *detect* this and act on it. iOS makes
-   * that impossible — Family Controls tokens are opaque, so Byre never learns
+   * that impossible — Family Controls tokens are opaque, so Phonewise never learns
    * what anyone opens — and it would be the wrong thing even if it were
    * possible: being told by an app that it has noticed your habit is a worse
    * first minute than being asked.

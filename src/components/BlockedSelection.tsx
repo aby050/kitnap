@@ -72,7 +72,7 @@ const LOOSENING: Record<Loosening, { title: string; body: string; label: string;
   },
   edit: {
     title: 'Change what is blocked?',
-    body: "Apple's picker lets you remove apps as easily as add them, and it never tells Byre which you touched. Adding is free; this hold is the price of being able to take one off.",
+    body: "Apple's picker lets you remove apps as easily as add them, and it never tells Phonewise which you touched. Adding is free; this hold is the price of being able to take one off.",
     label: 'Hold to open the picker',
     holdMs: 1400,
   },
@@ -129,7 +129,7 @@ export default function BlockedSelection({
   const sites = counts?.sites ?? 0;
   const empty = apps + categories + sites === 0;
   const rows = apps + categories;
-  // A shield can outlive the selection that created it — reinstalling Byre
+  // A shield can outlive the selection that created it — reinstalling Phonewise
   // wipes the App Group where the selection is recorded, but Apple enforces
   // the shield at the OS level independently of that, by design. When that
   // happens the list looks empty yet apps are still genuinely blocked, with
@@ -195,7 +195,7 @@ export default function BlockedSelection({
           </View>
           <Text style={styles.emptyTitle}>Nothing's holding you back. Yet.</Text>
           <Text style={styles.emptyBody}>
-            Pick the apps that eat your evenings — Byre will do the holding back for you.
+            Pick the apps that eat your evenings — Phonewise will do the holding back for you.
           </Text>
         </View>
       )}
@@ -206,7 +206,7 @@ export default function BlockedSelection({
 
       {orphanedShield && (
         <Text style={styles.orphanNote}>
-          Some apps are still blocked from before — likely left over from reinstalling Byre.
+          Some apps are still blocked from before — likely left over from reinstalling Phonewise.
           Nothing shows above because that record is gone, but the block itself is still real.
         </Text>
       )}
@@ -221,7 +221,7 @@ export default function BlockedSelection({
             <Text style={styles.editText}>{empty ? 'Choose apps to block' : 'Change selection'}</Text>
           </Pressable>
           <Text style={styles.note}>
-            Apple's picker is the only way to choose apps, and it never tells Byre which ones you
+            Apple's picker is the only way to choose apps, and it never tells Phonewise which ones you
             picked — the icons above are drawn by iOS itself.
           </Text>
           {!empty && (

@@ -9,7 +9,7 @@ export { mediaFor } from './ambienceMedia';
  * it: the block runs, a loop plays, and the countdown is the only thing on
  * screen. It is deliberately NOT the "For you / Digital detox" preset shelf
  * this category ships — two carousels of timer presets with no relationship to
- * the user is exactly the interchangeable surface Byre was flagged for under
+ * the user is exactly the interchangeable surface Phonewise was flagged for under
  * 4.3(a). Every room here is named for a reason a person already has, and each
  * one maps to the block-screen voice that reason picked.
  */

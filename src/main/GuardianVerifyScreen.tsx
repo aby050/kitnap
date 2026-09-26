@@ -58,7 +58,7 @@ const INTENT_COPY: Record<GuardedIntent, { title: string; what: string; cancel: 
   },
   deleteAccount: {
     title: 'Delete everything?',
-    what: 'erasing Byre and everything in it',
+    what: 'erasing Phonewise and everything in it',
     cancel: 'Never mind, keep my account',
   },
 };

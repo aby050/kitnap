@@ -41,7 +41,7 @@ export default function AmbienceVideoLayer({
       contentFit="cover"
       nativeControls={false}
       // Picture-in-picture is what drags `audio` into UIBackgroundModes on
-      // iOS. Byre was rejected under 2.5.4 for exactly that key. Never enable.
+      // iOS. Phonewise was rejected under 2.5.4 for exactly that key. Never enable.
       allowsPictureInPicture={false}
       onFirstFrameRender={onFirstFrame}
       {...(Platform.OS === 'android' ? { useExoShutter: false } : null)}

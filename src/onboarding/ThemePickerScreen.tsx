@@ -50,7 +50,7 @@ export default function ThemePickerScreen({
           What are you protecting?
         </Animated.Text>
         <Text style={styles.sub}>
-          Byre doesn’t show a grey “blocked” wall. It says this to you, in your own reason’s words.
+          Phonewise doesn’t show a grey “blocked” wall. It says this to you, in your own reason’s words.
         </Text>
 
         {/* ── The payoff, first and biggest ──────────────────────────────
@@ -87,7 +87,7 @@ export default function ThemePickerScreen({
             {/* Static chrome — never keyed, so it never flickers. */}
             <View style={styles.previewTop}>
               <Icon name="lock" size={13} color="rgba(255,255,255,0.72)" strokeWidth={1.9} />
-              <Text style={styles.previewChrome}>BLOCKED BY BYRE</Text>
+              <Text style={styles.previewChrome}>BLOCKED BY PHONEWISE</Text>
             </View>
 
             <View style={styles.previewBody}>

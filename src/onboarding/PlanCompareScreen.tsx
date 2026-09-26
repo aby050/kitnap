@@ -47,7 +47,7 @@ const ROWS: { label: string; free: string; pro: string }[] = [
  * and it reads as a panic offer: the price you were just quoted was
  * apparently never the real price.
  *
- * Same offer, honest framing. It states plainly that Byre works free forever,
+ * Same offer, honest framing. It states plainly that Phonewise works free forever,
  * shows exactly what the free plan keeps and gives up, and puts the annual
  * price beside it with the saving computed from the store's own numbers. A
  * user who takes the free plan here is not a lost sale — they are a user who
@@ -109,7 +109,7 @@ export default function PlanCompareScreen({
 
       <ScrollView contentContainerStyle={st.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.duration(420)}>
-          <Text style={st.title}>byre works</Text>
+          <Text style={st.title}>phonewise works</Text>
           <Text style={[st.title, st.titleAccent]}>free, forever.</Text>
           <Text style={st.sub}>
             Not a crippled trial. The blocking, the movement unlocks and emergency access are all

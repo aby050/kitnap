@@ -11,7 +11,7 @@ import Icon, { IconName } from '../ui/Icon';
  * Google requires this of any app using accessibility services that isn't an
  * accessibility tool: say what the API is used for, what it reads, and get an
  * affirmative action before enabling — not a Grant button next to a sentence.
- * Byre is not an accessibility tool (it isn't built for users with
+ * Phonewise is not an accessibility tool (it isn't built for users with
  * disabilities), so `isAccessibilityTool` stays false and this screen is the
  * honest route rather than the loophole.
  *
@@ -30,7 +30,7 @@ const POINTS: { icon: IconName; title: string; body: string }[] = [
   {
     icon: 'shield',
     title: 'What it is used for',
-    body: 'To notice the moment a blocked app opens, so Byre can show the block screen. That is its only job.',
+    body: 'To notice the moment a blocked app opens, so Phonewise can show the block screen. That is its only job.',
   },
   {
     icon: 'lock',
@@ -40,7 +40,7 @@ const POINTS: { icon: IconName; title: string; body: string }[] = [
   {
     icon: 'lock',
     title: 'Where it goes',
-    body: 'Nowhere. The check happens on your phone and the app name is discarded straight after. Byre has no server to send it to.',
+    body: 'Nowhere. The check happens on your phone and the app name is discarded straight after. Phonewise has no server to send it to.',
   },
 ];
 
@@ -61,7 +61,7 @@ export default function AccessibilityDisclosure({
           <View style={styles.handle} />
 
           <Text style={styles.eyebrow}>BEFORE YOU TURN THIS ON</Text>
-          <Text style={styles.title}>Byre uses Android's Accessibility Service</Text>
+          <Text style={styles.title}>Phonewise uses Android's Accessibility Service</Text>
           <Text style={styles.lede}>
             It is the only way an app can tell that another app has opened. Here is exactly what that
             means, in full.
@@ -81,9 +81,9 @@ export default function AccessibilityDisclosure({
             ))}
 
             <Text style={styles.footnote}>
-              Byre is not an accessibility tool for people with disabilities, and does not claim to be.
+              Phonewise is not an accessibility tool for people with disabilities, and does not claim to be.
               It uses this API for app blocking only. You can turn it off at any time in Android
-              Settings, and Byre will stop blocking.
+              Settings, and Phonewise will stop blocking.
             </Text>
           </ScrollView>
 

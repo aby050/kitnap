@@ -12,7 +12,7 @@ import React from 'react';
 import { motion } from './tokens';
 
 /**
- * Byre's shared motion. Durations, springs and press scales live in
+ * Phonewise's shared motion. Durations, springs and press scales live in
  * `tokens.ts`; the *behaviours* built from them live here, so a screen never
  * hand-rolls an entrance and two adjacent screens can't drift apart.
  *
@@ -56,7 +56,7 @@ export const curves = {
  * ───────────────────────────────────────────────────────────── */
 
 /**
- * Fade up into place. The standard way anything arrives in Byre.
+ * Fade up into place. The standard way anything arrives in Phonewise.
  *
  * `rise` is deliberately small (8–16pt). A long travel makes a calm app feel
  * busy; the point is that content *settles* rather than slides in from off

@@ -13,7 +13,7 @@ import EmergencyTokensScreen from './EmergencyTokensScreen';
 import DeleteAccountScreen from './DeleteAccountScreen';
 import AppearanceScreen from './AppearanceScreen';
 import EssentialsScreen from './EssentialsScreen';
-// World feature — deprioritized per product decision (Byre-style apps don't
+// World feature — deprioritized per product decision (Phonewise-style apps don't
 // have a "world" concept; focus is the core Shield/Gate/timer loop instead).
 // Code kept, commented, in case we revisit it later.
 // import WorldScreen from './WorldScreen';
@@ -160,7 +160,7 @@ type TimerPreset = { minutes: number; label: string; autoStart: boolean; hardMod
  * same order, the tab bar of the app this one keeps getting compared to. Three
  * matching labels is not a coincidence a reviewer has to think hard about.
  *
- * The names now describe what Byre actually has. `apps` is the blocklist, so
+ * The names now describe what Phonewise actually has. `apps` is the blocklist, so
  * it says Blocked — shorter, and the thing the app is for. `timer` stopped
  * being a timer when the dial came out: it is ten rooms you pick between, so
  * it says Rooms. Home / Blocked / Rooms also reads as one place rather than
@@ -203,7 +203,7 @@ export default function MainApp({
    *  tab/overlay was showing. */
   pendingShieldPackage?: string | null;
   onShieldConsumed?: () => void;
-  /** Set by App.tsx when Apple's shield "Let me in" button reopens Byre via
+  /** Set by App.tsx when Apple's shield "Let me in" button reopens Phonewise via
    *  the device-activity:// scheme. There's no per-app payload — Family
    *  Controls tokens are opaque — so unlike pendingShieldPackage this jumps
    *  straight to the Gate, skipping the RN ShieldScreen entirely (Apple's
@@ -442,7 +442,7 @@ export default function MainApp({
    * patience for a lie — showed "you have five minutes" while every app
    * stayed shut.
    *
-   * The gap is Apple's orphaned shield. Reinstalling Byre wipes the App Group
+   * The gap is Apple's orphaned shield. Reinstalling Phonewise wipes the App Group
    * holding the selection record, but the OS keeps enforcing the shield
    * independently (deliberately — otherwise a child escapes a block by
    * deleting the controlling app). So the apps are blocked, and the thing we
@@ -724,7 +724,7 @@ export default function MainApp({
     // the plans themselves, not to the Settings screen that lists a row
     // leading to them: the user asked to see prices, so show prices.
     setProGate({
-      title: 'Guardian is part of Byre Pro',
+      title: 'Guardian is part of Phonewise Pro',
       body:
         'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
       icon: 'shield',
@@ -964,7 +964,7 @@ export default function MainApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingShieldPackage]);
 
-  // "Let me in" reopening Byre used to land on whatever tab was showing —
+  // "Let me in" reopening Phonewise used to land on whatever tab was showing —
   // the button did nothing visible because there was no challenge screen to
   // route to. This is that route: straight to the Gate, same as the moment
   // right after Apple's shield.
@@ -986,7 +986,7 @@ export default function MainApp({
 
   // iOS equivalent: Apple's own Shield UI is what the user actually sees
   // over a blocked app (not our RN ShieldScreen — Apple doesn't allow custom
-  // UI inside that extension). Its button opens Byre, so on foreground we
+  // UI inside that extension). Its button opens Phonewise, so on foreground we
   // check whether a shield is currently active and, if so, skip straight to
   // the Gate — the "I need it" step already happened on Apple's screen.
   useEffect(() => {
@@ -1002,14 +1002,14 @@ export default function MainApp({
     if (Platform.OS === 'android') {
       // Seeded by the day, not the render: the cover is written to disk here
       // and read by the service later, so it should read the same all day
-      // rather than depending on whenever Byre last happened to be open.
+      // rather than depending on whenever Phonewise last happened to be open.
       const line = pickShieldMessage(themeKey, Math.floor(Date.now() / 86400000));
       setShieldCopy(
         line.lead,
         line.emphasis ?? '',
         goal.line
           ? `You said you wanted ${goal.line}.`
-          : 'You asked Byre to keep this shut.',
+          : 'You asked Phonewise to keep this shut.',
         'Let me in',
       );
       return;
@@ -1023,8 +1023,8 @@ export default function MainApp({
     // whole life of the app and can no longer mean "the user just hit one" —
     // routing straight to the Gate on that would trap every launch. What
     // foregrounding is actually good for is repairing state: put the shield
-    // back if a grant ran out while Byre was closed.
-    // Repair on every foreground: the window may have run out while Byre
+    // back if a grant ran out while Phonewise was closed.
+    // Repair on every foreground: the window may have run out while Phonewise
     // was closed, in which case the door has to shut before anything else
     // draws.
     const onForeground = () => {
@@ -1059,7 +1059,7 @@ export default function MainApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Shuts the door the moment a grant runs out with Byre in the foreground.
+  // Shuts the door the moment a grant runs out with Phonewise in the foreground.
   // The native usage threshold in startGrantWindow covers the app-is-closed
   // case; this covers the case where the user is watching the countdown.
   useEffect(() => {
@@ -1726,7 +1726,7 @@ export default function MainApp({
               schedules={schedules}
               onUnblockPackage={(pkg) => {
                 // Guarded like every other unblock. This one was not, which
-                // made the tidiest route out of Byre a single tap on the very
+                // made the tidiest route out of Phonewise a single tap on the very
                 // screen listing what you asked to be protected from — and it
                 // bypassed a guardian entirely.
                 const next = blockedPackages.filter((p) => p !== pkg);
@@ -1889,7 +1889,7 @@ export default function MainApp({
                   // that cannot lock, and beats the tap appearing to do nothing.
                   Alert.alert(
                     'Not locked',
-                    'Byre still needs that permission before it can hold anything back. Nothing was started — grant it and try again.',
+                    'Phonewise still needs that permission before it can hold anything back. Nothing was started — grant it and try again.',
                   );
                 }
               })();

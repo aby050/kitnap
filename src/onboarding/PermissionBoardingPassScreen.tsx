@@ -155,7 +155,7 @@ export default function PermissionBoardingPassScreen({
       key: 'screenTime',
       icon: 'chart',
       title: 'Screen Time',
-      desc: "Uses Apple's Screen Time controls so Byre can block the apps you pick. A system prompt appears — Allow it.",
+      desc: "Uses Apple's Screen Time controls so Phonewise can block the apps you pick. A system prompt appears — Allow it.",
       granted: screenTime,
       onRequest: async () => {
         await requestScreenTimeAuthorization();
@@ -166,7 +166,7 @@ export default function PermissionBoardingPassScreen({
       key: 'notification',
       icon: 'bell',
       title: 'Notifications',
-      desc: 'Lets Byre ping you when a timed unlock ends, even if the app is in the background.',
+      desc: 'Lets Phonewise ping you when a timed unlock ends, even if the app is in the background.',
       granted: notification,
       onRequest: async () => {
         await Notifications.requestPermissionsAsync();

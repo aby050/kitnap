@@ -102,10 +102,10 @@ export default function IOSAppPickerScreen({
 
   const body = (
     <Animated.View entering={FadeIn.duration(350)} style={styles.cluster}>
-      <Text style={styles.heading}>Which apps should Byre block?</Text>
+      <Text style={styles.heading}>Which apps should Phonewise block?</Text>
       <Text style={styles.sub}>
         {hint ??
-          "This uses Apple's picker — Byre never sees the names, only that they're blocked. Choose the ones that usually steal your hours."}
+          "This uses Apple's picker — Phonewise never sees the names, only that they're blocked. Choose the ones that usually steal your hours."}
       </Text>
 
       {authStatus !== 'approved' ? (

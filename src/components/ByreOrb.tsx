@@ -17,7 +17,7 @@ type Props = {
 };
 
 /**
- * The Byre mark.
+ * The Phonewise mark.
  *
  * The real artwork rather than a redraw: the mark's whole character is in the
  * rounded tube and its gloss, and a hand-built SVG of it read as a flat blob.
@@ -52,7 +52,7 @@ export default function ByreOrb({ size = 160, awake, style }: Props) {
           source={brandMark}
           style={{ width: size, height: size }}
           resizeMode="contain"
-          accessibilityLabel="Byre"
+          accessibilityLabel="Phonewise"
         />
       </Animated.View>
     </View>

@@ -27,7 +27,7 @@ import android.widget.TextView
  *
  * ## Why an overlay and not an activity
  *
- * The service used to answer a blocked app by firing a `byre://shield` deep
+ * The service used to answer a blocked app by firing a `phonewise://shield` deep
  * link, which launches Byre as a task. Three things are wrong with that:
  *
  *   1. **It is slow.** A cold-ish RN activity start is hundreds of
@@ -309,12 +309,12 @@ object ShieldOverlay {
   }
 
   private fun openByre(context: Context, packageName: String) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("byre://shield?package=$packageName"))
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("phonewise://shield?package=$packageName"))
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     try {
       context.startActivity(intent)
     } catch (e: Exception) {
-      Log.e("ByreShieldOverlay", "Failed to open Byre", e)
+      Log.e("PhonewiseShieldOverlay", "Failed to open Phonewise", e)
     }
   }
 }

@@ -9,7 +9,7 @@ import android.view.accessibility.AccessibilityEvent
 /**
  * Watches for foreground-app changes and, when the app that just came to
  * the foreground is on the blocked list, brings Byre to the front via a
- * `byre://shield?package=<pkg>` deep link — the RN side (App.tsx) listens
+ * `phonewise://shield?package=<pkg>` deep link — the RN side (App.tsx) listens
  * for that URL and shows the Shield/Gate/Grant flow already built for the
  * chosen intensity level.
  *

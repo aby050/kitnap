@@ -10,7 +10,7 @@ import ByreMark from '../ui/ByreMark';
 import { APPEARANCES, appearance } from '../design/appearance';
 
 /** Shown as the row's current value, so the setting states itself. */
-const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'Byre';
+const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'Phonewise';
 
 /** Derived rather than written out, so the copy can't drift from the seed the
  *  way it did when DEMO_DAYS went from 60 to 183. */
@@ -247,7 +247,7 @@ export default function SettingsScreen({
               {onOpenAbout && (
                 <SettingRow
                   icon={<RowIcon name="info" />}
-                  title="About Byre"
+                  title="About Phonewise"
                   subtitle="What it does, and how to reach us"
                   onPress={onOpenAbout}
                 />
@@ -276,7 +276,7 @@ export default function SettingsScreen({
               turquoise mark would out-shout the list above it, which is the
               screen's actual content. Dark, it reads as a maker's stamp. */}
           <ByreMark size={72} tone="dark" />
-          <Text style={styles.footerName}>Byre</Text>
+          <Text style={styles.footerName}>Phonewise</Text>
           <Text style={styles.footerVersion}>{versionLine}</Text>
         </View>
       </ScrollView>

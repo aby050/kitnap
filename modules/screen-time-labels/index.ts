@@ -9,7 +9,7 @@ import { Platform, ViewProps } from 'react-native';
  * so this is a native view: React Native hands it a selection id, the Swift
  * side reads that selection out of the shared app group and renders the
  * genuine icons. Nothing about which apps they are is ever readable from JS,
- * which is what keeps the "Byre never sees the names" promise true.
+ * which is what keeps the "Phonewise never sees the names" promise true.
  */
 
 export type ScreenTimeLabelsProps = ViewProps & {

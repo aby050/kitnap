@@ -19,7 +19,7 @@ import { File, Paths } from 'expo-file-system';
  * be pulled afterwards with:
  *
  *   xcrun devicectl device copy from --domain-type appDataContainer \
- *     --domain-identifier com.abhay.byre --source Documents --destination ./out
+ *     --domain-identifier com.abhay.phonewise --source Documents --destination ./out
  *
  * ## Constraints this has to respect
  *

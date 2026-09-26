@@ -29,7 +29,7 @@ object ShieldCopyStore {
 
   private const val DEFAULT_TITLE = "You did not come here for anything."
   private const val DEFAULT_EMPHASIS = ""
-  private const val DEFAULT_BODY = "You asked Byre to keep this shut. Open Byre to earn your way in."
+  private const val DEFAULT_BODY = "You asked Phonewise to keep this shut. Open Phonewise to earn your way in."
   private const val DEFAULT_CTA = "Let me in"
 
   fun set(context: Context, title: String, emphasis: String, body: String, cta: String) {

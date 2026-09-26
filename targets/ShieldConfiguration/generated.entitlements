@@ -6,7 +6,7 @@
     <true/>
     <key>com.apple.security.application-groups</key>
     <array>
-      <string>group.com.abhay.byre</string>
+      <string>group.com.abhay.phonewise</string>
     </array>
   </dict>
 </plist>

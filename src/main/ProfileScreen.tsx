@@ -380,8 +380,8 @@ export default function ProfileScreen({
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
             <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
           </Pressable>
-          {/* The wordmark said "Byre" on a screen the user reached from inside
-              Byre — it named the app to someone who already knew. The highest
+          {/* The wordmark said "Phonewise" on a screen the user reached from inside
+              Phonewise — it named the app to someone who already knew. The highest
               award actually earned is the one piece of identity this header
               can carry that the user did not already have.
               Falls back to the wordmark only while nothing is unlocked, so a
@@ -389,7 +389,7 @@ export default function ProfileScreen({
               though it were theirs. */}
           <View style={styles.headerTitleWrap}>
             {heroAward.locked ? (
-              <Text style={styles.headerWordmark}>Byre</Text>
+              <Text style={styles.headerWordmark}>Phonewise</Text>
             ) : (
               <>
                 <Text style={styles.headerAward} numberOfLines={1}>
@@ -786,7 +786,7 @@ export default function ProfileScreen({
             {shareTarget && (
               <>
                 <LinearGradient colors={['#12241A', '#0B0B0D']} style={StyleSheet.absoluteFill} />
-                <Text style={styles.shareBrand}>Byre</Text>
+                <Text style={styles.shareBrand}>Phonewise</Text>
                 <Medal medal={shareTarget.medal} def={shareTarget} size={88} locked={!earnedIds.has(shareTarget.id)} id={`share-${shareTarget.id}`} />
                 <Text style={styles.shareName}>{shareTarget.name}</Text>
                 <Text style={styles.shareDesc}>{shareTarget.description}</Text>

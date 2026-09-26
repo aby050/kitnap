@@ -12,10 +12,10 @@ import { momentLine } from './moments';
  * bundle identifiers before any build with this capability will even
  * provision successfully, let alone before requestAuthorization() can
  * succeed on-device:
- *   - com.abhay.byre
- *   - com.abhay.byre.ActivityMonitor
- *   - com.abhay.byre.ShieldAction
- *   - com.abhay.byre.ShieldConfiguration
+ *   - com.abhay.phonewise
+ *   - com.abhay.phonewise.ActivityMonitor
+ *   - com.abhay.phonewise.ShieldAction
+ *   - com.abhay.phonewise.ShieldConfiguration
  * Request at https://developer.apple.com/contact/request/family-controls-distribution
  * — once per bundle ID above, from the Apple Developer account holder.
  * Until all four are approved, requestAuthorization() below will reject.
@@ -152,8 +152,8 @@ export function isCurrentlyShielded(): boolean {
 }
 
 /** Sets the Shield's appearance and what its button does. The primary
- *  button opens Byre (via `type: 'openApp'`) rather than granting access
- *  directly — the actual Gate/difficulty challenge happens inside Byre,
+ *  button opens Phonewise (via `type: 'openApp'`) rather than granting access
+ *  directly — the actual Gate/difficulty challenge happens inside Phonewise,
  *  same as the Android flow, not inside the Shield extension itself (Apple
  *  doesn't allow arbitrary custom UI there). */
 /**
@@ -196,7 +196,7 @@ const SHIELD_LINES: { title: string; subtitle: string; icon: string }[] = [
     subtitle: 'Outside is rendering at full resolution today. No loading screen.',
     icon: 'sun.max.fill',
   },
-  // A style pack rather than one-offs — Byre-flavored wisdom, not scripture
+  // A style pack rather than one-offs — Phonewise-flavored wisdom, not scripture
   // recited straight, but the Gita's actual line each time so it stays real.
   {
     title: 'You have a right to your work',
@@ -258,7 +258,7 @@ const SHIELD_SUBTITLES = [
   'It will still be there tonight. So will you.',
 ];
 
-/** Identifier for the "open Byre" banner the shield posts, shared with the
+/** Identifier for the "open Phonewise" banner the shield posts, shared with the
  *  notification-tap handler in App.tsx. Stable so repeat taps replace the
  *  banner instead of stacking. */
 export const SHIELD_UNLOCK_NOTIFICATION_ID = 'byre-shield-unlock';
@@ -267,7 +267,7 @@ export function configureShield(_title?: string, personalLine?: string) {
   if (!native) return;
   const line = shieldLineForToday();
   native.updateShield(
-    // Cast: `titleVariants` / `subtitleVariants` are Byre's own additions,
+    // Cast: `titleVariants` / `subtitleVariants` are Phonewise's own additions,
     // read by ShieldConfigurationExtension.swift. The library's TS type for
     // the config predates them and doesn't allow extra keys.
     {
@@ -299,7 +299,7 @@ export function configureShield(_title?: string, personalLine?: string) {
       secondaryButtonLabelColor: WHITE,
     } as any,
     {
-      // "Let me in" brings Byre to the front so the Gate can be earned.
+      // "Let me in" brings Phonewise to the front so the Gate can be earned.
       //
       // This used to be a dead button, and the note that replaced it here
       // blamed Apple. It wasn't Apple: the library's `openUrl` called
@@ -316,16 +316,16 @@ export function configureShield(_title?: string, personalLine?: string) {
       // library's own ShieldActionType TS union never listed it.
       primary: {
         type: 'openUrl',
-        // Byre's own registered scheme (app.json's `scheme` array), not the
+        // Phonewise's own registered scheme (app.json's `scheme` array), not the
         // library default "device-activity://".
-        url: 'byre://unlock',
+        url: 'phonewise://unlock',
         behavior: 'defer',
-        // The notification IS the route into Byre, not a consolation prize —
+        // The notification IS the route into Phonewise, not a consolation prize —
         // an extension cannot launch its container, so this is the only
         // bridge iOS gives us. Everything here exists to make the second tap
         // obvious and immediate.
         fallbackNotification: {
-          // Reads as the door it is. "Byre" as a title told the user nothing
+          // Reads as the door it is. "Phonewise" as a title told the user nothing
           // about why their screen just buzzed.
           //
           // No placeholders. The extension only ever supplies `action`,
@@ -335,13 +335,13 @@ export function configureShield(_title?: string, personalLine?: string) {
           // ended up on screen. `{applicationName}` does resolve, but it is
           // nil for a blocked website and leaves the sentence hanging, so the
           // copy is written to stand without it.
-          title: 'Open Byre to get in',
+          title: 'Open Phonewise to get in',
           body: 'Tap here — one quick step and you’re through.',
           // 'active' wakes the screen and banners immediately. The better
           // level here is 'timeSensitive', which also pierces Focus — exactly
           // when someone is most likely to be blocked — but that entitlement
           // is portal-only (not exposed in the App Store Connect API), so it
-          // needs Time Sensitive Notifications ticked on the com.abhay.byre
+          // needs Time Sensitive Notifications ticked on the com.abhay.phonewise
           // App ID first. Flip this the day that's done.
           interruptionLevel: 'active',
           sound: 'default',
@@ -350,8 +350,8 @@ export function configureShield(_title?: string, personalLine?: string) {
           identifier: SHIELD_UNLOCK_NOTIFICATION_ID,
           threadIdentifier: SHIELD_UNLOCK_NOTIFICATION_ID,
           // Read by App.tsx's response listener so tapping lands on the Gate
-          // rather than wherever Byre happened to be last.
-          userInfo: { url: 'byre://unlock' },
+          // rather than wherever Phonewise happened to be last.
+          userInfo: { url: 'phonewise://unlock' },
         },
       } as any,
       // Closes the shield and leaves the app blocked — the honest "not now".
@@ -415,8 +415,8 @@ const MIN_OS_WINDOW_MINUTES = 15;
   // Deliberately longer than the grant the user is shown: fifteen minutes is
   // Apple's floor and the grant is three, so this is a *backstop*, not the
   // primary expiry. `startGrantClock` and `enforcePersistentBlock()` re-block at
-  // the real grant length whenever Byre is alive. This exists so that force-
-  // quitting Byre the moment the door opens costs fifteen minutes instead of
+  // the real grant length whenever Phonewise is alive. This exists so that force-
+  // quitting Phonewise the moment the door opens costs fifteen minutes instead of
   // buying unlimited access, which is what it bought before.
   const windowMinutes = Math.max(grantMinutes, MIN_OS_WINDOW_MINUTES);
   const start = new Date();
@@ -493,7 +493,7 @@ export function grantTemporaryAccess(grantMinutes: number) {
  * between. Deliberately chosen over a usage-metered budget — the deal is
  * simply "three minutes, then it locks."
  *
- * The cost of that choice is that time spent inside Byre is time spent, so
+ * The cost of that choice is that time spent inside Phonewise is time spent, so
  * GrantScreen must send the user off rather than invite them to watch the
  * countdown. That screen is where this rule gets honoured.
  *
@@ -528,7 +528,7 @@ export function grantRemainingMs(): number {
 }
 
 /** The deadline the rest of the app reasons about. While the clock is
- *  paused this is always in the future, which is the point: sitting in Byre
+ *  paused this is always in the future, which is the point: sitting in Phonewise
  *  must never be what ends a grant. */
 function grantUntil(): number | null {
   const remaining = grantRemainingMs();
@@ -556,7 +556,7 @@ export type BlockState =
   /** Earned access, ending at `until`. */
   | { kind: 'granted'; until: number };
 
-/** The single answer to "is Byre holding the door right now?" — every screen
+/** The single answer to "is Phonewise holding the door right now?" — every screen
  *  that talks about blocking reads this instead of guessing from a timer. */
 export function getBlockState(): BlockState {
   if (!native || !hasBlockedSelection()) return { kind: 'none' };
@@ -583,11 +583,11 @@ export function endGrantNow() {
 /** Releases every Screen Time restriction this app has ever applied,
  *  regardless of whether the local selection record still exists.
  *
- * Recovery path for exactly one scenario: uninstalling Byre wipes its App
+ * Recovery path for exactly one scenario: uninstalling Phonewise wipes its App
  * Group container (the selection record lives there), but Apple's shield
  * is enforced by the OS independently of that container — by design, so a
  * kid can't escape a block by deleting the controlling app. Reinstalling
- * gets Byre back but not the record of what it had blocked, so the normal
+ * gets Phonewise back but not the record of what it had blocked, so the normal
  * "unblock these specific tokens" call has nothing to point at. resetBlocks
  * doesn't need to know which tokens — it clears the OS-level state directly.
  */
@@ -600,7 +600,7 @@ export function resetAllBlocks() {
 /* ────────────────────────────────────────────────────────────────────────
  * Adult-content filter
  *
- * Byre cannot detect what anyone looks at, and this is not a workaround for
+ * Phonewise cannot detect what anyone looks at, and this is not a workaround for
  * that — it is the reason one is not needed.
  *
  * Family Controls hands out opaque tokens: an ApplicationToken cannot be

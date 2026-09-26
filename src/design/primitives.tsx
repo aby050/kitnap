@@ -38,7 +38,7 @@ import {
 } from './tokens';
 
 /**
- * Byre's primitives. Every screen is assembled from these — no screen defines
+ * Phonewise's primitives. Every screen is assembled from these — no screen defines
  * its own button, card, row or header.
  *
  * The reason is not tidiness, it's that the app previously had four different
@@ -936,7 +936,7 @@ export function SegmentedControl<T extends string>({
 }
 
 /**
- * Honest empty state. Byre's principle is "no fake numbers", so a screen with
+ * Honest empty state. Phonewise's principle is "no fake numbers", so a screen with
  * nothing in it says so plainly rather than showing placeholder data.
  */
 export function EmptyState({

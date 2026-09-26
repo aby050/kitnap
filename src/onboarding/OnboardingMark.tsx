@@ -39,7 +39,7 @@ export const markSlotHeight = (large?: boolean) =>
 export const ONBOARDING_MARK_SLOT = markSlotHeight(false);
 
 /**
- * The Byre mark, lifted out of individual screens so it can stay mounted
+ * The Phonewise mark, lifted out of individual screens so it can stay mounted
  * from the three education slides through the question flow. Screens render
  * {@link OnboardingMarkSlot} to reserve the same space; this overlay paints
  * the actual mark once. `hidden` only fades it — never unmounts — so a

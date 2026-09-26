@@ -11,7 +11,7 @@ import { Platform, ViewProps } from 'react-native';
  * them.
  *
  * Requires Apple to have approved the Family Controls entitlement for the
- * extension's own bundle id (com.abhay.byre.ReportExtension) — until then
+ * extension's own bundle id (com.abhay.phonewise.ReportExtension) — until then
  * this renders blank on-device even though it builds and installs fine.
  */
 export type UsageReportProps = ViewProps & {

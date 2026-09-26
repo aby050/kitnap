@@ -32,7 +32,7 @@ module.exports = (config) => {
     // DeviceActivityReport is an ExtensionKit extension, and App Store
     // validation rejects the build (409 "must be built as an ExtensionKit
     // extension") when it ships in PlugIns. After any `expo prebuild`,
-    // ios/Byre.xcodeproj must be re-patched: productType
+    // ios/Phonewise.xcodeproj must be re-patched: productType
     // com.apple.product-type.extensionkit-extension, product fileType
     // wrapper.extensionkit-extension, and the appex moved out of "Embed
     // Foundation Extensions" into an "Embed ExtensionKit Extensions" phase

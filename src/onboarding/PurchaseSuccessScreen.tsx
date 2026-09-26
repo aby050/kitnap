@@ -55,7 +55,7 @@ export default function PurchaseSuccessScreen({
       ? 'Restored.\nYou were already in.'
       : isTrial
         ? "You're in.\nSeven days on us."
-        : "You're in.\nWelcome to Byre.";
+        : "You're in.\nWelcome to Phonewise.";
 
   // Every branch has to survive a missing date — the store does not always
   // return one, and "Free until null" is worse than saying nothing.

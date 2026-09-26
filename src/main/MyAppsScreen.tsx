@@ -236,7 +236,7 @@ export default function MyAppsScreen({
           <EmptyState
             icon="calendar"
             title="No recurring rules"
-            body="Add a window like Work Time or Sleep and Byre will block on schedule."
+            body="Add a window like Work Time or Sleep and Phonewise will block on schedule."
             actionLabel="Add a rule"
             onAction={onOpenSchedules}
           />
@@ -300,7 +300,7 @@ export default function MyAppsScreen({
             does the opposite: the Family Activity Picker defines what is
             blocked and everything the user did not pick is allowed already,
             so a screen promising to keep Maps and the dialer "always allowed"
-            describes a permission Byre never grants — nothing reads these
+            describes a permission Phonewise never grants — nothing reads these
             toggles on the way to the shield. It stays on the locked session
             screen, where it is what it actually is: shortcuts out to the
             dialer, maps and your bank while everything else is shut. */}

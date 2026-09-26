@@ -10,7 +10,7 @@ import { createMMKV } from 'react-native-mmkv';
 export type Appearance = 'blue' | 'green';
 
 export const APPEARANCES: { key: Appearance; name: string; blurb: string; swatch: string }[] = [
-  { key: 'green', name: 'Byre', blurb: 'The mark’s own mint', swatch: '#6FE3A9' },
+  { key: 'green', name: 'Phonewise', blurb: 'The mark’s own mint', swatch: '#6FE3A9' },
   { key: 'blue', name: 'Midnight', blurb: 'Electric blue on black', swatch: '#3B4FF2' },
 ];
 

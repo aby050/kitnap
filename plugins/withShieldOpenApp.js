@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 /**
- * Makes the shield's "Let me in" button actually open Byre.
+ * Makes the shield's "Let me in" button actually open Phonewise.
  *
  * This has to be a plugin rather than a plain edit to `targets/`, because
  * react-native-device-activity's own `withCopyTargetFolder` copies that whole

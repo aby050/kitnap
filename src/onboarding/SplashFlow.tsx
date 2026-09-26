@@ -239,7 +239,7 @@ export default function SplashFlow({ onDone }: { onDone: () => void }) {
             source={brandMark}
             style={styles.logo}
             resizeMode="contain"
-            accessibilityLabel="Byre"
+            accessibilityLabel="Phonewise"
           />
         </Animated.View>
       </View>

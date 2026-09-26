@@ -26,7 +26,7 @@ const fs = require('fs');
 const path = require('path');
 
 const TARGET = 'UsageReportExtension';
-const PBX = path.join(__dirname, '..', 'ios', 'Byre.xcodeproj', 'project.pbxproj');
+const PBX = path.join(__dirname, '..', 'ios', 'Phonewise.xcodeproj', 'project.pbxproj');
 
 if (!fs.existsSync(PBX)) {
   console.error(`fix-extensionkit: ${PBX} not found — run expo prebuild first.`);

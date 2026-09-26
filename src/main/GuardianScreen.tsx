@@ -15,10 +15,10 @@ import { generateGuardianCode, hashGuardianCode, newSalt } from '../data/guardia
  *  not technical: loosening a rule means asking a real human for a code, not
  *  fighting the OS.
  *
- *  There is no backend, so there is no way for Byre to deliver the code
+ *  There is no backend, so there is no way for Phonewise to deliver the code
  *  itself. Instead the code is generated on-device and the user sends it to
  *  their guardian themselves, through the OS share sheet — their own
- *  messaging apps, not a service Byre runs. Only a salted hash is ever
+ *  messaging apps, not a service Phonewise runs. Only a salted hash is ever
  *  persisted; the plaintext code exists only for the moment it's shown and
  *  shared. */
 export type Guardian = { enabled: boolean; name: string; contact: string; codeHash: string; codeSalt: string };
@@ -89,7 +89,7 @@ export default function GuardianScreen({
     const trimmedName = name.trim();
     try {
       await Share.share({
-        message: `I've made you my Guardian in Byre.\n\nThis code is the only way I can unblock apps, weaken my limits or delete my account:\n\n${pendingCode}\n\nI can't see it any more — you're the only one who has it. Only give it to me if you think I should really have it.`,
+        message: `I've made you my Guardian in Phonewise.\n\nThis code is the only way I can unblock apps, weaken my limits or delete my account:\n\n${pendingCode}\n\nI can't see it any more — you're the only one who has it. Only give it to me if you think I should really have it.`,
       });
     } catch {
       // Share sheet dismissed or failed — the code is still valid and can be
@@ -124,7 +124,7 @@ export default function GuardianScreen({
           <Text style={styles.heroTitle}>A friend holds the code</Text>
           <Text style={styles.heroBody}>
             We can't stop you disabling this in Settings — nobody can, on iOS. So instead, the five ways
-            out of Byre need a code only your guardian has. You send it to them yourself; Byre never sees
+            out of Phonewise need a code only your guardian has. You send it to them yourself; Phonewise never sees
             it and never delivers it.
           </Text>
         </Animated.View>
@@ -232,7 +232,7 @@ export default function GuardianScreen({
                 <Text style={styles.codeLabel}>Their code — shown once</Text>
                 <Text style={styles.codeValue}>{pendingCode}</Text>
                 <Text style={styles.codeHint}>
-                  Send this to {name.trim() || 'them'} now. Byre keeps no copy you can look up, and
+                  Send this to {name.trim() || 'them'} now. Phonewise keeps no copy you can look up, and
                   this screen will not show it again. If it is lost, three bailouts remove the lock.
                 </Text>
                 <View style={{ height: 14 }} />

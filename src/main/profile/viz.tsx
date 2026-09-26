@@ -20,7 +20,7 @@ import Medal from './Medal';
 import { AchievementDef } from '../../data/progress';
 
 /**
- * The Profile visual language — Byre's own azure/glass focus dashboard,
+ * The Profile visual language — Phonewise's own azure/glass focus dashboard,
  * rendered entirely in vector so it ships with the app (no bitmaps, no emoji).
  *
  *  · GemHero      the iridescent focus crystal + glow bloom (screen centrepiece)

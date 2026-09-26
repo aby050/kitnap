@@ -62,10 +62,10 @@ const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
 };
 import { colors } from './src/theme';
 
-/** byre://shield?package=com.instagram.android — fired by the native
+/** phonewise://shield?package=com.instagram.android — fired by the native
  *  Accessibility Service when a blocked app comes to the foreground. */
 function parseShieldDeepLink(url: string | null): string | null {
-  if (!url || !url.startsWith('byre://shield')) return null;
+  if (!url || !url.startsWith('phonewise://shield')) return null;
   try {
     const query = url.split('?')[1] ?? '';
     const params = new URLSearchParams(query);
@@ -132,7 +132,7 @@ export default function App() {
   // Configured once here so entitlement state is the same everywhere.
   const purchases = usePurchases();
   const [pendingShieldPackage, setPendingShieldPackage] = useState<string | null>(null);
-  // Set when Apple's shield "Let me in" button reopens Byre via the
+  // Set when Apple's shield "Let me in" button reopens Phonewise via the
   // device-activity:// scheme — routes straight to the unlock challenge
   // instead of Home, which is what tapping that button is supposed to mean.
   const [pendingIOSUnlock, setPendingIOSUnlock] = useState(false);
@@ -203,7 +203,7 @@ export default function App() {
   // The base list is always enforced — schedules are lockdown windows that
   // close the escape hatches, not windows that decide *whether* to block — so
   // this only needs to re-run when the list itself changes, plus on foreground
-  // in case the service was restarted while Byre was away.
+  // in case the service was restarted while Phonewise was away.
   useEffect(() => {
     if (!loaded) return;
     const sync = () => {
@@ -232,24 +232,24 @@ export default function App() {
   }, [loaded, persisted.intensityKey]);
 
   // Catches the deep link the Accessibility Service fires when a blocked
-  // app opens, whether Byre was already running or cold-started by it.
+  // app opens, whether Phonewise was already running or cold-started by it.
   useEffect(() => {
     const handleUrl = (url: string | null) => {
       const pkg = parseShieldDeepLink(url);
       if (pkg) setPendingShieldPackage(pkg);
       // iOS's shield has no per-app payload to carry (Family Controls tokens
       // are opaque) — the scheme firing at all is the entire signal.
-      if (url?.startsWith('byre://unlock') || url?.startsWith('device-activity://')) {
+      if (url?.startsWith('phonewise://unlock') || url?.startsWith('device-activity://')) {
         setPendingIOSUnlock(true);
       }
     };
     Linking.getInitialURL().then(handleUrl);
     const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
 
-    // iOS only: Apple's shield button cannot open Byre — no extension can
+    // iOS only: Apple's shield button cannot open Phonewise — no extension can
     // launch its container — so the ShieldAction extension posts a banner
-    // carrying `byre://unlock` instead, and this is what makes tapping it
-    // land on the Gate rather than on whatever screen Byre was last showing.
+    // carrying `phonewise://unlock` instead, and this is what makes tapping it
+    // land on the Gate rather than on whatever screen Phonewise was last showing.
     // Without this the notification opens the app and abandons the user.
     let disposeNotifications: (() => void) | undefined;
     if (Platform.OS === 'ios') {
@@ -259,7 +259,7 @@ export default function App() {
             const data = res.notification.request.content.data as { url?: string } | undefined;
             if (data?.url) handleUrl(data.url);
           };
-          // A tap that cold-started Byre has already been delivered by the
+          // A tap that cold-started Phonewise has already been delivered by the
           // time this listener attaches, so ask for it explicitly.
           Notifications.getLastNotificationResponseAsync().then((res) => {
             if (res) onResponse(res);
@@ -268,7 +268,7 @@ export default function App() {
           disposeNotifications = () => nSub.remove();
         })
         .catch(() => {
-          // Notifications unavailable — the shield banner simply opens Byre
+          // Notifications unavailable — the shield banner simply opens Phonewise
           // on its last screen, which is the old behaviour.
         });
     }
@@ -484,8 +484,8 @@ export default function App() {
             <IOSAppPickerScreen
               hint={
                 hoursFromUsage
-                  ? 'Start with the apps that already eat most of your day. Byre never sees the names you pick.'
-                  : 'Block the apps that usually steal the hours you described. Byre never sees the names you pick.'
+                  ? 'Start with the apps that already eat most of your day. Phonewise never sees the names you pick.'
+                  : 'Block the apps that usually steal the hours you described. Phonewise never sees the names you pick.'
               }
               onContinue={() => setStage('intensity')}
             />
@@ -522,7 +522,7 @@ export default function App() {
               The exit-intent "Too Expensive? Here is 50% OFF" screen that used
               to sit behind "Not now" is gone: a last-chance discount fired at
               someone who just declined is the single most copied screen in
-              this category, and it was one of the things making Byre's funnel
+              this category, and it was one of the things making Phonewise's funnel
               read as a reskin under guideline 4.3(a). */}
           {stage === 'paywall' && (
             <PaywallScreen

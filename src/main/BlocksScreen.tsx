@@ -312,7 +312,7 @@ export default function BlocksScreen({
                     {Platform.OS === 'android'
                       ? query
                         ? `Nothing matching "${query}".`
-                        : 'No apps found. Byre needs usage access to read what is installed.'
+                        : 'No apps found. Phonewise needs usage access to read what is installed.'
                       : 'iOS does not let apps see what else is installed. Use the Screen Time picker instead.'}
                   </Text>
                 </View>
