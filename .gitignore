@@ -65,3 +65,4 @@ expo*.log
 # Design canvases drafted for review; the published Artifact is the record.
 /design-room/
 /design-profile/
+build/
