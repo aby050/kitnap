@@ -14,7 +14,7 @@
       "bundleIdentifier": "com.abhay.phonewise",
       "appleTeamId": "RG96N3U9GH",
       "supportsTablet": false,
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
         "NSCameraUsageDescription": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone.",
@@ -76,7 +76,8 @@
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "16.4"
+            "deploymentTarget": "16.4",
+            "enableSceneSupport": true
           },
           "android": {
             "minSdkVersion": 26
