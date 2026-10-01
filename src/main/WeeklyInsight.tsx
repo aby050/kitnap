@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, useWindowDimensions, Pressable } from 'react-native';
+import { CONTENT_H, CONTENT_W } from '../layout';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -71,7 +72,8 @@ export default function WeeklyInsight({
   const monthStart = weeklyWindows(dateKey()).monthStart;
   const milestones = earnedThisMonth(progress, monthStart);
 
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: rawWidth } = useWindowDimensions();
+  const windowWidth = Math.min(rawWidth, CONTENT_W);
   const cardWidth = windowWidth - 40; // matches container padding width
 
   const [activeIndex, setActiveIndex] = useState(0);

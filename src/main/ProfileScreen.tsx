@@ -1,6 +1,7 @@
 import Svg, { Circle, G } from 'react-native-svg';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
+import { CONTENT_W as COLUMN_W } from '../layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -40,7 +41,7 @@ import {
   DotProgress,
 } from './profile/viz';
 
-const { width } = Dimensions.get('window');
+const width = COLUMN_W;
 const CONTENT_W = width - space.gutter * 2;
 /** Ten weeks fits the card and is long enough for streaks to read as shapes. */
 const HEATMAP_WEEKS = 10;
