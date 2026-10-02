@@ -73,6 +73,7 @@ type Props = {  q: Extract<GateQuestion, { kind: 'activity' }>;
 
 export default function ActivityChallenge({ q, repsFor, onDone, onComplete }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
+  const [askedCamera, setAskedCamera] = useState(false);
   const [fellBackToBreathing, setFellBackToBreathing] = useState(false);
 
   // Swappable: a push-up is impossible in a lift, on a bad shoulder, or in a
@@ -314,11 +315,20 @@ export default function ActivityChallenge({ q, repsFor, onDone, onComplete }: Pr
           We need the camera up so this can't be skipped from a pocket. Nothing is recorded or leaves your phone.
         </Text>
         <View style={styles.ctaWrap}>
-          <Button label="Allow camera" variant="primary" onPress={requestPermission} />
+          <Button
+            label="Continue"
+            variant="primary"
+            onPress={async () => {
+              await requestPermission();
+              setAskedCamera(true);
+            }}
+          />
         </View>
-        <Pressable onPress={goBreathing} hitSlop={10} style={{ alignSelf: 'center' }}>
-          <Text style={styles.skip}>Prefer not to — do a breathing round instead</Text>
-        </Pressable>
+        {askedCamera && (
+          <Pressable onPress={goBreathing} hitSlop={10} style={{ alignSelf: 'center' }}>
+            <Text style={styles.skip}>Camera is off — do a breathing round instead</Text>
+          </Pressable>
+        )}
       </View>
     );
   }

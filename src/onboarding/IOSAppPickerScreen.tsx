@@ -115,7 +115,7 @@ export default function IOSAppPickerScreen({
               ? 'Requesting…'
               : authStatus === 'denied'
                 ? 'Access denied — tap to retry'
-                : 'Allow Screen Time access'
+                : 'Continue'
           }
           variant="outline"
           disabled={authStatus === 'requesting'}

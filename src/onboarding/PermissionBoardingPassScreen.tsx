@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -88,23 +88,6 @@ export default function PermissionBoardingPassScreen({
     return () => sub.remove();
   }, [refresh]);
 
-  // iOS system prompts only appear if we actually request them. Fire the
-  // current card's request so Simulator/device dialogs show up instead of
-  // a Grant button that used to no-op (Android settings openers).
-  useEffect(() => {
-    if (Platform.OS !== 'ios') return;
-    let cancelled = false;
-    (async () => {
-      if (index === 0) await requestScreenTimeAuthorization();
-      else if (index === 1) await Notifications.requestPermissionsAsync();
-      else if (index === 2) await Camera.requestCameraPermissionsAsync();
-      if (!cancelled) await refresh();
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [index, refresh]);
-
   const androidCards: Card[] = [
     {
       key: 'overlay',
@@ -155,7 +138,7 @@ export default function PermissionBoardingPassScreen({
       key: 'screenTime',
       icon: 'chart',
       title: 'Screen Time',
-      desc: "Uses Apple's Screen Time controls so Phonewise can block the apps you pick. A system prompt appears — Allow it.",
+      desc: "Uses Apple's Screen Time controls so Phonewise can block the apps you pick. A system prompt follows.",
       granted: screenTime,
       onRequest: async () => {
         await requestScreenTimeAuthorization();
@@ -198,7 +181,10 @@ export default function PermissionBoardingPassScreen({
   const card = cards[index];
   const isLast = index === cards.length - 1;
 
+  const advancedFor = useRef('');
   const next = () => {
+    if (advancedFor.current === card.key) return;
+    advancedFor.current = card.key;
     if (isLast) onContinue();
     else setIndex((i) => i + 1);
   };
@@ -243,10 +229,26 @@ export default function PermissionBoardingPassScreen({
           </View>
         ) : (
           <>
-            <Button label="Grant" variant="primary" onPress={card.onRequest} />
-            <Pressable onPress={next} hitSlop={10}>
-              <Text style={styles.skipLink}>Skip for now</Text>
-            </Pressable>
+            {Platform.OS === 'ios' ? (
+              // Apple 5.1.1(iv): the button ahead of a system permission prompt
+              // must read Continue/Next and always lead to the prompt, with no
+              // way to skip past it. Whatever the answer, move on afterwards.
+              <Button
+                label="Continue"
+                variant="primary"
+                onPress={async () => {
+                  await card.onRequest();
+                  next();
+                }}
+              />
+            ) : (
+              <>
+                <Button label="Grant" variant="primary" onPress={card.onRequest} />
+                <Pressable onPress={next} hitSlop={10}>
+                  <Text style={styles.skipLink}>Skip for now</Text>
+                </Pressable>
+              </>
+            )}
           </>
         )}
       </View>
