@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Modal from './Modal';
 import ScreenTimeLabels, { screenTimeLabelsAvailable } from 'screen-time-labels';
 import { SELECTION_ID, getBlockState, getSelectionCounts } from '../data/iosScreenTime';
 import { palette, radius } from '../design/tokens';

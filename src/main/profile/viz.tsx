@@ -3,13 +3,11 @@ import { StyleSheet, Text, View, ViewStyle, StyleProp } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, {
   Circle,
-  Ellipse,
   Path,
   Rect,
   Line,
   Defs,
   LinearGradient as SvgGradient,
-  RadialGradient,
   Stop,
   G,
   Text as SvgText,
@@ -23,7 +21,6 @@ import { AchievementDef } from '../../data/progress';
  * The Profile visual language — Phonewise's own azure/glass focus dashboard,
  * rendered entirely in vector so it ships with the app (no bitmaps, no emoji).
  *
- *  · GemHero      the iridescent focus crystal + glow bloom (screen centrepiece)
  *  · IntensityBars two-tone stacked bar chart (mint = held, coral = slip)
  *  · Donut         segmented ring for the device-usage breakdown
  *  · Sparkline     inline trend line for a metric mini-card
@@ -40,78 +37,6 @@ let _uid = 0;
  *  within a render pass. */
 function useGid(prefix: string) {
   return React.useMemo(() => `${prefix}-${++_uid}`, [prefix]);
-}
-
-/* ─────────────────────────────────────────────────────────────
- * GEM HERO — the iridescent crystal that anchors the screen
- * ───────────────────────────────────────────────────────────── */
-
-export function GemHero({ size = 208, glow = palette.accent }: { size?: number; glow?: string }) {
-  const g = useGid('gem');
-  const h = size * 1.06;
-  return (
-    <View style={{ width: size, height: h, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={h} viewBox="0 0 200 212">
-        <Defs>
-          {/* Ambient bloom behind the gem — this is the screen's light source. */}
-          <RadialGradient id={`${g}-glow`} cx="50%" cy="44%" r="52%">
-            <Stop offset="0%" stopColor={glow} stopOpacity={0.42} />
-            <Stop offset="42%" stopColor={glow} stopOpacity={0.12} />
-            <Stop offset="100%" stopColor={glow} stopOpacity={0} />
-          </RadialGradient>
-          {/* Play-of-colour: mint → teal → blue → violet → gold, the opal spectrum. */}
-          <SvgGradient id={`${g}-body`} x1="0.12" y1="0.05" x2="0.9" y2="0.98">
-            <Stop offset="0" stopColor="#D6FCEA" />
-            <Stop offset="0.24" stopColor={palette.accent} />
-            <Stop offset="0.46" stopColor="#6FE3E8" />
-            <Stop offset="0.66" stopColor="#7F92E0" />
-            <Stop offset="0.84" stopColor="#C79BFF" />
-            <Stop offset="1" stopColor="#FFE29A" />
-          </SvgGradient>
-          <SvgGradient id={`${g}-flash`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.0} />
-            <Stop offset="0.5" stopColor="#BFFFF0" stopOpacity={0.55} />
-            <Stop offset="1" stopColor="#7F92E0" stopOpacity={0.0} />
-          </SvgGradient>
-          <SvgGradient id={`${g}-ped`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#1C1C21" />
-            <Stop offset="1" stopColor="#050506" />
-          </SvgGradient>
-        </Defs>
-
-        {/* Glow field */}
-        <Rect x="0" y="0" width="200" height="212" fill={`url(#${g}-glow)`} />
-
-        {/* Pedestal */}
-        <Ellipse cx="100" cy="192" rx="46" ry="9" fill="#000000" opacity={0.6} />
-        <Rect x="66" y="176" width="68" height="16" rx="6" fill={`url(#${g}-ped)`} />
-
-        {/* Crystal body — an irregular rounded opal silhouette */}
-        <G>
-          <Path
-            d="M100 20 C132 26 170 50 172 94 C174 132 146 168 100 176 C56 168 26 134 28 96 C30 52 68 26 100 20 Z"
-            fill={`url(#${g}-body)`}
-          />
-          {/* Colour flashes — soft internal iridescence */}
-          <Path d="M74 44 C104 40 142 66 138 104 C120 92 96 84 70 96 C58 74 62 52 74 44 Z" fill={`url(#${g}-flash)`} />
-          <Path d="M118 118 C136 120 150 138 138 156 C120 150 104 150 92 158 C104 132 106 120 118 118 Z" fill="#7F92E0" opacity={0.28} />
-          <Path d="M50 108 C66 104 86 116 84 138 C68 138 56 132 46 140 C42 126 42 114 50 108 Z" fill="#FFE29A" opacity={0.22} />
-          {/* Facet lines */}
-          <Path d="M100 24 L100 172 M40 92 L160 100 M60 46 L150 150 M150 52 L54 148" stroke="#FFFFFF" strokeOpacity={0.18} strokeWidth={1} />
-          {/* Top highlight */}
-          <Ellipse cx="80" cy="58" rx="22" ry="12" fill="#FFFFFF" opacity={0.5} transform="rotate(-24 80 58)" />
-          {/* Rim */}
-          <Path
-            d="M100 20 C132 26 170 50 172 94 C174 132 146 168 100 176 C56 168 26 134 28 96 C30 52 68 26 100 20 Z"
-            fill="none"
-            stroke="#FFFFFF"
-            strokeOpacity={0.3}
-            strokeWidth={1.5}
-          />
-        </G>
-      </Svg>
-    </View>
-  );
 }
 
 /* ─────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Modal from './Modal';
 import Icon from '../ui/Icon';
 import BailoutGlyph from './BailoutGlyph';
 import { palette, radius, space, type } from '../design/tokens';

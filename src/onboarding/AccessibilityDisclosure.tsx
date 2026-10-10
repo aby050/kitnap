@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Modal from '../components/Modal';
 import { Button } from '../design/primitives';
 import { palette, radius } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';

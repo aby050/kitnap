@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, View, Pressable, Modal, TouchableOpacity } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, View, Pressable, TouchableOpacity } from 'react-native';
+import Modal from '../components/Modal';
 import { CONTENT_H, CONTENT_W } from '../layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';

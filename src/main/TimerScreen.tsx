@@ -3,7 +3,6 @@ import {
   BackHandler,
   Dimensions,
   Linking,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Modal from '../components/Modal';
 import { CONTENT_H, CONTENT_W } from '../layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';

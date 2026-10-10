@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Modal from './Modal';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Button } from '../design/primitives';
 import BailoutGlyph from './BailoutGlyph';
