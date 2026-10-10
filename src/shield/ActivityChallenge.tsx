@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Dimensions } from 'react-native';
+import { CONTENT_H, CONTENT_W } from '../layout';
 import { useCameraPermissions } from 'expo-camera';
 import { useKeepAwake } from 'expo-keep-awake';
 import { GateQuestion } from '../data/gateQuestions';
@@ -437,7 +438,7 @@ const styles = StyleSheet.create({
     // and rep count still fit on a small phone.
     // 62%, not 70%: the rest of the screen has to hold the prompt, the tier
     // note and the Bailout link without them colliding.
-    height: Math.min(Dimensions.get('window').height * 0.62, 560),
+    height: Math.min(CONTENT_H * 0.62, 560),
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#000',

@@ -6,14 +6,15 @@
       "phonewise",
       "device-activity"
     ],
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.abhay.phonewise",
       "appleTeamId": "RG96N3U9GH",
-      "supportsTablet": false,
+      "supportsTablet": true,
+      "requireFullScreen": true,
       "buildNumber": "3",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
@@ -92,7 +93,7 @@
         }
       ],
       "./plugins/withShieldOpenApp.js",
-        "./plugins/withIPhoneOnlyExtensions.js",
+      "./plugins/withDeviceFamily.js",
       "@react-native-community/datetimepicker",
       [
         "expo-video",

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { CONTENT_H, CONTENT_W } from '../layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -15,7 +16,8 @@ import ByreOrb from '../components/ByreOrb';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
-const { width, height } = Dimensions.get('window');
+const width = CONTENT_W;
+const height = CONTENT_H;
 const CONFETTI_COLORS = ['#f5c542', '#e07a5f', '#8fb8ff', palette.accent, '#ff7ab8', '#7dd8ff', '#d9f77e'];
 
 function ConfettiPiece({ index }: { index: number }) {

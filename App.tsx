@@ -61,6 +61,7 @@ const INTENSITY_TO_MONITORING_LEVEL: Record<IntensityKey, MonitoringLevel> = {
   strict: 'strict',
 };
 import { colors } from './src/theme';
+import { CONTENT_MAX_W } from './src/layout';
 
 /** phonewise://shield?package=com.instagram.android — fired by the native
  *  Accessibility Service when a blocked app comes to the foreground. */
@@ -362,6 +363,7 @@ export default function App() {
         <View style={styles.root}>
           <PersistentBackground />
           <StatusBar style="light" />
+          <View style={styles.column}>
 
           {stage === 'splash' && <SplashFlow onDone={() => setStage('education')} />}
 
@@ -598,6 +600,7 @@ export default function App() {
             />
           )}
 
+          </View>
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -606,4 +609,6 @@ export default function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  // Phone-width column on iPad; full width on phones. See src/layout.ts.
+  column: { flex: 1, width: '100%', maxWidth: CONTENT_MAX_W, alignSelf: 'center' },
 });

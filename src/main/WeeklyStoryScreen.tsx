@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import { CONTENT_H, CONTENT_W } from '../layout';
 import Animated, { FadeIn, FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,7 +39,7 @@ import { tapLight } from '../ui/haptics';
  *      the story and the check-in can never report different weeks.
  */
 
-const { width: SCREEN_W } = Dimensions.get('window');
+const SCREEN_W = CONTENT_W;
 
 type Page = {
   key: string;

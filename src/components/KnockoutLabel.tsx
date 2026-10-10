@@ -1,5 +1,6 @@
 import React from 'react';
 import { Dimensions, StyleSheet } from 'react-native';
+import { CONTENT_H, CONTENT_W } from '../layout';
 import Svg, { Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { fonts, gradients } from '../design/tokens';
 
@@ -36,7 +37,7 @@ export default function KnockoutLabel({
   height: number;
   fontSize?: number;
 }) {
-  const screenH = Dimensions.get('window').height;
+  const screenH = CONTENT_H;
 
   return (
     <Svg

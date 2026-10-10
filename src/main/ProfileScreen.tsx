@@ -1,6 +1,8 @@
 import Svg, { Circle, G } from 'react-native-svg';
 import React, { useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
+import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions } from 'react-native';
+import Modal from '../components/Modal';
+import { CONTENT_W as COLUMN_W } from '../layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -40,7 +42,7 @@ import {
   DotProgress,
 } from './profile/viz';
 
-const { width } = Dimensions.get('window');
+const width = COLUMN_W;
 const CONTENT_W = width - space.gutter * 2;
 /** Ten weeks fits the card and is long enough for streaks to read as shapes. */
 const HEATMAP_WEEKS = 10;
@@ -60,7 +62,7 @@ const STAT_TINTS = {
 } as const;
 
 /** The signature headline figure — big tabular numerals with small dim units,
- *  the way Opal renders "3h 37m". Split so the unit contrast does the work. */
+ *  as in "3h 37m". Split so the unit contrast does the work. */
 function compactDuration(minutes: number): string {
   if (minutes >= 6000) return `${Math.round(minutes / 60)}h`;
   return formatDuration(minutes);

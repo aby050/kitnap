@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Modal from './Modal';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
