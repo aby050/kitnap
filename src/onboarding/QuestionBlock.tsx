@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
    *
    * It was a centred 21pt medium line capped at 300pt wide, with the answers
    * as small wrapped chips underneath — the standard onboarding-quiz layout
-   * that most apps in this category ship. Set as a left-aligned
+   * that most apps in this category ship, Opal included. Set as a left-aligned
    * editorial headline instead, on the same type as the education slides, so
    * the whole flow reads as one voice rather than a funnel bolted onto an app. */
   prompt: {

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { Dimensions, Image, Pressable, StyleSheet, View } from 'react-native';
-import { CONTENT_H, CONTENT_W } from '../layout';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import Animated, {
@@ -17,7 +16,7 @@ import { tapMedium } from '../ui/haptics';
 import { brandMark } from '../ui/brandMark';
 import { palette } from '../design/tokens';
 
-const width = CONTENT_W;
+const { width } = Dimensions.get('window');
 
 /** The splash's own palette — deliberately deeper than the app's ground so the
  *  bloom has somewhere to come up from. */

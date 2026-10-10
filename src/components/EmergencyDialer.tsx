@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import Modal from './Modal';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { palette, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
 import { tapLight } from '../ui/haptics';

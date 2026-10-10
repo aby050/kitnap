@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
-import Modal from '../components/Modal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -20,6 +19,7 @@ import {
 import { TierThumb, TierConnector, GradientMeter } from './profile/viz';
 
 import { Button, Card, Pill } from '../design/primitives';
+import { Modal } from 'react-native';
 
 const CATEGORIES: { key: AchievementCategory | 'all'; label: string }[] = [
   { key: 'all', label: 'All' },

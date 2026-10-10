@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, View, Pressable, TouchableOpacity } from 'react-native';
-import Modal from '../components/Modal';
-import { CONTENT_H, CONTENT_W } from '../layout';
+import { Dimensions, ScrollView, StyleSheet, Text, View, Pressable, Modal, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Path, Line, Rect } from 'react-native-svg';
@@ -10,8 +8,7 @@ import { GradientButton } from '../components/ui';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
-const width = CONTENT_W;
-const height = CONTENT_H;
+const { width, height } = Dimensions.get('window');
 
 /**
  * Onboarding step, shown right after Intensity, before Future-Self.

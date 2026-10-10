@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,7 +11,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Modal from '../components/Modal';
 import AppGlyph from '../ui/AppGlyph';
 import { InstalledApp, useInstalledApps } from '../data/installedApps';
 import { SafeAreaView } from 'react-native-safe-area-context';

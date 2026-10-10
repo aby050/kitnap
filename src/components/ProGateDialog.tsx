@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Modal from './Modal';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Button } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';

@@ -10,7 +10,7 @@ const PERIODS: { key: NonNullable<UsageReportProps['period']>; label: string }[]
 ];
 
 /**
- * Real "Screen Time" numbers, as a card. Apple only lets this
+ * Real "Screen Time" numbers, the Opal-style card. Apple only lets this
  * render through a DeviceActivityReport extension (targets/UsageReport) —
  * it stays blank until that extension's own bundle id
  * (com.abhay.phonewise.ReportExtension) has Apple's Family Controls approval,

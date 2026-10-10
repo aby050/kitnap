@@ -3,6 +3,7 @@ import {
   BackHandler,
   Dimensions,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -12,8 +13,6 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Modal from '../components/Modal';
-import { CONTENT_H, CONTENT_W } from '../layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
 import Animated, {
@@ -50,7 +49,7 @@ import { SoundKey } from '../data/sounds';
 import { fonts, gradients, motion, palette, radius, space, type } from '../design/tokens';
 import Toggle from '../design/Toggle';
 
-const width = CONTENT_W;
+const { width } = Dimensions.get('window');
 
 // Duration bounds — adjusted in 15-minute steps by the ± controls.
 /** Idle time before the locked screen steps back to the always-on face.

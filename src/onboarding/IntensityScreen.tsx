@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Dimensions } from 'react-native';
-import { CONTENT_H, CONTENT_W } from '../layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Path, Defs, RadialGradient, Stop } from 'react-native-svg';
 import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
@@ -10,7 +9,7 @@ import { isLoosening } from '../data/intensityChange';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
-const width = CONTENT_W;
+const { width } = Dimensions.get('window');
 
 const ROWS: { label: string; get: (i: (typeof INTENSITIES)[number]) => string }[] = [
   { label: 'Challenge', get: (i) => i.challengeTypes },
