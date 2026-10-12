@@ -97,7 +97,7 @@ import {
 } from '../data/iosScreenTime';
 import { palette, space } from '../design/tokens';
 import { useEntrance } from '../design/motion';
-import { daysOnLevel, isLoosening, requestIntensityChange, settleIntensity } from '../data/intensityChange';
+import { daysOnLevel, isLoosening, LOOSEN_DELAY_MS, requestIntensityChange, settleIntensity } from '../data/intensityChange';
 import GuardianVerifyScreen, { GuardedIntent, GUARDIAN_RELEASE_COST } from './GuardianVerifyScreen';
 import { Screen, ScreenHeader } from '../design/primitives';
 import Icon, { IconName } from '../ui/Icon';
@@ -773,6 +773,69 @@ export default function MainApp({
   const [progressPhotos, setProgressPhotos] = useState<ProgressPhoto[]>(persisted.progressPhotos);
   const [blockedPackages, setBlockedPackagesState] = useState<string[]>(persisted.blockedPackages);
 
+  const [pendingUnblocks, setPendingUnblocks] = useState<{ pkg: string; at: number }[]>(
+    persisted.pendingUnblocks ?? [],
+  );
+
+  /** The one way the blocked list changes from the UI.
+   *
+   *  Adding is always instant. Removing is the loosening, so it goes through
+   *  the guardian when there is one — and on Strict with no guardian, it waits
+   *  LOOSEN_DELAY_MS, the "24 hour delay" the Strict card promises. Without
+   *  this, Strict delayed leaving Strict but not quietly emptying the list,
+   *  which is the same escape by a side door. */
+  const changeBlocked = (next: string[], back: Overlay, intent: GuardedIntent) => {
+    const removed = blockedPackages.filter((p) => !next.includes(p));
+    const apply = (list: string[]) => {
+      setBlockedPackagesState(list);
+      onPatch({ blockedPackages: list });
+    };
+    if (removed.length === 0) {
+      apply(next);
+      return;
+    }
+    if (guardian?.enabled || activeIntensityKey !== 'strict') {
+      requireGuardian(() => apply(next), back, intent);
+      return;
+    }
+    // Strict, no guardian: keep the removed apps blocked for now, schedule them.
+    apply([...next, ...removed]);
+    const at = Date.now() + LOOSEN_DELAY_MS;
+    const queued = [
+      ...pendingUnblocks.filter((u) => !removed.includes(u.pkg)),
+      ...removed.map((pkg) => ({ pkg, at: pendingUnblocks.find((u) => u.pkg === pkg)?.at ?? at })),
+    ];
+    setPendingUnblocks(queued);
+    onPatch({ pendingUnblocks: queued });
+    Alert.alert(
+      'Unblocks in 24 hours',
+      "You're on Strict, so taking an app off the list waits a day. It stays blocked until then. If you still want it gone tomorrow, it will be.",
+    );
+  };
+
+  // Land any unblock whose day has passed. Stored deadlines, settled on
+  // foreground, so closing the app does not reset the clock.
+  useEffect(() => {
+    const settle = () => {
+      if (pendingUnblocks.length === 0) return;
+      const now = Date.now();
+      const due = pendingUnblocks.filter((u) => u.at <= now).map((u) => u.pkg);
+      if (due.length === 0) return;
+      const rest = pendingUnblocks.filter((u) => u.at > now);
+      const list = blockedPackages.filter((p) => !due.includes(p));
+      setBlockedPackagesState(list);
+      setPendingUnblocks(rest);
+      onPatch({ blockedPackages: list, pendingUnblocks: rest });
+    };
+    settle();
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') settle();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingUnblocks, blockedPackages]);
+
+
   /**
    * Is there actually anything being held back right now?
    *
@@ -1326,13 +1389,7 @@ export default function MainApp({
             /* Adding is free; taking something off is the loosening. Guarding
                both would make the guardian a tax on tightening, which is the
                opposite of the point. */
-            const loosening = next.length < blockedPackages.length;
-            const apply = () => {
-              setBlockedPackagesState(next);
-              onPatch({ blockedPackages: next });
-            };
-            if (loosening) requireGuardian(apply, 'blockedApps', 'blockedApps');
-            else apply();
+            changeBlocked(next, 'blockedApps', 'blockedApps');
           }}
           appModes={blockedAppModes}
           onChangeModes={(next) => {
@@ -1380,15 +1437,7 @@ export default function MainApp({
              nothing. */
           blockedPackages={blockedPackages}
           onUnblock={(pkg) =>
-            requireGuardian(
-              () => {
-                const next = blockedPackages.filter((p) => p !== pkg);
-                setBlockedPackagesState(next);
-                onPatch({ blockedPackages: next });
-              },
-              'blocks',
-              'blockedApps',
-            )
+            changeBlocked(blockedPackages.filter((p) => p !== pkg), 'blocks', 'blockedApps')
           }
         />
       );
@@ -1729,12 +1778,7 @@ export default function MainApp({
                 // made the tidiest route out of Phonewise a single tap on the very
                 // screen listing what you asked to be protected from — and it
                 // bypassed a guardian entirely.
-                const next = blockedPackages.filter((p) => p !== pkg);
-                const apply = () => {
-                  setBlockedPackagesState(next);
-                  onPatch({ blockedPackages: next });
-                };
-                requireGuardian(apply, null, 'blockedApps');
+                changeBlocked(blockedPackages.filter((p) => p !== pkg), null, 'blockedApps');
               }}
               onOpenBlockedApps={() => setOverlay('blockedApps')}
               onOpenSchedules={() => setOverlay('schedules')}
@@ -1760,12 +1804,7 @@ export default function MainApp({
               }}
               blockedPackages={blockedPackages}
               onUpdateBlockedPackages={(next) => {
-                const apply = () => {
-                  setBlockedPackagesState(next);
-                  onPatch({ blockedPackages: next });
-                };
-                if (next.length < blockedPackages.length) requireGuardian(apply, null, 'blockedApps');
-                else apply();
+                changeBlocked(next, null, 'blockedApps');
               }}
               tokenBalance={emergencyTokens}
               onSpendTokenToCancel={() => {

@@ -34,6 +34,11 @@ export type PersistedState = {
    *  Strict starts to bite is the same as not having chosen it. */
   pendingIntensityKey?: IntensityKey | null;
   pendingIntensityAt?: number | null;
+  /** Apps the user asked to unblock while on Strict, and when each lands.
+   *  Same rule as the level itself: in Strict, loosening waits a day. The
+   *  packages stay in `blockedPackages` (so the shield keeps working) until
+   *  their time comes. */
+  pendingUnblocks?: { pkg: string; at: number }[];
   futureSelfMessage: string;
   goal: GoalData;
   hoursReclaimed: number;

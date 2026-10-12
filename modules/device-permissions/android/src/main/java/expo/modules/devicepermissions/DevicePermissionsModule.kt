@@ -120,22 +120,6 @@ class DevicePermissionsModule : Module() {
       ctx.startActivity(intent)
     }
 
-    Function("isNotificationListenerEnabled") {
-      val ctx = appContext.reactContext ?: return@Function false
-      val enabled = Settings.Secure.getString(
-        ctx.contentResolver,
-        "enabled_notification_listeners",
-      ) ?: ""
-      enabled.contains(ctx.packageName)
-    }
-
-    Function("openNotificationListenerSettings") {
-      val ctx = appContext.reactContext ?: return@Function null
-      val intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-      ctx.startActivity(intent)
-    }
-
     /** The lines the overlay shows. Written whenever the shield is configured
      *  in JS, read by the accessibility service in the moment a block fires —
      *  see ShieldCopyStore for why the cover cannot simply ask. */

@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.inputmethod.InputMethodManager
 
 /**
  * Watches for foreground-app changes and, when the app that just came to
@@ -62,6 +63,15 @@ class ByreAccessibilityService : AccessibilityService() {
       // anything.
       return
     }
+
+    // Windows that open on top of the current app without replacing it: the
+    // notification shade, quick settings, the volume panel, the keyboard. They
+    // say nothing about which app is in front, so they must neither show nor
+    // hide anything. Treating them as "moved to an unblocked app" was a
+    // bypass: on the shield, pull the shade down and back up, and the cover
+    // was gone with the blocked app still underneath — and since the blocked
+    // app's window never changed, nothing fired to bring the cover back.
+    if (isTransientSystemWindow(pkg)) return
 
     // Lockdown inverts the rule: everything is blocked unless it is on the
     // short allowlist. Evaluated before the blocklist because during a
@@ -136,6 +146,20 @@ class ByreAccessibilityService : AccessibilityService() {
       ShieldCopyStore.body(applicationContext),
       ShieldCopyStore.cta(applicationContext),
     )
+  }
+
+  private var imePackages: Set<String>? = null
+
+  private fun isTransientSystemWindow(pkg: String): Boolean {
+    if (pkg == "com.android.systemui") return true
+    val imes = imePackages ?: try {
+      val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+      (imm?.enabledInputMethodList?.map { it.packageName }?.toSet() ?: emptySet())
+        .also { imePackages = it }
+    } catch (e: Exception) {
+      emptySet()
+    }
+    return pkg in imes
   }
 
   private fun applyMonitoringLevelIfChanged() {

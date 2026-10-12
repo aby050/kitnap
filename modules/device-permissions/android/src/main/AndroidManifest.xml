@@ -24,18 +24,6 @@
         android:resource="@xml/byre_accessibility_service_config" />
     </service>
 
-    <!-- Notification listener. Still a stub: it logs the posting package and
-         nothing else. Either it suppresses notifications from blocked apps or
-         it should not be declared at all — Play treats this as a sensitive
-         permission and asks for a justification we currently cannot give. -->
-    <service
-      android:name="expo.modules.devicepermissions.ByreNotificationListenerService"
-      android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-      android:exported="false">
-      <intent-filter>
-        <action android:name="android.service.notification.NotificationListenerService" />
-      </intent-filter>
-    </service>
   </application>
 
 </manifest>

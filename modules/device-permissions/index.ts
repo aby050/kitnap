@@ -5,8 +5,6 @@ type Native = {
   openOverlaySettings(): void;
   isAccessibilityServiceEnabled(): boolean;
   openAccessibilitySettings(): void;
-  isNotificationListenerEnabled(): boolean;
-  openNotificationListenerSettings(): void;
   setBlockedPackages(packages: string[]): void;
   grantTemporaryAccess?(grantMinutes: number): void;
   setShieldCopy?(title: string, emphasis: string, body: string, cta: string): void;
@@ -57,8 +55,6 @@ export const openOverlaySettings = () => native?.openOverlaySettings();
 export const isAccessibilityServiceEnabled = () => native?.isAccessibilityServiceEnabled() ?? false;
 export const openAccessibilitySettings = () => native?.openAccessibilitySettings();
 
-export const isNotificationListenerEnabled = () => native?.isNotificationListenerEnabled() ?? false;
-export const openNotificationListenerSettings = () => native?.openNotificationListenerSettings();
 
 export const isIgnoringBatteryOptimizations = () => native?.isIgnoringBatteryOptimizations() ?? false;
 export const openBatteryOptimizationSettings = () => native?.openBatteryOptimizationSettings();

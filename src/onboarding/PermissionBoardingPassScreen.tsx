@@ -8,10 +8,8 @@ import {
   canDrawOverlays,
   isAccessibilityServiceEnabled,
   isIgnoringBatteryOptimizations,
-  isNotificationListenerEnabled,
   openAccessibilitySettings,
   openBatteryOptimizationSettings,
-  openNotificationListenerSettings,
   openOverlaySettings,
 } from 'device-permissions';
 import { checkUsageAccessPermission, openUsageAccessSettings } from '../data/androidUsage';
@@ -75,7 +73,7 @@ export default function PermissionBoardingPassScreen({
     if (Platform.OS !== 'android') return;
     setOverlay(canDrawOverlays());
     setAccessibility(isAccessibilityServiceEnabled());
-    setNotification(isNotificationListenerEnabled());
+    setNotification((await Notifications.getPermissionsAsync()).granted);
     setBattery(isIgnoringBatteryOptimizations());
     setUsage(await checkUsageAccessPermission());
   }, []);
@@ -118,10 +116,13 @@ export default function PermissionBoardingPassScreen({
     {
       key: 'notification',
       icon: 'bell',
-      title: 'Notification access',
-      desc: 'Notices notifications from distracting apps so it can nudge you before you even open them.',
+      title: 'Notifications',
+      desc: 'Lets Phonewise tell you when a timed unlock ends and keep a running session visible.',
       granted: notification,
-      onRequest: openNotificationListenerSettings,
+      onRequest: async () => {
+        await Notifications.requestPermissionsAsync();
+        await refresh();
+      },
     },
     {
       key: 'battery',
