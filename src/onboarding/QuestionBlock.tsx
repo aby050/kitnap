@@ -95,24 +95,35 @@ function TypewriterText({ text, speed = 11, onComplete, style }: TypewriterTextP
   const [caretOn, setCaretOn] = useState(true);
   const done = shown >= plain.length;
   const finished = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const delayFor = useCallback(
-    (ch: string, next: string) => {
-      if (/[.!?]/.test(ch)) return speed * 4;
-      if (/[,;:—]/.test(ch)) return speed * 2.4;
-      if (ch === ' ' && /[A-Z]/.test(next || '')) return speed * 1.4;
-      // Jitter keeps identical letters from marching in lockstep.
-      return speed * (0.8 + Math.random() * 0.4);
-    },
-    [speed],
-  );
+  /** Cumulative reveal time per character. Shaped rather than fixed: a beat
+   *  after sentence ends, less after commas, jitter elsewhere. */
+  const schedule = React.useMemo(() => {
+    const out: number[] = [];
+    let t = 0;
+    for (let i = 0; i < plain.length; i++) {
+      const ch = plain[i];
+      const next = plain[i + 1] ?? '';
+      if (/[.!?]/.test(ch)) t += speed * 4;
+      else if (/[,;:—]/.test(ch)) t += speed * 2.4;
+      else if (ch === ' ' && /[A-Z]/.test(next)) t += speed * 1.4;
+      else t += speed * (0.8 + Math.random() * 0.4);
+      out.push(t);
+    }
+    return out;
+  }, [plain, speed]);
 
   useEffect(() => {
     setShown(0);
     finished.current = false;
   }, [text]);
 
+  // Driven by elapsed time, not one timeout per character. A timeout per
+  // character costs a render per character, and on a mid-range Android phone
+  // that stretched a one-second line to four or five — twenty questions of
+  // that is minutes of waiting before the app has done anything. Now a slow
+  // frame just reveals several characters at once.
   useEffect(() => {
     if (done) {
       if (!finished.current) {
@@ -122,14 +133,21 @@ function TypewriterText({ text, speed = 11, onComplete, style }: TypewriterTextP
       }
       return;
     }
-    timer.current = setTimeout(
-      () => setShown((n) => n + 1),
-      delayFor(plain[shown] ?? '', plain[shown + 1] ?? ''),
-    );
+    const start = Date.now() - (shown > 0 ? schedule[shown - 1] : 0);
+    timer.current = setInterval(() => {
+      const elapsed = Date.now() - start;
+      let n = 0;
+      while (n < schedule.length && schedule[n] <= elapsed) n++;
+      setShown((cur) => (n > cur ? n : cur));
+    }, 32);
     return () => {
-      if (timer.current) clearTimeout(timer.current);
+      if (timer.current) clearInterval(timer.current);
     };
-  }, [shown, done, plain, delayFor, onComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done, schedule, onComplete]);
+
+  /** Tap anywhere on the line to finish it at once. */
+  const skip = useCallback(() => setShown(plain.length), [plain.length]);
 
   // Independent of typing, so the caret never stutters mid-word.
   useEffect(() => {
@@ -141,7 +159,7 @@ function TypewriterText({ text, speed = 11, onComplete, style }: TypewriterTextP
   // only once the line finishes.
   let budget = shown;
   return (
-    <Text style={style}>
+    <Text style={style} onPress={done ? undefined : skip} suppressHighlighting>
       {runs.map((run, i) => {
         if (budget <= 0) return null;
         const slice = run.text.slice(0, budget);
@@ -180,7 +198,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
     if (question.kind === 'static') {
       setTimeout(() => {
         onAnswer('true', '');
-      }, 1000); // 1.0s delay for reading after typing is done
+      }, 600); // a beat to read it once typing is done
     }
   };
 

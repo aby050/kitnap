@@ -294,7 +294,7 @@ export default function PostOnboardingFlow({ name, answers, onFinish }: Props) {
                 <View style={styles.phoneGlow} pointerEvents="none" />
                 <View style={styles.phoneMock}>
                   <View style={styles.phoneRim} pointerEvents="none" />
-                  <View style={styles.cameraNotch} />
+                  <View style={Platform.OS === 'ios' ? styles.cameraNotch : styles.punchHole} />
                 {notifSub === 0 ? (
                   <View style={styles.phoneContent}>
                     <View style={styles.appGrid}>
@@ -594,6 +594,18 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     position: 'absolute',
     top: 9,
+    zIndex: 3,
+  },
+  /* Android's equivalent: a centred punch-hole camera. An iPhone island on an
+   * Android onboarding screen reads as a ported app. */
+  punchHole: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#000000',
+    alignSelf: 'center',
+    position: 'absolute',
+    top: 12,
     zIndex: 3,
   },
   phoneContent: {

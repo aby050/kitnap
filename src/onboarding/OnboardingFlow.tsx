@@ -151,9 +151,15 @@ export default function OnboardingFlow({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
-          onContentSizeChange={(_w, h) => setContentH(h)}
         >
-          <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
+          {/* Measured here, not via onContentSizeChange: once the content is
+              centred, the content container stays exactly viewport-tall even
+              when the answers overflow it, so "fits" never flipped back and a
+              long multi-select list pushed its own question off the top. The
+              block's own height is the honest number (plus the 44+48 padding). */}
+          <View onLayout={(e) => setContentH(e.nativeEvent.layout.height + 92)}>
+            <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
+          </View>
         </ScrollView>
       </KeyboardAvoider>
     </SafeAreaView>
