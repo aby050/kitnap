@@ -21,6 +21,10 @@ import android.text.style.StyleSpan
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.app.usage.UsageStatsManager
+import android.os.Handler
+import android.os.Looper
+import java.util.Calendar
 
 /**
  * The shield, drawn *over* the blocked app rather than replacing it.
@@ -244,6 +248,34 @@ object ShieldOverlay {
       setPadding(dp(context, 8f), dp(context, 18f), dp(context, 8f), 0)
     })
 
+    /*
+     * Today's time in this app, so the cover says something true about this
+     * particular reach rather than only something general. Filled in off the
+     * main thread: the cover must appear in the frame the app does, and a
+     * usage query is tens of milliseconds it has no business waiting on. If
+     * Usage Access is off, or the number is zero, the line simply stays empty.
+     */
+    val usageLine = TextView(context).apply {
+      setTextColor(Color.parseColor("#6FE3A9"))
+      setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+      gravity = Gravity.CENTER
+      setPadding(dp(context, 8f), dp(context, 14f), dp(context, 8f), 0)
+      visibility = View.GONE
+    }
+    root.addView(usageLine)
+    Thread {
+      val minutes = minutesToday(context, packageName)
+      if (minutes <= 0) return@Thread
+      val label = try {
+        val pm = context.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+      } catch (e: Exception) { "this app" }
+      Handler(Looper.getMainLooper()).post {
+        usageLine.text = "You’ve already spent ${formatMinutes(minutes)} in $label today."
+        usageLine.visibility = View.VISIBLE
+      }
+    }.start()
+
     root.addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
 
     /*
@@ -292,6 +324,43 @@ object ShieldOverlay {
       }
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
+    // The better place to put the reach, if the user named one. Sits between
+    // "Not now" and the way in: a real alternative, but never louder than the
+    // choice the block was set up to make.
+    val alt = AlternativeAppStore.get(context)
+    val altLaunch = alt?.let { context.packageManager.getLaunchIntentForPackage(it) }
+    if (alt != null && altLaunch != null && alt != packageName) {
+      val altLabel = try {
+        val pm = context.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(alt, 0)).toString()
+      } catch (e: Exception) { null }
+      if (altLabel != null) {
+        root.addView(TextView(context).apply {
+          text = "Open $altLabel instead"
+          setTextColor(Color.parseColor("#6FE3A9"))
+          setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+          gravity = Gravity.CENTER
+          background = GradientDrawable().apply {
+            cornerRadius = dp(context, 30f).toFloat()
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(context, 1f), Color.parseColor("#556FE3A9"))
+          }
+          setPadding(dp(context, 28f), dp(context, 15f), dp(context, 28f), dp(context, 15f))
+          isClickable = true
+          setOnClickListener {
+            hide(context)
+            try {
+              context.startActivity(altLaunch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+              Log.e("ByreShieldOverlay", "Could not open alternative", e)
+            }
+          }
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+          topMargin = dp(context, 12f)
+        })
+      }
+    }
+
     root.addView(TextView(context).apply {
       text = cta
       setTextColor(Color.parseColor("#B8FFFFFF"))
@@ -307,6 +376,25 @@ object ShieldOverlay {
 
     return root
   }
+
+  private fun minutesToday(context: Context, pkg: String): Long {
+    if (!UsageAccess.isGranted(context)) return 0
+    return try {
+      val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+      val start = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+      }.timeInMillis
+      val ms = usm.queryAndAggregateUsageStats(start, System.currentTimeMillis())[pkg]
+        ?.totalTimeInForeground ?: 0L
+      ms / 60000
+    } catch (e: Exception) {
+      0
+    }
+  }
+
+  private fun formatMinutes(m: Long): String =
+    if (m < 60) "$m min" else if (m % 60 == 0L) "${m / 60}h" else "${m / 60}h ${m % 60}m"
 
   private fun openByre(context: Context, packageName: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("phonewise://shield?package=$packageName"))

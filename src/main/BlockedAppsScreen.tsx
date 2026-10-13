@@ -8,6 +8,8 @@ import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
 import { INTENSITIES, IntensityKey, getIntensity } from '../data/themes';
 import { palette, space } from '../design/tokens';
 import Icon from '../ui/Icon';
+import AppGlyph from '../ui/AppGlyph';
+import { installedLabel, useInstalledApps } from '../data/installedApps';
 
 /** Real, editable blocked-apps list — replaces the old mock AppPickerScreen
  *  /MyAppsScreen, which had no actual Android package identifiers wired to
@@ -25,6 +27,8 @@ export default function BlockedAppsScreen({
   onChangePaused,
   pauseSeconds = 6,
   onChangePauseSeconds,
+  alternativeApp,
+  onChangeAlternative,
   onBack,
 }: {
   blockedPackages: string[];
@@ -38,6 +42,9 @@ export default function BlockedAppsScreen({
   onChangePaused?: (packages: string[]) => void;
   pauseSeconds?: number;
   onChangePauseSeconds?: (seconds: number) => void;
+  /** Android only: the app the shield offers instead of a blocked one. */
+  alternativeApp?: string | null;
+  onChangeAlternative?: (pkg: string | null) => void;
   onBack: () => void;
 }) {
   const modeFor = (pkg: string): IntensityKey => appModes?.[pkg] ?? defaultMode ?? 'steady';
@@ -47,6 +54,13 @@ export default function BlockedAppsScreen({
     onChangeModes?.({ ...(appModes ?? {}), [pkg]: next });
   };
   const [customInput, setCustomInput] = useState('');
+  const [pickingAlt, setPickingAlt] = useState(false);
+  const [altQuery, setAltQuery] = useState('');
+  const installed = useInstalledApps();
+  const altChoices = (installed ?? [])
+    .filter((a) => !blockedPackages.includes(a.packageName) && !pausedPackages.includes(a.packageName))
+    .filter((a) => !altQuery || a.label.toLowerCase().includes(altQuery.toLowerCase()))
+    .slice(0, 40);
   const customPackages = blockedPackages.filter((p) => !DEFAULT_BLOCKED_APPS.some((a) => a.packageName === p));
 
   const toggle = (packageName: string) => {
@@ -186,6 +200,74 @@ export default function BlockedAppsScreen({
                 </View>
               </View>
             )}
+          </>
+        )}
+
+        {/* The redirect. A block that only says no leaves the reach with
+            nowhere to go; naming one better place, chosen in a calm moment,
+            turns the shield into a fork in the road. */}
+        {!!onChangeAlternative && (
+          <>
+            <Text style={styles.sectionLabel}>Instead, open…</Text>
+            <Text style={styles.pauseIntro}>
+              The shield offers this app in place of the one you reached for. Pick something you’d
+              rather be doing — a book, a language app, your notes.
+            </Text>
+            <View style={styles.group}>
+              <Pressable style={styles.row} onPress={() => setPickingAlt((v) => !v)}>
+                {alternativeApp ? (
+                  <AppGlyph name={installedLabel(alternativeApp) ?? alternativeApp} packageName={alternativeApp} size={30} />
+                ) : null}
+                <View style={{ flex: 1, marginLeft: alternativeApp ? 12 : 0 }}>
+                  <Text style={styles.rowTitle}>
+                    {alternativeApp ? installedLabel(alternativeApp) ?? alternativeApp : 'Choose an app'}
+                  </Text>
+                  <Text style={styles.rowSub}>
+                    {alternativeApp ? 'Shown on the shield' : 'Nothing offered yet'}
+                  </Text>
+                </View>
+                {alternativeApp ? (
+                  <Pressable onPress={() => onChangeAlternative(null)} style={styles.removeBtn} hitSlop={8}>
+                    <Icon name="close" size={12} color={palette.textSecondary} />
+                  </Pressable>
+                ) : (
+                  <Icon name="chevronRight" size={14} color={palette.textSecondary} />
+                )}
+              </Pressable>
+              {pickingAlt && (
+                <>
+                  <View style={[styles.row, styles.rowBorder]}>
+                    <TextInput
+                      value={altQuery}
+                      onChangeText={setAltQuery}
+                      placeholder="Search apps"
+                      placeholderTextColor={palette.textTertiary}
+                      style={[styles.rowTitle, { flex: 1, paddingVertical: 0 }]}
+                    />
+                  </View>
+                  {installed === null ? (
+                    <Text style={[styles.rowSub, { padding: 16 }]}>Loading apps…</Text>
+                  ) : (
+                    altChoices.map((app) => (
+                      <Pressable
+                        key={app.packageName}
+                        style={[styles.row, styles.rowBorder]}
+                        onPress={() => {
+                          onChangeAlternative(app.packageName);
+                          setPickingAlt(false);
+                          setAltQuery('');
+                        }}
+                      >
+                        <AppGlyph name={app.label} packageName={app.packageName} size={30} />
+                        <Text style={[styles.rowTitle, { flex: 1, marginLeft: 12 }]} numberOfLines={1}>
+                          {app.label}
+                        </Text>
+                      </Pressable>
+                    ))
+                  )}
+                </>
+              )}
+            </View>
           </>
         )}
 

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/widget_root"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:orientation="vertical"
+  android:padding="16dp"
+  android:background="@drawable/phonewise_widget_bg">
+
+  <TextView
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="PHONEWISE"
+    android:textColor="#6FE3A9"
+    android:textSize="10sp"
+    android:letterSpacing="0.15"
+    android:textStyle="bold" />
+
+  <TextView
+    android:id="@+id/widget_screen_time"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="6dp"
+    android:text="—"
+    android:textColor="#FFFFFF"
+    android:textSize="28sp"
+    android:textStyle="bold" />
+
+  <TextView
+    android:id="@+id/widget_screen_label"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:text="screen time today"
+    android:textColor="#99FFFFFF"
+    android:textSize="12sp" />
+
+  <View
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1" />
+
+  <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <LinearLayout
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:orientation="vertical">
+      <TextView
+        android:id="@+id/widget_streak"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+      <TextView
+        android:id="@+id/widget_streak_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="day streak"
+        android:textColor="#99FFFFFF"
+        android:textSize="11sp" />
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/widget_reclaimed_box"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="1"
+      android:orientation="vertical">
+      <TextView
+        android:id="@+id/widget_reclaimed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0m"
+        android:textColor="#6FE3A9"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+      <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="reclaimed this week"
+        android:textColor="#99FFFFFF"
+        android:textSize="11sp" />
+    </LinearLayout>
+  </LinearLayout>
+</LinearLayout>

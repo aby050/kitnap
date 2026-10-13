@@ -39,6 +39,10 @@ export type PersistedState = {
    *  packages stay in `blockedPackages` (so the shield keeps working) until
    *  their time comes. */
   pendingUnblocks?: { pkg: string; at: number }[];
+  /** Android: the app the shield offers instead of a blocked one. */
+  alternativeApp?: string | null;
+  /** Optional daily screen-time goal in minutes; null/absent = none set. */
+  dailyGoalMinutes?: number | null;
   futureSelfMessage: string;
   goal: GoalData;
   hoursReclaimed: number;

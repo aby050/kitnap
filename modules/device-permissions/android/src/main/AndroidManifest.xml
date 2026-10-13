@@ -24,6 +24,18 @@
         android:resource="@xml/byre_accessibility_service_config" />
     </service>
 
+    <!-- Home-screen widget: today's screen time, streak, reclaimed time. -->
+    <receiver
+      android:name="expo.modules.devicepermissions.PhonewiseWidget"
+      android:label="Phonewise"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/phonewise_widget_info" />
+    </receiver>
   </application>
 
 </manifest>

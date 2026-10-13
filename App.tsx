@@ -48,10 +48,13 @@ import { hydrateAmbienceCache, prefetchAmbience } from './src/data/ambiencePrefe
 import {
   MonitoringLevel,
   setBlockedPackages,
+  setAlternativeApp,
+  updateWidget,
   setMonitoringLevel,
   setPausedPackages,
   setPauseSeconds,
 } from './modules/device-permissions';
+import { addDays, dateKey, sumRange } from './src/data/progress';
 import { effectiveBlockedPackages } from './src/data/scheduleEnforcer';
 import { usePurchases } from './src/data/usePurchases';
 import { purchasedBailoutCount } from './src/data/purchases';
@@ -199,6 +202,19 @@ export default function App() {
     );
   }, [loaded, purchases.info]);
 
+  // Feed the home-screen widget what only the app knows. Screen time the
+  // widget reads for itself; streak, goal and reclaimed time come from here.
+  useEffect(() => {
+    if (!loaded || Platform.OS !== 'android') return;
+    const today = dateKey();
+    const week = sumRange(persisted.progress, addDays(today, -6), today);
+    updateWidget(
+      persisted.progress.currentStreak,
+      persisted.dailyGoalMinutes ?? 0,
+      week.savedMinutes,
+    );
+  }, [loaded, persisted.progress, persisted.dailyGoalMinutes]);
+
   // Keep the native Accessibility Service's blocked-package list in sync.
   // The base list is always enforced — schedules are lockdown windows that
   // close the escape hatches, not windows that decide *whether* to block — so
@@ -216,13 +232,14 @@ export default function App() {
         persisted.pausedPackages.filter((p) => !persisted.blockedPackages.includes(p)),
       );
       setPauseSeconds(persisted.pauseSeconds);
+      setAlternativeApp(persisted.alternativeApp ?? '');
     };
     sync();
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') sync();
     });
     return () => sub.remove();
-  }, [loaded, persisted.blockedPackages, persisted.pausedPackages, persisted.pauseSeconds]);
+  }, [loaded, persisted.blockedPackages, persisted.pausedPackages, persisted.pauseSeconds, persisted.alternativeApp]);
 
   // Battery/responsiveness follows the same intensity dial the user already
   // sets for unlock friction — no separate setting to expose, and it stays

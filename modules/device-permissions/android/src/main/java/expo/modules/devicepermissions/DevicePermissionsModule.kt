@@ -168,6 +168,20 @@ class DevicePermissionsModule : Module() {
       BlockedPackagesStore.set(ctx, packages)
     }
 
+    // Streak, goal and the week's reclaimed minutes for the home-screen widget,
+    // which re-renders straight away. Screen time it reads for itself.
+    Function("updateWidget") { streak: Int, goalMinutes: Int, reclaimedWeekMinutes: Int ->
+      val ctx = appContext.reactContext ?: return@Function null
+      WidgetStatsStore.set(ctx, streak, goalMinutes, reclaimedWeekMinutes)
+      PhonewiseWidget.refreshAll(ctx)
+    }
+
+    // The app the shield offers instead ("Open Kindle instead"). Empty clears it.
+    Function("setAlternativeApp") { pkg: String ->
+      val ctx = appContext.reactContext ?: return@Function null
+      AlternativeAppStore.set(ctx, pkg)
+    }
+
     // The counterpart to setBlockedPackages: how the Accessibility Service
     // learns that a challenge was passed. Without it the service re-shields
     // the moment the user returns to the app they just unlocked.

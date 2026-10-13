@@ -1,3 +1,4 @@
 <resources>
   <string name="byre_accessibility_description">Lets Phonewise notice when a distracting app opens, so it can step in before you\'re scrolling. Phonewise does not read on-screen content.</string>
+  <string name="phonewise_widget_description">Today’s screen time, your streak and the time you’ve reclaimed.</string>
 </resources>

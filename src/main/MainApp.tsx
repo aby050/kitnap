@@ -47,7 +47,7 @@ import SubscriptionScreen from './SubscriptionScreen';
 import AboutScreen from './AboutScreen';
 import WebDocScreen from './WebDocScreen';
 import TrialTimelineScreen from '../onboarding/TrialTimelineScreen';
-import { ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, focusScore, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
+import { STREAK_MILESTONES, ProgressEvent, ProgressState, dateKey, daysSinceJoin, getDay, focusScore, recordEvents, sumRange, totals, unlockAchievements, weeklyWindows } from '../data/progress';
 import {
   endGrantNow as endAndroidGrantNow,
   grantTemporaryAccess as grantAndroidAccess,
@@ -69,6 +69,7 @@ import { useTodayUsage } from '../data/useTodayUsage';
 import ScreenTimeDiagnostics from './ScreenTimeDiagnostics';
 import { EssentialKey } from '../data/gateQuestions';
 import { buildDemoState, clearDemoState } from '../data/demoData';
+import StreakCelebration from '../components/StreakCelebration';
 import { recordGateReflection, recordActivitySession } from '../data/store';
 import { limitExceededPackages, newlyExceededLimits } from '../data/appLimitEnforcer';
 import { DEFAULT_BEDTIME, isWithinBedtime } from '../data/bedtime';
@@ -953,9 +954,17 @@ export default function MainApp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [streakCelebration, setStreakCelebration] = useState<number | null>(null);
+
   function applyProgress(events: ProgressEvent[]) {
     setProgress((prev) => {
       const next = recordEvents(prev, events, { joinedDays });
+      if (
+        next.currentStreak > prev.currentStreak &&
+        STREAK_MILESTONES.includes(next.currentStreak)
+      ) {
+        setStreakCelebration(next.currentStreak);
+      }
       const t = totals(next);
       setHoursReclaimed(t.savedMinutes / 60);
       setReclaimedToday(getDay(next, dateKey()).savedMinutes);
@@ -1379,6 +1388,10 @@ export default function MainApp({
               : undefined
           }
           pauseSeconds={persisted.pauseSeconds}
+          alternativeApp={persisted.alternativeApp ?? null}
+          onChangeAlternative={
+            Platform.OS === 'android' ? (pkg) => onPatch({ alternativeApp: pkg }) : undefined
+          }
           onChangePauseSeconds={
             Platform.OS === 'android'
               ? (seconds) => onPatch({ pauseSeconds: seconds })
@@ -1731,6 +1744,8 @@ export default function MainApp({
           {tab === 'home' && (
             <HomeScreen
               onOpenProfile={() => setOverlay('profile')}
+              dailyGoalMinutes={persisted.dailyGoalMinutes ?? null}
+              onChangeGoal={(m) => onPatch({ dailyGoalMinutes: m })}
               onOpenApps={() => setTab('apps')}
               onTriggerShield={openUnlockFlow}
               onOpenRooms={() => setTab('timer')}
@@ -1876,6 +1891,7 @@ export default function MainApp({
           should make knowingly. Both ways out are offered: buy a Bailout, or
           start anyway with eyes open. */}
       {/* Pro gates, in the app's own voice rather than the platform's. */}
+      <StreakCelebration days={streakCelebration} onDismiss={() => setStreakCelebration(null)} />
       <ProGateDialog
         visible={!!proGate}
         title={proGate?.title ?? ''}

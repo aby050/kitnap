@@ -6,6 +6,8 @@ type Native = {
   isAccessibilityServiceEnabled(): boolean;
   openAccessibilitySettings(): void;
   setBlockedPackages(packages: string[]): void;
+  setAlternativeApp(pkg: string): void;
+  updateWidget(streak: number, goalMinutes: number, reclaimedWeekMinutes: number): void;
   grantTemporaryAccess?(grantMinutes: number): void;
   setShieldCopy?(title: string, emphasis: string, body: string, cta: string): void;
   setPausedPackages?(packages: string[]): void;
@@ -60,6 +62,11 @@ export const isIgnoringBatteryOptimizations = () => native?.isIgnoringBatteryOpt
 export const openBatteryOptimizationSettings = () => native?.openBatteryOptimizationSettings();
 
 export const setBlockedPackages = (packages: string[]) => native?.setBlockedPackages(packages);
+/** The app the shield offers instead of the blocked one. '' clears it. */
+/** Push streak/goal/reclaimed to the home-screen widget and re-render it. */
+export const updateWidget = (streak: number, goalMinutes: number, reclaimedWeekMinutes: number) =>
+  native?.updateWidget?.(Math.round(streak), Math.round(goalMinutes), Math.round(reclaimedWeekMinutes));
+export const setAlternativeApp = (pkg: string) => native?.setAlternativeApp?.(pkg);
 
 /** Tells the Accessibility Service to stand down for `grantMinutes` — the
  *  Android counterpart to iOS's Family Controls grant window. The service
