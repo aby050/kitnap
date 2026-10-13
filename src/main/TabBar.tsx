@@ -225,7 +225,7 @@ function TabItem<K extends string>({
             // White, not accent: the accent pill behind the active tab
             // already carries the selection colour, and tinted glyphs on
             // frosted glass lose contrast badly. Brightness does the work.
-            color={palette.onColorTextDim}
+            color={liquidGlassAvailable ? palette.onColorTextDim : 'rgba(255,255,255,0.62)'}
             activeColor={palette.text}
             active={active}
             lift={1.5}
@@ -280,8 +280,18 @@ const styles = StyleSheet.create({
     ...(liquidGlassAvailable
       ? null
       : {
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: 'rgba(255,255,255,0.16)',
+          // Without Liquid Glass the frosted pane let the screen's bright
+          // lower gradient straight through, and the white labels all but
+          // vanished against it. A near-opaque dark ground keeps the bar
+          // legible over anything; the edge stops it melting into dark screens.
+          backgroundColor: 'rgba(8,11,15,0.92)',
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.14)',
+          shadowColor: '#000',
+          shadowOpacity: 0.45,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 12,
         }),
   },
   pill: {
@@ -299,7 +309,7 @@ const styles = StyleSheet.create({
   itemInner: { alignItems: 'center', justifyContent: 'center' },
   iconSlot: { height: PILL_H, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   label: {
-    color: palette.onColorTextDim,
+    color: liquidGlassAvailable ? palette.onColorTextDim : 'rgba(255,255,255,0.62)',
     fontSize: 11.5,
     fontWeight: '600',
     letterSpacing: 0.1,
