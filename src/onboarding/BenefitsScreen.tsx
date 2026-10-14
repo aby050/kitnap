@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: 24, paddingTop: 28, alignItems: 'center' },
   eyebrow: { color: palette.accent, fontSize: 12, fontWeight: '800', letterSpacing: 1.8, alignSelf: 'flex-start' },
   ringWrap: { marginTop: 22 },
-  ringCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  ringCenter: { ...(StyleSheet.absoluteFill as object), alignItems: 'center', justifyContent: 'center' },
   ringBig: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 58, fontWeight: '800', letterSpacing: -2, lineHeight: 62 },
   ringUnit: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontFamily: fonts.semibold, fontWeight: '600', marginTop: 2 },
   ringSub: { color: 'rgba(255,255,255,0.6)', fontSize: 12.5, marginTop: 1 },
