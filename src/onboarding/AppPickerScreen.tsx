@@ -61,10 +61,18 @@ const BRAND: Record<string, keyof typeof Ionicons.glyphMap> = {
   notion: 'document-text',
 };
 
+const BROWSER_OR_TOOL = /chrome|firefox|brave|opera|edge|browser|duckduckgo|vivaldi|settings|camera|gallery|contacts|dialer|phone|clock|calculator|files|play\.store|vending/i;
+/** The system's own category flag is unreliable (browsers sometimes arrive as
+ *  social); anything that is clearly a browser or a utility is not a "Social"
+ *  app and goes under Other. */
+function fixCategory(pkg: string, category: string): string {
+  return category === 'social' && BROWSER_OR_TOOL.test(pkg) ? 'other' : category;
+}
+
 function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: string }) {
   // The phone's real launcher icon always wins.
   if (icon) {
-    return <Image source={{ uri: icon }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />;
+    return <Image source={{ uri: icon }} style={{ width: '100%', height: '100%', resizeMode: 'contain' }} />;
   }
   const CAT: Record<string, keyof typeof Ionicons.glyphMap> = {
     all: 'apps', social: 'chatbubbles', games: 'game-controller', entertainment: 'film', productivity: 'briefcase', other: 'ellipsis-horizontal',
@@ -116,7 +124,7 @@ export default function AppPickerScreen({
             ];
 
             const categoriesWithApps = new Set<string>();
-            installed.forEach(app => categoriesWithApps.add(app.category));
+            installed.forEach(app => { app.category = fixCategory(app.packageName, app.category); categoriesWithApps.add(app.category); });
 
             const sortedCategories = ['social', 'games', 'entertainment', 'productivity', 'other'].filter(c => categoriesWithApps.has(c));
             
@@ -299,7 +307,7 @@ export default function AppPickerScreen({
                     onPress={() => handleRowPress(e)}
                     style={styles.rowRightContent}
                   >
-                    <View style={[styles.appIcon, { backgroundColor: e.tint }]}>
+                    <View style={[styles.appIcon, { backgroundColor: e.icon ? 'transparent' : e.tint }]}>
                       <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
                     </View>
                   
@@ -338,7 +346,7 @@ export default function AppPickerScreen({
         {selectedAppCount > 0 ? (
           <View style={styles.selectedStrip}>
             {selectedEntries.slice(0, SELECTED_STRIP_MAX).map((e) => (
-              <View key={e.id} style={[styles.selectedChip, { backgroundColor: e.tint }]}>
+              <View key={e.id} style={[styles.selectedChip, { backgroundColor: e.icon ? 'transparent' : e.tint }]}>
                 <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
               </View>
             ))}
@@ -376,8 +384,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   selectedChip: {
-    width: 34,
-    height: 34,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -392,7 +400,8 @@ const styles = StyleSheet.create({
   },
   centerStack: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 12,
   },
   hintRow: {
     flexDirection: 'row',
@@ -420,7 +429,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   listCard: {
-    height: 340,
+    flex: 1,
+    minHeight: 340,
     backgroundColor: palette.surfaceRaised,
     borderRadius: radius.xl,
     overflow: 'hidden',
@@ -471,9 +481,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   appIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
