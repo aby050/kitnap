@@ -11,6 +11,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Question } from './questions';
+import Icon from '../ui/Icon';
 import { GradientButton } from '../components/ui';
 import { Field } from '../design/primitives';
 import { fonts, palette, space } from '../design/tokens';
@@ -37,7 +38,33 @@ function promptSize(prompt: string) {
   return { fontSize: 32, lineHeight: 34, letterSpacing: -1.1 };
 }
 
-function OptionButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+/** Display-only icons. Answer values stay the plain labels, so nothing that
+ *  reads them back (rules, schedule, block-screen voice) is affected. */
+const ICONS: Record<string, string> = {
+  'Focus better': 'target', 'Sleep better': 'moon', 'Be more present': 'eye', 'Improve mental health': 'heart', Other: 'plus',
+  'Drawing / painting': 'edit', Reading: 'book', Exercise: 'pulse', Meditation: 'leaf', Study: 'note', 'Work / a project': 'rocket',
+  'Family / relationships': 'heart', Music: 'headphones', Cooking: 'flame', 'Learning a skill': 'bolt',
+  'First thing in the morning': 'sunrise', 'Through the working day': 'clock', 'The evening': 'sun', 'Late at night, in bed': 'moon',
+  'Adult sites': 'lock', 'Betting and gambling': 'alert', 'Short-form video': 'play', 'News and doomscroll': 'mist',
+  'Push-ups': 'pulse', Squats: 'pulse', 'Jumping jacks': 'bolt', 'I’d rather not move': 'pause',
+  'At a desk': 'grid', 'In bed': 'moon', 'On the sofa': 'home', 'Out and about': 'door',
+};
+
+/** One line under the question: why it is being asked. Makes the flow feel
+ *  like a conversation rather than a form. */
+const HINTS: Record<string, string> = {
+  matters: 'This sets the voice of your block screen.',
+  interests: 'We’ll show these back to you when the urge hits.',
+  slipWindow: 'Your first schedule is built around this.',
+  hardBlock: 'Optional. Nobody is judging this list.',
+  name: 'Just so the app can talk to you like a person.',
+  movement: 'You can change this any time in Settings.',
+  whereBlocked: 'So we never ask for a move you can’t do there.',
+  repBaseline: 'Be honest — the first challenge starts here.',
+  controlScale: 'No wrong answer. This is your starting line.',
+};
+
+function OptionButton({ label, selected, onPress, tile }: { label: string; selected: boolean; onPress: () => void; tile?: boolean }) {
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
@@ -46,12 +73,28 @@ function OptionButton({ label, selected, onPress }: { label: string; selected: b
         onPressIn={() => (scale.value = withTiming(0.95, { duration: 90 }))}
         onPressOut={() => (scale.value = withSpring(1, { damping: 12, stiffness: 220 }))}
         onPress={onPress}
-        style={[styles.optionBtn, selected && styles.optionBtnSelected]}
+        style={[styles.optionBtn, tile && styles.optionTile, selected && styles.optionBtnSelected]}
       >
-        <Text style={[styles.optionText, selected && styles.optionTextSelected, { flex: 1 }]}>{label}</Text>
-        <View style={[styles.optionDot, selected && styles.optionDotOn]}>
-          {selected && <Text style={styles.optionTick}>✓</Text>}
-        </View>
+        {ICONS[label] ? (
+          <View style={tile ? styles.tileEmoji : styles.rowEmoji}>
+            <Icon name={ICONS[label] as any} size={tile ? 26 : 20} color={selected ? palette.onLight : '#FFFFFF'} />
+          </View>
+        ) : null}
+        <Text
+          style={[styles.optionText, tile && { fontSize: 15, textAlign: 'center' }, selected && styles.optionTextSelected, !tile && { flex: 1 }]}
+        >
+          {label}
+        </Text>
+        {!tile && (
+          <View style={[styles.optionDot, selected && styles.optionDotOn]}>
+            {selected && <Text style={styles.optionTick}>✓</Text>}
+          </View>
+        )}
+        {tile && selected && (
+          <View style={styles.tileTick}>
+            <Text style={styles.optionTick}>✓</Text>
+          </View>
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -225,6 +268,12 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
         style={[styles.prompt, promptSize(question.prompt)]}
       />
 
+      {isTypingComplete && HINTS[question.id] && (
+        <Animated.Text entering={FadeIn.duration(400)} style={styles.hint}>
+          {HINTS[question.id]}
+        </Animated.Text>
+      )}
+
       {isTypingComplete && question.kind === 'text' && (
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
           <Field
@@ -273,10 +322,15 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 
       {isTypingComplete && question.kind === 'multi' && (
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
-          <View style={styles.optionsWrap}>
+          <View style={[styles.optionsWrap, question.options.length > 5 && styles.tileGrid]}>
             {question.options.map((opt, i) => (
-              <Animated.View key={opt} entering={FadeInDown.delay(i * 60).duration(320)}>
+              <Animated.View
+                key={opt}
+                entering={FadeInDown.delay(i * 40).duration(300)}
+                style={question.options.length > 5 ? styles.tileCell : undefined}
+              >
               <OptionButton
+                tile={question.options.length > 5}
                 label={opt}
                 selected={multiSelected.includes(opt)}
                 onPress={() => {
@@ -402,6 +456,16 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignSelf: 'stretch',
     gap: 9,
+  },
+  hint: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: -4, marginBottom: 18 },
+  rowEmoji: { marginRight: 14 },
+  tileEmoji: { marginBottom: 10 },
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginHorizontal: -4 },
+  tileCell: { width: '50%', padding: 4 },
+  optionTile: { flexDirection: 'column', paddingVertical: 18, paddingHorizontal: 10, justifyContent: 'center', minHeight: 104 },
+  tileTick: {
+    position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10,
+    backgroundColor: palette.onLight, alignItems: 'center', justifyContent: 'center',
   },
   optionDot: {
     width: 22,
