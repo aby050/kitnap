@@ -57,6 +57,7 @@ const HINTS: Record<string, string> = {
   interests: 'We’ll show these back to you when the urge hits.',
   slipWindow: 'Your first schedule is built around this.',
   hardBlock: 'Optional. Nobody is judging this list.',
+  healthLimit: 'Some unlock challenges involve light movement. Optional.',
   name: 'Just so the app can talk to you like a person.',
   movement: 'You can change this any time in Settings.',
   whereBlocked: 'So we never ask for a move you can’t do there.',
@@ -362,8 +363,19 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             const atPlus = question.maxPlus && rounded >= question.max;
             const shown = atPlus ? `${question.max}+` : String(rounded);
             const maxLabel = question.maxPlus ? `${question.max}+` : String(question.max);
+            const pips = question.max - question.min + 1;
             return (
-              <>
+              <View style={styles.sliderCard}>
+                {pips <= 12 && (
+                  <View style={styles.pipRow}>
+                    {Array.from({ length: pips }).map((_, i) => (
+                      <View
+                        key={i}
+                        style={[styles.pip, i + question.min <= rounded && styles.pipOn, i + question.min === rounded && styles.pipCurrent]}
+                      />
+                    ))}
+                  </View>
+                )}
                 <Text style={named ? styles.levelName : styles.ageValue}>{named ?? shown}</Text>
                 {named ? (
                   <Text style={styles.levelMeta}>
@@ -374,7 +386,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
                     {question.min} – {maxLabel}
                   </Text>
                 )}
-              </>
+              </View>
             );
           })()}
           <Slider
@@ -457,7 +469,21 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: 9,
   },
-  hint: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: -4, marginBottom: 18 },
+  sliderCard: {
+    alignItems: 'center',
+    paddingVertical: 22,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    backgroundColor: palette.onColor,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.onColorBorder,
+    marginBottom: 12,
+  },
+  pipRow: { flexDirection: 'row', gap: 6, marginBottom: 18 },
+  pip: { width: 18, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
+  pipOn: { backgroundColor: palette.accent },
+  pipCurrent: { backgroundColor: '#FFFFFF', width: 26 },
+  hint: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: -4, marginBottom: 14 },
   rowEmoji: { marginRight: 14 },
   tileEmoji: { marginBottom: 10 },
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginHorizontal: -4 },
@@ -538,17 +564,18 @@ const styles = StyleSheet.create({
   levelName: {
     color: palette.text,
     fontFamily: fonts.extrabold,
-    fontSize: 44,
+    fontSize: 30,
     fontWeight: '800',
-    textAlign: 'left',
-    lineHeight: 48,
-    letterSpacing: -1.8,
+    textAlign: 'center',
+    lineHeight: 34,
+    letterSpacing: -1,
+    minHeight: 68,
   },
   levelMeta: {
     color: palette.onColorTextDim,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'left',
+    textAlign: 'center',
     marginTop: 6,
     marginBottom: 4,
   },
