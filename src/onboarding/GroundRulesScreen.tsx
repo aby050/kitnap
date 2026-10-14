@@ -13,14 +13,9 @@ export default function GroundRulesScreen({ onContinue }: { onContinue: () => vo
         <Animated.View entering={FadeIn.duration(700)}>
           <ByreOrb size={190} awake />
         </Animated.View>
-        <View style={{ alignItems: 'center', gap: 14 }}>
-          <Animated.Text entering={FadeInDown.delay(250).duration(500)} style={styles.heading}>
-            now the <Text style={{ color: palette.accent }}>ground rules.</Text>
-          </Animated.Text>
-          <Animated.Text entering={FadeInDown.delay(450).duration(500)} style={styles.sub}>
-            Three quick choices: what to block, how hard it should be to get back in, and a note to your future self.
-          </Animated.Text>
-        </View>
+        <Animated.Text entering={FadeInDown.delay(250).duration(500)} style={styles.heading}>
+          Great, now let's set some ground Rules.
+        </Animated.Text>
       </View>
       <View style={styles.ctaWrap}>
         <GradientButton label="Continue" onPress={onContinue} />
@@ -31,16 +26,14 @@ export default function GroundRulesScreen({ onContinue }: { onContinue: () => vo
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34, gap: 44 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34, gap: 60 },
   heading: {
     color: palette.text,
-    fontSize: 38,
+    fontSize: 24,
     fontWeight: '800',
     textAlign: 'center',
-    lineHeight: 42,
-    letterSpacing: -1.2,
-    maxWidth: 320,
+    lineHeight: 32,
+    maxWidth: 300,
   },
-  sub: { color: 'rgba(255,255,255,0.78)', fontSize: 15.5, lineHeight: 22, textAlign: 'center', maxWidth: 300 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14 },
 });

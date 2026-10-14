@@ -137,14 +137,10 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 10 },
   heading: {
     color: palette.text,
-    fontFamily: fonts.extrabold,
-    fontSize: 34,
+    fontSize: 25,
     fontWeight: '800',
-    textAlign: 'left',
-    lineHeight: 36,
-    letterSpacing: -1.2,
-    textTransform: 'lowercase',
-    alignSelf: 'stretch',
+    textAlign: 'center',
+    lineHeight: 33,
   },
   headingAccent: { color: palette.accent },
   eyebrow: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -9,9 +9,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { fonts, palette } from '../design/tokens';
-import { tapLight } from '../ui/haptics';
 import { OnboardingMarkSlot } from './OnboardingMark';
 
 interface Slide {
@@ -73,7 +71,6 @@ export default function EducationScreen({
   const isLastSlide = slideIndex === SLIDES.length - 1;
 
   const handleNext = () => {
-    tapLight();
     if (!isLastSlide) {
       setSlideIndex(slideIndex + 1);
       return;
@@ -91,11 +88,6 @@ export default function EducationScreen({
       accessibilityHint="Advances to the next slide"
     >
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(0,0,0,0)', 'rgba(3,10,20,0.55)']}
-        style={styles.scrim}
-      />
       <OnboardingMarkSlot large />
       {/* Content is bottom-anchored and left-aligned rather than centred in
           the middle of the screen: the headline sits in the lower third where
@@ -103,14 +95,11 @@ export default function EducationScreen({
           its weight. `flex-end` does the anchoring so the stack still moves
           with the mark above it on shorter devices. */}
       <View style={styles.body}>
-        <View style={{ alignSelf: 'stretch' }}>
+        <View>
           {currentSlide.lines.map((line, i) => (
             <Animated.Text
               key={`${currentSlide.key}-${i}`}
               entering={FadeInDown.delay(120 + i * 70).duration(420)}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
               style={[styles.title, i === currentSlide.accentLine && styles.titleAccent]}
             >
               {line}
@@ -142,10 +131,6 @@ export default function EducationScreen({
       </View>
 
       <View style={styles.ctaWrap}>
-        <View style={styles.cta}>
-          <Text style={styles.ctaLabel}>{isLastSlide ? 'Set it up' : 'Continue'}</Text>
-          <Text style={styles.ctaArrow}>→</Text>
-        </View>
         <TapHint last={isLastSlide} />
       </View>
     </SafeAreaView>
@@ -174,29 +159,16 @@ function TapHint({ last }: { last: boolean }) {
 
   return (
     <Animated.Text style={[styles.tapHint, style]}>
-      {last ? 'or tap anywhere' : 'or tap anywhere'}
+      {last ? 'Tap to begin' : 'Tap to continue'}
     </Animated.Text>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  scrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' },
-  cta: {
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  ctaLabel: { color: '#0A1F3A', fontSize: 17, fontFamily: fonts.semibold, fontWeight: '700' },
-  ctaArrow: { color: '#0A1F3A', fontSize: 18, fontWeight: '700' },
   tapHint: {
-    color: palette.textSecondary,
-    fontSize: 12.5,
+    color: palette.textTertiary,
+    fontSize: 13.5,
     fontWeight: '600',
     letterSpacing: 0.6,
     textAlign: 'center',
@@ -212,18 +184,18 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: 28,
     paddingTop: 8,
-    gap: 14,
+    gap: 18,
   },
   title: {
     color: palette.text,
     fontFamily: fonts.extrabold,
-    fontSize: Math.min(44, Dimensions.get('window').width * 0.105),
+    fontSize: 44,
     fontWeight: '800',
     textAlign: 'left',
     // Leading below the font size. The headline is a stack of short lines and
     // only reads as a single block when they nearly touch — the default ~1.3
     // ratio used elsewhere breaks it into separate sentences.
-    lineHeight: Math.min(46, Dimensions.get('window').width * 0.112),
+    lineHeight: 46,
     letterSpacing: -1.6,
     // Authored sentence-case in the data stays readable; the all-lowercase
     // setting is presentation, and reverting it is one line.
@@ -231,29 +203,26 @@ const styles = StyleSheet.create({
   },
   titleAccent: { color: palette.accent },
   subtitle: {
-    color: 'rgba(255,255,255,0.82)',
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowRadius: 8,
+    color: palette.textTertiary,
     fontFamily: fonts.regular,
     // Deliberately small and dim against a 34pt headline. The reference sets
     // its body copy at roughly a third the headline size — the contrast is
     // what makes the headline read as the subject and the copy as a footnote.
-    fontSize: 15,
+    fontSize: 15.5,
     textAlign: 'left',
-    lineHeight: 22,
-    maxWidth: 340,
+    lineHeight: 23,
+    maxWidth: 330,
   },
   boldText: {
     fontFamily: fonts.semibold,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: palette.textSecondary,
   },
   indicatorContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   indicatorDot: {
     width: 28,

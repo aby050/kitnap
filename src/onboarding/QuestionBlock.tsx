@@ -11,7 +11,6 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Question } from './questions';
-import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';
 import { Field } from '../design/primitives';
 import { fonts, palette, space } from '../design/tokens';
@@ -33,50 +32,12 @@ type Props = {
  */
 function promptSize(prompt: string) {
   const n = prompt.replace(/\*\*/g, '').length;
-  if (n > 80) return { fontSize: 21, lineHeight: 28, letterSpacing: -0.3 };
-  if (n > 48) return { fontSize: 23, lineHeight: 30, letterSpacing: -0.4 };
-  return { fontSize: 26, lineHeight: 33, letterSpacing: -0.5 };
+  if (n > 80) return { fontSize: 24, lineHeight: 27, letterSpacing: -0.7 };
+  if (n > 48) return { fontSize: 28, lineHeight: 31, letterSpacing: -0.9 };
+  return { fontSize: 32, lineHeight: 34, letterSpacing: -1.1 };
 }
 
-/** Display-only icons. Answer values stay the plain labels, so nothing that
- *  reads them back (rules, schedule, block-screen voice) is affected. */
-const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  'Focus better': 'locate-outline', 'Sleep better': 'moon-outline', 'Be more present': 'sparkles-outline',
-  'Improve mental health': 'heart-outline', Other: 'ellipsis-horizontal-circle-outline',
-  'Drawing / painting': 'color-palette-outline', Reading: 'book-outline', Exercise: 'barbell-outline',
-  Meditation: 'leaf-outline', Study: 'school-outline', 'Work / a project': 'briefcase-outline',
-  'Family / relationships': 'people-outline', Music: 'musical-notes-outline', Cooking: 'restaurant-outline',
-  'Learning a skill': 'bulb-outline',
-  'First thing in the morning': 'sunny-outline', 'Through the working day': 'time-outline',
-  'The evening': 'partly-sunny-outline', 'Late at night, in bed': 'moon-outline',
-  'Adult sites': 'eye-off-outline', 'Betting and gambling': 'dice-outline', 'Short-form video': 'play-circle-outline',
-  'News and doomscroll': 'newspaper-outline',
-  'Push-ups': 'fitness-outline', Squats: 'walk-outline', 'Jumping jacks': 'flash-outline', 'I’d rather not move': 'hand-left-outline',
-  'At a desk': 'desktop-outline', 'In bed': 'bed-outline', 'On the sofa': 'tv-outline', 'Out and about': 'navigate-outline',
-};
-
-/** One line under the question: why it is being asked. Makes the flow feel
- *  like a conversation rather than a form. */
-const EYEBROWS: Record<string, string> = {
-  matters: 'YOUR WHY', interests: 'YOUR TIME', slipWindow: 'YOUR WEAK SPOT', hardBlock: 'OFF LIMITS',
-  name: 'YOU', healthLimit: 'YOUR BODY', movement: 'YOUR KEY', repBaseline: 'YOUR BASELINE',
-  whereBlocked: 'YOUR SPOT', controlScale: 'YOUR STARTING LINE',
-};
-
-const HINTS: Record<string, string> = {
-  matters: 'This sets the voice of your block screen.',
-  interests: 'We’ll show these back to you when the urge hits.',
-  slipWindow: 'Your first schedule is built around this.',
-  hardBlock: 'Optional. Nobody is judging this list.',
-  healthLimit: 'Some unlock challenges involve light movement. Optional.',
-  name: 'Just so the app can talk to you like a person.',
-  movement: 'You can change this any time in Settings.',
-  whereBlocked: 'So we never ask for a move you can’t do there.',
-  repBaseline: 'Be honest — the first challenge starts here.',
-  controlScale: 'No wrong answer. This is your starting line.',
-};
-
-function OptionButton({ label, selected, onPress, tile }: { label: string; selected: boolean; onPress: () => void; tile?: boolean }) {
+function OptionButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
@@ -85,29 +46,9 @@ function OptionButton({ label, selected, onPress, tile }: { label: string; selec
         onPressIn={() => (scale.value = withTiming(0.95, { duration: 90 }))}
         onPressOut={() => (scale.value = withSpring(1, { damping: 12, stiffness: 220 }))}
         onPress={onPress}
-        style={[styles.optionBtn, tile && styles.optionTile, selected && styles.optionBtnSelected]}
+        style={[styles.optionBtn, selected && styles.optionBtnSelected]}
       >
-        {ICONS[label] ? (
-          <View style={tile ? styles.tileEmoji : styles.rowEmoji}>
-            <Ionicons name={ICONS[label]} size={tile ? 28 : 22} color={selected ? palette.onLight : '#FFFFFF'} />
-          </View>
-        ) : null}
-        <Text
-          numberOfLines={tile ? 2 : undefined}
-          style={[styles.optionText, tile && { fontSize: 14.5, textAlign: 'center' }, selected && styles.optionTextSelected, !tile && { flex: 1 }]}
-        >
-          {label}
-        </Text>
-        {!tile && (
-          <View style={[styles.optionDot, selected && styles.optionDotOn]}>
-            {selected && <Text style={styles.optionTick}>✓</Text>}
-          </View>
-        )}
-        {tile && selected && (
-          <View style={styles.tileTick}>
-            <Text style={styles.optionTick}>✓</Text>
-          </View>
-        )}
+        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{label}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -275,22 +216,11 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       // tradeoff for not showing broken overlap.
       style={styles.block}
     >
-      {EYEBROWS[question.id] ? (
-        <View style={styles.eyebrow}>
-          <Text style={styles.eyebrowText}>{EYEBROWS[question.id]}</Text>
-        </View>
-      ) : null}
       <TypewriterText
         text={question.prompt}
         onComplete={handleTypewriterComplete}
         style={[styles.prompt, promptSize(question.prompt)]}
       />
-
-      {isTypingComplete && HINTS[question.id] && (
-        <Animated.Text entering={FadeIn.duration(400)} style={styles.hint}>
-          {HINTS[question.id]}
-        </Animated.Text>
-      )}
 
       {isTypingComplete && question.kind === 'text' && (
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
@@ -340,15 +270,10 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 
       {isTypingComplete && question.kind === 'multi' && (
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
-          <View style={[styles.optionsWrap, question.options.length > 5 && styles.tileGrid]}>
+          <View style={styles.optionsWrap}>
             {question.options.map((opt, i) => (
-              <Animated.View
-                key={opt}
-                entering={FadeInDown.delay(i * 40).duration(300)}
-                style={question.options.length > 5 ? styles.tileCell : undefined}
-              >
+              <Animated.View key={opt} entering={FadeInDown.delay(i * 60).duration(320)}>
               <OptionButton
-                tile={question.options.length > 5}
                 label={opt}
                 selected={multiSelected.includes(opt)}
                 onPress={() => {
@@ -380,19 +305,8 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             const atPlus = question.maxPlus && rounded >= question.max;
             const shown = atPlus ? `${question.max}+` : String(rounded);
             const maxLabel = question.maxPlus ? `${question.max}+` : String(question.max);
-            const pips = question.max - question.min + 1;
             return (
-              <View style={styles.sliderCard}>
-                {pips <= 12 && (
-                  <View style={styles.pipRow}>
-                    {Array.from({ length: pips }).map((_, i) => (
-                      <View
-                        key={i}
-                        style={[styles.pip, i + question.min <= rounded && styles.pipOn, i + question.min === rounded && styles.pipCurrent]}
-                      />
-                    ))}
-                  </View>
-                )}
+              <>
                 <Text style={named ? styles.levelName : styles.ageValue}>{named ?? shown}</Text>
                 {named ? (
                   <Text style={styles.levelMeta}>
@@ -403,7 +317,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
                     {question.min} – {maxLabel}
                   </Text>
                 )}
-              </View>
+              </>
             );
           })()}
           <Slider
@@ -460,25 +374,16 @@ const styles = StyleSheet.create({
    * the whole flow reads as one voice rather than a funnel bolted onto an app. */
   prompt: {
     color: palette.text,
-    fontFamily: fonts.bold,
-    fontSize: 26,
-    fontWeight: '700',
+    fontFamily: fonts.extrabold,
+    fontSize: 32,
+    fontWeight: '800',
     textAlign: 'left',
     alignSelf: 'stretch',
-    lineHeight: 33,
-    letterSpacing: -0.5,
+    // Leading under the size, as on the education headlines.
+    lineHeight: 34,
+    letterSpacing: -1.1,
+    textTransform: 'lowercase',
   },
-  eyebrow: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: palette.accentSoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.accentBorder,
-    marginBottom: 14,
-  },
-  eyebrowText: { color: palette.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
   promptEmphasis: { color: palette.accent },
   fullWidth: {
     width: '100%',
@@ -495,45 +400,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: 9,
   },
-  sliderCard: {
-    alignItems: 'center',
-    paddingVertical: 22,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    backgroundColor: palette.onColor,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.onColorBorder,
-    marginBottom: 12,
-  },
-  pipRow: { flexDirection: 'row', gap: 6, marginBottom: 18 },
-  pip: { width: 18, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
-  pipOn: { backgroundColor: palette.accent },
-  pipCurrent: { backgroundColor: '#FFFFFF', width: 26 },
-  hint: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: -4, marginBottom: 14 },
-  rowEmoji: { marginRight: 14 },
-  tileEmoji: { marginBottom: 10 },
-  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginHorizontal: -4 },
-  tileCell: { width: '50%', padding: 4 },
-  optionTile: { flexDirection: 'column', paddingVertical: 18, paddingHorizontal: 10, justifyContent: 'center', height: 112 },
-  tileTick: {
-    position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10,
-    backgroundColor: palette.onLight, alignItems: 'center', justifyContent: 'center',
-  },
-  optionDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 12,
-  },
-  optionDotOn: { backgroundColor: palette.onLight, borderColor: palette.onLight },
-  optionTick: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginTop: -1 },
   optionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: 17,
     paddingHorizontal: 20,
     borderRadius: 18,
@@ -590,18 +457,17 @@ const styles = StyleSheet.create({
   levelName: {
     color: palette.text,
     fontFamily: fonts.extrabold,
-    fontSize: 30,
+    fontSize: 44,
     fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 34,
-    letterSpacing: -1,
-    minHeight: 68,
+    textAlign: 'left',
+    lineHeight: 48,
+    letterSpacing: -1.8,
   },
   levelMeta: {
     color: palette.onColorTextDim,
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
+    textAlign: 'left',
     marginTop: 6,
     marginBottom: 4,
   },

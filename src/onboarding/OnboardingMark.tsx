@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import ByreOrb from '../components/ByreOrb';
@@ -19,14 +19,12 @@ export const ONBOARDING_MARK_SIZE = 76;
 /** The education slides carry three short lines and nothing else, so the
  *  mark is the only thing with room to grow into — it reads as the brand
  *  moment there rather than as a header. */
-export const ONBOARDING_MARK_SIZE_LARGE = Math.round(
-  Math.min(240, Math.max(150, Dimensions.get('window').height * 0.27)),
-);
+export const ONBOARDING_MARK_SIZE_LARGE = 240;
 
 /** How far the large mark drops below the safe area. The education slides
  *  carry three short lines and then a lot of nothing; the mark moves down
  *  into that gap rather than hugging the status bar with a hole beneath it. */
-const LARGE_DROP = Dimensions.get('window').height < 760 ? 24 : 48;
+const LARGE_DROP = 56;
 
 /** Breathing room above the mark, inside the safe area. */
 const MARK_OFFSET = 12;

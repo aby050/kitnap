@@ -6,7 +6,7 @@ import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-rea
 import HoldButton from '../components/HoldButton';
 import { INTENSITIES, IntensityKey } from '../data/themes';
 import { isLoosening } from '../data/intensityChange';
-import { palette, fonts } from '../design/tokens';
+import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 const { width } = Dimensions.get('window');
@@ -70,7 +70,7 @@ export default function IntensityScreen({
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header Title */}
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          how hard should this {<Text style={{ color: palette.accent }}>push back?</Text>}
+          How hard should this push back?
         </Animated.Text>
         <Text style={styles.sub}>
           Both levels give you the same thing: three unlocks a day, three minutes each. What changes is
@@ -212,7 +212,14 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     zIndex: 2,
   },
-  heading: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 34, fontWeight: '800', textAlign: 'left', lineHeight: 36, letterSpacing: -1.2, textTransform: 'lowercase', alignSelf: 'stretch' },
+  heading: { 
+    color: '#ffffff', 
+    fontSize: 27, 
+    fontWeight: '800', 
+    textAlign: 'center', 
+    lineHeight: 35,
+    letterSpacing: -0.5,
+  },
   sub: { 
     color: 'rgba(255,255,255,0.5)', 
     fontSize: 15, 
