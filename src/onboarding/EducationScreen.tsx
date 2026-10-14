@@ -9,9 +9,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { fonts, palette } from '../design/tokens';
-import { tapLight } from '../ui/haptics';
 import { OnboardingMarkSlot } from './OnboardingMark';
 
 interface Slide {
@@ -32,19 +30,19 @@ const SLIDES: Slide[] = [
     key: 'willpower',
     lines: ['you’ve probably', 'tried a blocker', 'before.'],
     accentLine: 1,
-    subtitle: 'Most of them let you out the moment you push. One tap, a short delay, a password you set and remember.\n\nA block is only ever as strong as the moment you are weakest.',
+    subtitle: 'Most let you out the moment you push. A block is only as strong as your weakest moment.',
   },
   {
     key: 'stoppingPoint',
     lines: ['this one', 'doesn’t let', 'you out.'],
     accentLine: 1,
-    subtitle: 'Start a session and it cannot be paused, cancelled, or waited out — not by force-quitting, not by deleting the app.\n\n**The way back in is earned**: a real challenge, or one of your Bailouts.',
+    subtitle: 'Once a session starts it can’t be paused or waited out. **The way back in is earned.**',
   },
   {
     key: 'setupIntro',
     lines: ['let’s set', 'yours up.'],
     accentLine: 0,
-    subtitle: 'A few questions, then you choose what to block and **how hard it should be** to get back in.',
+    subtitle: 'A few quick questions, then you choose what to block and **how hard it should be.**',
   },
 ];
 
@@ -73,7 +71,6 @@ export default function EducationScreen({
   const isLastSlide = slideIndex === SLIDES.length - 1;
 
   const handleNext = () => {
-    tapLight();
     if (!isLastSlide) {
       setSlideIndex(slideIndex + 1);
       return;
@@ -91,11 +88,6 @@ export default function EducationScreen({
       accessibilityHint="Advances to the next slide"
     >
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(0,0,0,0)', 'rgba(3,10,20,0.55)']}
-        style={styles.scrim}
-      />
       <OnboardingMarkSlot large />
       {/* Content is bottom-anchored and left-aligned rather than centred in
           the middle of the screen: the headline sits in the lower third where
@@ -103,14 +95,11 @@ export default function EducationScreen({
           its weight. `flex-end` does the anchoring so the stack still moves
           with the mark above it on shorter devices. */}
       <View style={styles.body}>
-        <View style={{ alignSelf: 'stretch' }}>
+        <View>
           {currentSlide.lines.map((line, i) => (
             <Animated.Text
               key={`${currentSlide.key}-${i}`}
               entering={FadeInDown.delay(120 + i * 70).duration(420)}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
               style={[styles.title, i === currentSlide.accentLine && styles.titleAccent]}
             >
               {line}
@@ -142,10 +131,6 @@ export default function EducationScreen({
       </View>
 
       <View style={styles.ctaWrap}>
-        <View style={styles.cta}>
-          <Text style={styles.ctaLabel}>{isLastSlide ? 'Set it up' : 'Continue'}</Text>
-          <Text style={styles.ctaArrow}>→</Text>
-        </View>
         <TapHint last={isLastSlide} />
       </View>
     </SafeAreaView>
@@ -174,29 +159,16 @@ function TapHint({ last }: { last: boolean }) {
 
   return (
     <Animated.Text style={[styles.tapHint, style]}>
-      {last ? 'or tap anywhere' : 'or tap anywhere'}
+      {last ? 'Tap to begin' : 'Tap to continue'}
     </Animated.Text>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  scrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' },
-  cta: {
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  ctaLabel: { color: '#0A1F3A', fontSize: 17, fontFamily: fonts.semibold, fontWeight: '700' },
-  ctaArrow: { color: '#0A1F3A', fontSize: 18, fontWeight: '700' },
   tapHint: {
-    color: palette.textSecondary,
-    fontSize: 12.5,
+    color: palette.textTertiary,
+    fontSize: 13.5,
     fontWeight: '600',
     letterSpacing: 0.6,
     textAlign: 'center',
@@ -212,7 +184,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: 28,
     paddingTop: 8,
-    gap: 14,
+    gap: 18,
   },
   title: {
     color: palette.text,
@@ -231,29 +203,26 @@ const styles = StyleSheet.create({
   },
   titleAccent: { color: palette.accent },
   subtitle: {
-    color: 'rgba(255,255,255,0.82)',
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowRadius: 8,
+    color: 'rgba(255,255,255,0.78)',
     fontFamily: fonts.regular,
     // Deliberately small and dim against a 34pt headline. The reference sets
     // its body copy at roughly a third the headline size — the contrast is
     // what makes the headline read as the subject and the copy as a footnote.
-    fontSize: 15,
+    fontSize: 15.5,
     textAlign: 'left',
-    lineHeight: 22,
-    maxWidth: 340,
+    lineHeight: 23,
+    maxWidth: 330,
   },
   boldText: {
     fontFamily: fonts.semibold,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: palette.textSecondary,
   },
   indicatorContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   indicatorDot: {
     width: 28,

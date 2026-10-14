@@ -10,17 +10,15 @@ const ANDROID = Platform.OS === 'android';
 
 /** Short on purpose: a title and one line. Anything longer was being skimmed. */
 const PROMISES: { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }[] = [
-  { icon: 'exit-outline', title: 'Leave any time', body: 'You can turn this off in Settings. It works because you want it to.' },
-  { icon: 'megaphone-outline', title: 'No ads. Ever.', body: 'Not on the free plan, not later.' },
+  { icon: 'exit-outline', title: 'Leave any time', body: 'Turn it off in Settings.' },
+  { icon: 'megaphone-outline', title: 'No ads. Ever.', body: 'Free plan included.' },
   {
     icon: 'lock-closed-outline',
     title: ANDROID ? 'Accessibility, one job' : 'No VPN, no spying',
-    body: ANDROID
-      ? 'Only to see which app just opened. It never reads your screen or typing.'
-      : 'Apple’s Screen Time API only. Nothing runs in the background.',
+    body: ANDROID ? 'Only sees which app opened.' : 'Apple’s Screen Time only.',
   },
-  { icon: 'phone-portrait-outline', title: 'Your data stays here', body: 'No account, no cloud. Nothing leaves this phone.' },
-  { icon: 'medkit-outline', title: 'Emergency exit is free', body: 'One tap, no questions, no charge. Always.' },
+  { icon: 'phone-portrait-outline', title: 'Data stays on your phone', body: 'No account, no cloud.' },
+  { icon: 'medkit-outline', title: 'Emergency exit is free', body: 'One tap, always.' },
 ];
 
 function ShieldHero() {

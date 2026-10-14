@@ -7,7 +7,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { getInstalledApps } from 'device-permissions';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';
-import { palette, radius } from '../design/tokens';
+import { palette, radius, fonts } from '../design/tokens';
 import Icon from '../ui/Icon';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_PACKAGES } from '../data/blockedApps';
@@ -183,6 +183,17 @@ export default function AppPickerScreen({
     load();
   }, [suggestedPackages]);
 
+  // Open every category that already holds a pre-selected app, so what is
+  // ticked is visible without hunting for it.
+  useEffect(() => {
+    const open = new Set<string>(['social']);
+    selected.forEach((id) => {
+      const g = entries.find((e) => e.id === id)?.group;
+      if (g) open.add(g);
+    });
+    setExpandedCategories((prev) => Array.from(new Set([...prev, ...open])));
+  }, [entries, selected.length === 0]);
+
   const toggle = (id: string) => {
     setSelected((prev) => {
       let nextList = [...prev];
@@ -262,281 +273,180 @@ export default function AppPickerScreen({
     .filter((e): e is NonNullable<typeof e> => !!e && !e.expandable && e.id !== 'all');
   const selectedAppCount = selectedEntries.length;
 
+  const CAT_META: Record<string, { icon: keyof typeof Ionicons.glyphMap; tint: string }> = {
+    social: { icon: 'chatbubbles', tint: '#E0245E' },
+    games: { icon: 'game-controller', tint: '#F39C12' },
+    entertainment: { icon: 'play-circle', tint: '#8E44AD' },
+    productivity: { icon: 'briefcase', tint: '#3498DB' },
+    other: { icon: 'apps', tint: '#7F8C8D' },
+  };
+  const categories = entries.filter((e) => e.expandable || (!e.group && e.id !== 'all'));
+  const appsIn = (cat: string) => entries.filter((e) => e.group === cat);
+  const q = query.trim().toLowerCase();
+  const searchHits = q ? entries.filter((e) => !e.expandable && e.id !== 'all' && e.name.toLowerCase().includes(q)) : [];
+  const hasApps = entries.some((e) => !!e.group);
+
+  const AppTile = ({ e }: { e: Entry }) => {
+    const on = selected.includes(e.id);
+    return (
+      <Pressable onPress={() => toggle(e.id)} style={styles.tile} accessibilityRole="button" accessibilityState={{ selected: on }}>
+        <View style={[styles.tileIcon, on && styles.tileIconOn]}>
+          <View style={[styles.tileImg, !e.icon && { backgroundColor: e.tint }]}>
+            <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
+          </View>
+          {on && (
+            <View style={styles.tileCheck}>
+              <Ionicons name="checkmark" size={13} color="#06232B" />
+            </View>
+          )}
+        </View>
+        <Text style={[styles.tileName, on && { color: '#FFFFFF' }]} numberOfLines={2}>
+          {e.name}
+        </Text>
+      </Pressable>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoider>
         <View style={styles.centerStack}>
-        <View style={styles.hintRow}>
-          <Text style={styles.hint}>Use </Text>
-          <Text style={[styles.hint, styles.hintIconHighlight]}>Search</Text>
-          <Text style={styles.hint}> or tap </Text>
-          <Icon name="chevronRight" size={16} color="#ffffff" strokeWidth={2.2} />
-          <Text style={styles.hint}> to select apps to block</Text>
-        </View>
-        <Text style={styles.recommendHint}>
-          {selectedAppCount > 0
-            ? 'Pre-selected from what you actually use — tap to change.'
-            : 'Pick the apps that steal the most of your day.'}
-        </Text>
+          <Text style={styles.title}>What should we block?</Text>
+          <Text style={styles.recommendHint}>
+            {selectedAppCount > 0 ? 'Pre-selected from what you use. Tap to change.' : 'Pick the apps that steal your day.'}
+          </Text>
 
-        {/* Main card list */}
-        <Animated.View entering={FadeIn.duration(400)} style={styles.listCard}>
-          <ScrollView showsVerticalScrollIndicator={false} {...keyboardScrollProps}>
-            {visible.map((e, i) => {
-              const isSelected = selected.includes(e.id);
-              const expanded = expandedCategories.includes(e.id);
-              return (
-                <View
-                  key={e.id}
-                  style={[styles.row, i > 0 && styles.rowBorder, e.group && styles.rowNested]}
-                >
-                  {/* Left touchable checkbox */}
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => toggle(e.id)}
-                    style={styles.radioContainer}
-                  >
-                    <View style={[styles.radio, isSelected && styles.radioOn]}>
-                      {isSelected ? <Icon name="check" size={12} color="#0a1a10" /> : null}
-                    </View>
-                  </TouchableOpacity>
-                
-                  {/* Right touchable row content */}
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => handleRowPress(e)}
-                    style={styles.rowRightContent}
-                  >
-                    <View style={[styles.appIcon, { backgroundColor: e.icon ? 'transparent' : e.tint }]}>
-                      <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
-                    </View>
-                  
-                    <Text style={styles.appName}>{e.name}</Text>
-                  
-                    {e.expandable ? (
-                      <Icon
-                        name={expanded ? 'chevronDown' : 'chevronRight'}
-                        size={18}
-                        color="rgba(255,255,255,0.4)"
-                        strokeWidth={2}
-                      />
-                    ) : null}
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </ScrollView>
-
-          {/* Search input field inside the card container at bottom */}
-          <View style={styles.searchWrap}>
-            <Icon name="search" size={14} color="rgba(255,255,255,0.4)" />
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={16} color="rgba(255,255,255,0.5)" />
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search"
-              placeholderTextColor="rgba(255,255,255,0.3)"
+              placeholder="Search your apps"
+              placeholderTextColor="rgba(255,255,255,0.4)"
               style={styles.searchInput}
             />
-            <Icon name="mic" size={14} color="rgba(255,255,255,0.4)" />
-          </View>
-        </Animated.View>
-
-        {/* "3 apps selected" is a receipt, not an answer — these are the apps
-            themselves, so a wrong tick is caught here rather than later. */}
-        {selectedAppCount > 0 ? (
-          <View style={styles.selectedStrip}>
-            {selectedEntries.slice(0, SELECTED_STRIP_MAX).map((e) => (
-              <View key={e.id} style={[styles.selectedChip, { backgroundColor: e.icon ? 'transparent' : e.tint }]}>
-                <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
-              </View>
-            ))}
-            {selectedAppCount > SELECTED_STRIP_MAX ? (
-              <View style={[styles.selectedChip, styles.selectedChipMore]}>
-                <Text style={styles.selectedChipMoreText}>
-                  +{selectedAppCount - SELECTED_STRIP_MAX}
-                </Text>
-              </View>
+            {query ? (
+              <Pressable onPress={() => setQuery('')} hitSlop={10}>
+                <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.5)" />
+              </Pressable>
             ) : null}
           </View>
-        ) : null}
 
-        <Text style={styles.countLabel}>{selectedAppCount} {selectedAppCount === 1 ? 'app' : 'apps'} selected</Text>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false} {...keyboardScrollProps}>
+            {q ? (
+              <View style={styles.grid}>
+                {searchHits.map((e) => (
+                  <AppTile key={e.id} e={e} />
+                ))}
+                {searchHits.length === 0 && <Text style={styles.empty}>No app matches “{query}”.</Text>}
+              </View>
+            ) : (
+              categories.map((cat) => {
+                const meta = CAT_META[cat.id] ?? CAT_META.other;
+                const apps = appsIn(cat.id);
+                const open = expandedCategories.includes(cat.id);
+                const chosen = apps.filter((a) => selected.includes(a.id)).length;
+                const all = apps.length > 0 && chosen === apps.length;
+                return (
+                  <View key={cat.id} style={styles.section}>
+                    <Pressable
+                      onPress={() => (apps.length ? handleRowPress(cat) : toggle(cat.id))}
+                      style={styles.sectionHead}
+                    >
+                      <View style={[styles.catIcon, { backgroundColor: meta.tint }]}>
+                        <Ionicons name={meta.icon} size={22} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.catName}>{cat.name}</Text>
+                        <Text style={styles.catCount}>
+                          {apps.length ? `${chosen} of ${apps.length} selected` : selected.includes(cat.id) ? 'Selected' : 'Tap to block all'}
+                        </Text>
+                      </View>
+                      {apps.length > 0 && (
+                        <Pressable onPress={() => toggle(cat.id)} style={[styles.allPill, all && styles.allPillOn]} hitSlop={6}>
+                          <Text style={[styles.allPillText, all && { color: '#06232B' }]}>{all ? 'All' : 'Select all'}</Text>
+                        </Pressable>
+                      )}
+                      {apps.length > 0 && (
+                        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.5)" />
+                      )}
+                    </Pressable>
+                    {open && apps.length > 0 && (
+                      <View style={styles.grid}>
+                        {apps.map((a) => (
+                          <AppTile key={a.id} e={a} />
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            )}
+            {!hasApps && !q && (
+              <Text style={styles.empty}>We couldn’t read your installed apps, so you can block whole categories for now.</Text>
+            )}
+          </ScrollView>
 
-        <View style={styles.ctaWrap}>
-          <GradientButton label="Continue" onPress={() => onContinue(selected)} />
-        </View>
+          <View style={styles.ctaWrap}>
+            <GradientButton
+              label={selectedAppCount > 0 ? `Block ${selectedAppCount} ${selectedAppCount === 1 ? 'app' : 'apps'}` : 'Continue'}
+              onPress={() => onContinue(selected)}
+            />
+          </View>
         </View>
       </KeyboardAvoider>
     </SafeAreaView>
   );
 }
 
-/** Icons in the strip before it collapses to a "+N" tile. */
-const SELECTED_STRIP_MAX = 7;
-
 const styles = StyleSheet.create({
-  selectedStrip: {
+  container: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 18 },
+  centerStack: { flex: 1, paddingTop: 14 },
+  title: { color: '#FFFFFF', fontSize: 26, fontFamily: fonts.bold, fontWeight: '700', letterSpacing: -0.5 },
+  recommendHint: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4, marginBottom: 14 },
+  searchBar: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    alignItems: 'center',
     gap: 8,
-    marginTop: 14,
-    paddingHorizontal: 12,
+    height: 46,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 14,
   },
-  selectedChip: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  searchInput: { flex: 1, color: '#FFFFFF', fontSize: 15, height: 46 },
+  section: {
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 12,
     overflow: 'hidden',
   },
-  selectedChipMore: { backgroundColor: 'rgba(255,255,255,0.10)' },
-  selectedChipMoreText: { color: 'rgba(255,255,255,0.72)', fontSize: 12.5, fontWeight: '700' },
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 18,
-  },
-  centerStack: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    paddingTop: 12,
-  },
-  hintRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 12,
-  },
-  recommendHint: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 13,
-    textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  hint: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  hintIconHighlight: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  listCard: {
-    flex: 1,
-    minHeight: 340,
-    backgroundColor: palette.surfaceRaised,
-    borderRadius: radius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: palette.hairline,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    gap: 4,
-  },
-  radioContainer: {
-    paddingVertical: 12,
-    paddingRight: 10,
-  },
-  rowRightContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 12,
-  },
-  rowNested: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    paddingLeft: 40, // Indent nested apps under category
-  },
-  rowBorder: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.04)',
-  },
-  radio: {
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  catIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  catName: { color: '#FFFFFF', fontSize: 17, fontFamily: fonts.semibold, fontWeight: '700' },
+  catCount: { color: 'rgba(255,255,255,0.6)', fontSize: 12.5, marginTop: 2 },
+  allPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' },
+  allPillOn: { backgroundColor: palette.accent },
+  allPillText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, paddingBottom: 10 },
+  tile: { width: '25%', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 2 },
+  tileIcon: { width: 60, height: 60, borderRadius: 16, padding: 3, borderWidth: 2, borderColor: 'transparent' },
+  tileIconOn: { borderColor: palette.accent },
+  tileImg: { flex: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  tileCheck: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
     width: 22,
     height: 22,
     borderRadius: 11,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOn: {
     backgroundColor: palette.accent,
-    borderColor: palette.accent,
-  },
-  radioTick: {
-    color: '#0a1a10',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-  appIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
-  appName: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  chevron: {
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 22,
-    fontWeight: '300',
-  },
-  chevronDown: {
-    fontSize: 16,
-    marginTop: 2,
-  },
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    margin: 12,
-    paddingHorizontal: 16,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  searchIcon: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
-  },
-  micIcon: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.4)',
-  },
-  searchInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 15,
-  },
-  countLabel: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  ctaWrap: {
-    paddingBottom: 14,
-    paddingTop: 14,
-  },
+  tileName: { color: 'rgba(255,255,255,0.75)', fontSize: 11.5, textAlign: 'center', marginTop: 6, lineHeight: 14 },
+  empty: { color: 'rgba(255,255,255,0.65)', fontSize: 13.5, textAlign: 'center', padding: 16 },
+  ctaWrap: { paddingTop: 8, paddingBottom: 12 },
 });

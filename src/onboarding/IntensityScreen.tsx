@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated';
 import HoldButton from '../components/HoldButton';
 import { INTENSITIES, IntensityKey } from '../data/themes';
@@ -11,26 +11,43 @@ import Icon from '../ui/Icon';
 
 const { width } = Dimensions.get('window');
 
-const ROWS: { label: string; get: (i: (typeof INTENSITIES)[number]) => string }[] = [
-  { label: 'Challenge', get: (i) => i.challengeTypes },
-  { label: 'An unlock grants', get: (i) => `${i.grantMinutes} min` },
-  { label: 'Loosening a rule', get: (i) => i.settingsDelay },
-  { label: 'Daily cap', get: (i) => i.dailyCap },
-];
+type Glyph = keyof typeof Ionicons.glyphMap;
 
-// Top Eclipse Orb glow for premium onboarding aesthetics
-function HeaderGlow() {
+const CARD: Record<IntensityKey, { icon: Glyph; line: string; level: number; step: Glyph; stepLabel: string }> = {
+  steady: { icon: 'leaf-outline', line: 'A quick brain challenge to get in', level: 2, step: 'bulb-outline', stepLabel: 'Quick quiz' },
+  strict: { icon: 'barbell-outline', line: 'Real movement to get in', level: 4, step: 'body-outline', stepLabel: 'Move' },
+};
+
+function Meter({ level, active }: { level: number; active: boolean }) {
   return (
-    <View style={styles.glowContainer}>
-      <Svg width={width} height={160} viewBox={`0 0 ${width} 160`}>
-        <Defs>
-          <RadialGradient id="topGlow" cx="50%" cy="0%" r="50%">
-            <Stop offset="0%" stopColor={palette.accent} stopOpacity="0.15" />
-            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <Circle cx={width / 2} cy={0} r={140} fill="url(#topGlow)" />
-      </Svg>
+    <View style={styles.meter}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <View key={n} style={[styles.meterPip, n <= level && { backgroundColor: active ? palette.accent : 'rgba(255,255,255,0.55)' }]} />
+      ))}
+    </View>
+  );
+}
+
+function Flow({ selected, minutes }: { selected: IntensityKey; minutes: number }) {
+  const c = CARD[selected];
+  const steps: { icon: Glyph; label: string }[] = [
+    { icon: 'lock-closed-outline', label: 'App blocked' },
+    { icon: c.step, label: c.stepLabel },
+    { icon: 'lock-open-outline', label: `${minutes} min open` },
+  ];
+  return (
+    <View style={styles.flow}>
+      {steps.map((st, i) => (
+        <React.Fragment key={st.label}>
+          <View style={styles.flowStep}>
+            <View style={styles.flowIcon}>
+              <Ionicons name={st.icon} size={22} color={palette.accent} />
+            </View>
+            <Text style={styles.flowLabel}>{st.label}</Text>
+          </View>
+          {i < steps.length - 1 && <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.35)" style={{ marginTop: 14 }} />}
+        </React.Fragment>
+      ))}
     </View>
   );
 }
@@ -65,91 +82,56 @@ export default function IntensityScreen({
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <HeaderGlow />
-
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Header Title */}
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          how hard should this {<Text style={{ color: palette.accent }}>push back?</Text>}
+          how hard should it {<Text style={{ color: palette.accent }}>push back?</Text>}
         </Animated.Text>
-        <Text style={styles.sub}>
-          Both levels give you the same thing: three unlocks a day, three minutes each. What changes is
-          what it takes to earn one — answer something, or do something. Easing off later takes a day.
-        </Text>
+        <Text style={styles.sub}>Pick what it takes to open a blocked app.</Text>
 
-        {/* Segmented Row Selector */}
-        <View style={styles.segment}>
-          {INTENSITIES.map((i) => {
+        <View style={styles.cards}>
+          {INTENSITIES.map((i, idx) => {
             const active = i.key === selected;
+            const c = CARD[i.key];
             return (
-              <Pressable
-                key={i.key}
-                onPress={() => setSelected(i.key)}
-                style={[
-                  styles.segItem,
-                  active && styles.segItemActive
-                ]}
-              >
-                <View style={styles.segInner}>
-                  <Text style={[styles.segText, active && styles.segTextActive]}>{i.name}</Text>
-                  {i.key === recommended && (
-                    <Icon name="check" size={13} color={active ? palette.accent : 'rgba(255,255,255,0.45)'} strokeWidth={2.6} />
-                  )}
-                </View>
-              </Pressable>
+              <Animated.View key={i.key} entering={FadeInDown.delay(120 + idx * 90).duration(380)}>
+                <Pressable
+                  onPress={() => setSelected(i.key)}
+                  style={[styles.card, active && styles.cardActive]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <View style={[styles.cardIcon, active && styles.cardIconActive]}>
+                    <Ionicons name={c.icon} size={28} color={active ? '#06232B' : palette.accent} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.cardTitleRow}>
+                      <Text style={styles.cardTitle}>{i.name}</Text>
+                      {i.key === recommended && (
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>BEST FOR YOU</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.cardLine}>{c.line}</Text>
+                    <Meter level={c.level} active={active} />
+                  </View>
+                  <View style={[styles.radio, active && styles.radioOn]}>
+                    {active && <Ionicons name="checkmark" size={14} color="#06232B" />}
+                  </View>
+                </Pressable>
+              </Animated.View>
             );
           })}
         </View>
 
-        {recommended && recommendedReasons && recommendedReasons.length > 0 && (
-          <Animated.View
-            layout={LinearTransition.duration(260)}
-            entering={FadeInDown.duration(420)}
-            style={styles.recommendBox}
-          >
-            <Text style={styles.recommendTitle}>
-              We recommend {INTENSITIES.find((i) => i.key === recommended)?.name} for you
-            </Text>
-            {recommendedReasons.map((r) => (
-              <Text key={r} style={styles.recommendReason}>
-                · {r}
-              </Text>
-            ))}
-          </Animated.View>
-        )}
-
-        {/* Spec Table */}
-        {/* The table stays mounted and only the values cross-fade. Remounting
-            the whole card on every switch made the spec pop out and back in,
-            which read as a load rather than a change. */}
-        <Animated.View layout={LinearTransition.duration(260)} style={styles.table}>
-          {ROWS.map((row, i) => (
-            <View key={row.label} style={[styles.row, i < ROWS.length - 1 && styles.rowBorder]}>
-              <Text style={styles.rowLabel}>{row.label}</Text>
-              <Animated.Text
-                key={row.get(current)}
-                entering={FadeIn.duration(240)}
-                style={styles.rowValue}
-              >
-                {row.get(current)}
-              </Animated.Text>
-            </View>
-          ))}
+        <Text style={styles.flowHeading}>HOW AN UNLOCK WORKS</Text>
+        <Animated.View layout={LinearTransition.duration(260)}>
+          <Flow selected={selected} minutes={current.grantMinutes} />
         </Animated.View>
 
-        {/* Tip Warning Card */}
-        <View style={styles.note}>
-          <View style={styles.noteHeader}>
-            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke={palette.accent} strokeWidth="2" fill="none" />
-              <Path d="M12 8v5M12 16h.01" stroke={palette.accent} strokeWidth="2" strokeLinecap="round" />
-            </Svg>
-            <Text style={styles.noteTitle}>Real Protection</Text>
-          </View>
-          <Text style={styles.noteText}>
-            The delay on loosening your own rules is the real protection. Nobody at 11pm with an impulse waits
-            until tomorrow.
-          </Text>
+        <View style={styles.footnote}>
+          <Ionicons name="time-outline" size={16} color="rgba(255,255,255,0.7)" />
+          <Text style={styles.footnoteText}>Easing off later takes a day. That wait is the protection.</Text>
         </View>
       </ScrollView>
 
@@ -213,14 +195,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   heading: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 34, fontWeight: '800', textAlign: 'left', lineHeight: 36, letterSpacing: -1.2, textTransform: 'lowercase', alignSelf: 'stretch' },
-  sub: { 
-    color: 'rgba(255,255,255,0.5)', 
-    fontSize: 15, 
-    textAlign: 'center', 
-    marginTop: 12, 
-    lineHeight: 22,
-    fontWeight: '500',
-  },
   segment: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -334,4 +308,59 @@ const styles = StyleSheet.create({
     paddingBottom: 14, 
     paddingTop: 8,
   },
+  sub: { color: 'rgba(255,255,255,0.7)', fontSize: 15, marginTop: 8 },
+  cards: { gap: 12, marginTop: 22 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  cardActive: { borderColor: palette.accent, backgroundColor: palette.accentSoft },
+  cardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: palette.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardIconActive: { backgroundColor: palette.accent },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardTitle: { color: palette.text, fontSize: 20, fontFamily: fonts.bold, fontWeight: '700' },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: palette.accent },
+  badgeText: { color: '#06232B', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.8 },
+  cardLine: { color: 'rgba(255,255,255,0.72)', fontSize: 14, marginTop: 3 },
+  meter: { flexDirection: 'row', gap: 4, marginTop: 10 },
+  meterPip: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.14)' },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOn: { backgroundColor: palette.accent, borderColor: palette.accent },
+  flowHeading: { color: 'rgba(255,255,255,0.55)', fontSize: 11.5, fontWeight: '800', letterSpacing: 1.6, marginTop: 28, marginBottom: 14 },
+  flow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  flowStep: { alignItems: 'center', gap: 8, flex: 1 },
+  flowIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flowLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, fontWeight: '600', textAlign: 'center' },
+  footnote: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 26 },
+  footnoteText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, flex: 1 },
 });
