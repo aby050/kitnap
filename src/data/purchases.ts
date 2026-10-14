@@ -62,6 +62,11 @@ export const BAILOUT_PRODUCT_IDS = Object.keys(BAILOUT_PRODUCTS);
 
 let configured = false;
 
+/** Why the store last returned nothing. Shown in place of a bare "Soon" so a
+ *  billing problem on a device is diagnosable without a debugger. */
+let billingNote = '';
+export const getBillingNote = () => billingNote;
+
 /** Safe to call more than once; only the first call reaches the SDK. */
 export async function initPurchases(appUserId?: string): Promise<void> {
   if (configured) return;
@@ -132,10 +137,18 @@ export async function getDiscountOffering(): Promise<PurchasesOffering | null> {
 /** Consumables are fetched by product id — they don't belong in an offering,
  *  since the paywall picks a plan and the bailout screen sells a quantity. */
 export async function getBailoutProducts(): Promise<PurchasesStoreProduct[]> {
-  if (!configured) return [];
+  if (!configured) {
+    billingNote = 'Billing is not set up in this build.';
+    return [];
+  }
   try {
-    return await Purchases.getProducts(BAILOUT_PRODUCT_IDS, PRODUCT_CATEGORY.NON_SUBSCRIPTION);
-  } catch {
+    const found = await Purchases.getProducts(BAILOUT_PRODUCT_IDS, PRODUCT_CATEGORY.NON_SUBSCRIPTION);
+    billingNote = found.length
+      ? ''
+      : 'Google Play returned no products. Install from the Play Store as a tester account.';
+    return found;
+  } catch (e: any) {
+    billingNote = e?.message ? String(e.message).slice(0, 140) : 'Could not reach Google Play.';
     return [];
   }
 }

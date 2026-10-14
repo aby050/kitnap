@@ -7,7 +7,7 @@ import { gradients, palette, radius, space } from '../design/tokens';
 import Icon from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
 import { PurchasesStoreProduct } from 'react-native-purchases';
-import { BAILOUT_PRODUCTS, purchaseBailouts } from '../data/purchases';
+import { BAILOUT_PRODUCTS, getBillingNote, purchaseBailouts } from '../data/purchases';
 
 /** Copy per product id. Prices are never hardcoded — they come from the
  *  store so they're right in every currency and stay right after a reprice. */
@@ -188,15 +188,15 @@ export default function EmergencyTokensScreen({
                 <View style={styles.packFooter}>
                   <View style={styles.buyWrap}>
                     <View style={styles.buyBtnPlain}>
-                      <Text style={styles.buyText}>Soon</Text>
+                      <Text style={styles.buyText}>Unavailable</Text>
                     </View>
                   </View>
                 </View>
               </View>
             ))}
             <Text style={styles.purchaseNote}>
-              Bailout packs aren't reachable right now — check your connection and try again. Your
-              free Bailouts work either way.
+              Bailout packs aren't reachable right now. Your free Bailouts work either way.
+              {getBillingNote() ? `\n\n${getBillingNote()}` : ''}
             </Text>
           </>
         ) : (

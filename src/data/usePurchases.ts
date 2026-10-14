@@ -48,14 +48,21 @@ export function usePurchases(): PurchasesState {
 
   const load = useCallback(async () => {
     if (!isConfigured()) return;
-    const [current, discount, products] = await Promise.all([
-      getSubscriptionOffering(),
-      getDiscountOffering(),
-      getBailoutProducts(),
-    ]);
-    setOffering(current);
-    setDiscountOffering(discount);
-    setBailoutProducts(products);
+    // The store is often not connected yet on a cold start, so the first answer
+    // can be empty. One failed read used to leave every pack disabled until the
+    // app was killed; retry a few times with a growing pause instead.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const [current, discount, products] = await Promise.all([
+        getSubscriptionOffering(),
+        getDiscountOffering(),
+        getBailoutProducts(),
+      ]);
+      setOffering(current);
+      setDiscountOffering(discount);
+      setBailoutProducts(products);
+      if (products.length > 0 && current) return;
+      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+    }
   }, []);
 
   useEffect(() => {
