@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { palette } from '../design/tokens';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
@@ -134,6 +134,9 @@ export default function OnboardingFlow({
       <OnboardingMarkSlot />
 
       <View style={styles.progressWrap}>
+        <Text style={styles.stepLabel}>
+          {`STEP ${Math.min(progressFrom + stepIndex + 1, progressDenom)} OF ${progressDenom}`}
+        </Text>
         <View style={styles.progressTrack}>
           <Animated.View style={[styles.progressFill, progressFillStyle]} />
         </View>
@@ -172,14 +175,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   progressWrap: { paddingHorizontal: 28, marginTop: 4 },
+  stepLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    marginBottom: 8,
+  },
   progressTrack: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     overflow: 'hidden',
   },
   progressFill: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
     width: '100%',
     backgroundColor: palette.accent,

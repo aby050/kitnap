@@ -48,7 +48,10 @@ function OptionButton({ label, selected, onPress }: { label: string; selected: b
         onPress={onPress}
         style={[styles.optionBtn, selected && styles.optionBtnSelected]}
       >
-        <Text style={[styles.optionText, selected && styles.optionTextSelected]}>{label}</Text>
+        <Text style={[styles.optionText, selected && styles.optionTextSelected, { flex: 1 }]}>{label}</Text>
+        <View style={[styles.optionDot, selected && styles.optionDotOn]}>
+          {selected && <Text style={styles.optionTick}>✓</Text>}
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -400,7 +403,21 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     gap: 9,
   },
+  optionDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  optionDotOn: { backgroundColor: palette.onLight, borderColor: palette.onLight },
+  optionTick: { color: '#FFFFFF', fontSize: 13, fontWeight: '800', marginTop: -1 },
   optionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 17,
     paddingHorizontal: 20,
     borderRadius: 18,
