@@ -27,7 +27,7 @@ function ShieldHero() {
   return (
     <Animated.View entering={FadeIn.duration(600)} style={styles.hero}>
       <View style={styles.heroGlow}>
-        <Ionicons name="shield-checkmark" size={64} color={palette.accent} />
+        <Ionicons name="shield-checkmark" size={42} color={palette.accent} />
       </View>
     </Animated.View>
   );
@@ -70,9 +70,9 @@ export default function TrustPromiseScreen({ onContinue }: { onContinue: () => v
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  scroll: { paddingHorizontal: 22, paddingTop: 18, paddingBottom: 10 },
+  scroll: { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 6 },
   hero: { alignItems: 'center', marginBottom: 10 },
-  heroGlow: { width: 104, height: 104, borderRadius: 52, backgroundColor: palette.accentSoft, borderWidth: 1, borderColor: palette.accentBorder, alignItems: 'center', justifyContent: 'center' },
+  heroGlow: { width: 72, height: 72, borderRadius: 36, backgroundColor: palette.accentSoft, borderWidth: 1, borderColor: palette.accentBorder, alignItems: 'center', justifyContent: 'center' },
   heading: {
     color: palette.text,
     fontFamily: fonts.bold,
@@ -81,13 +81,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: -0.6,
   },
-  lede: { color: 'rgba(255,255,255,0.7)', fontSize: 15, textAlign: 'center', marginTop: 4, marginBottom: 20 },
-  list: { gap: 10 },
+  lede: { color: 'rgba(255,255,255,0.7)', fontSize: 15, textAlign: 'center', marginTop: 2, marginBottom: 14 },
+  list: { gap: 8 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 12,
+    paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 18,
     backgroundColor: palette.onColor,

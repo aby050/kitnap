@@ -59,7 +59,7 @@ export default function BenefitsScreen({
           <Text style={styles.bigUnit}> hours back</Text>
         </Animated.Text>
         <Text style={styles.sub}>
-          {fromUsage ? 'Measured from your usage.' : 'Estimated from your answers.'} If you hold the plan you set next, the dark bars are a week you keep.
+          {fromUsage ? 'Measured from your usage.' : 'Estimated from your answers.'} The grey is your day now; the green is what's left of it if you hold your plan.
         </Text>
 
         <View style={styles.chart}>
