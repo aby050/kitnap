@@ -5,6 +5,7 @@ import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAwar
 import Svg, { Circle, Path, Rect, Line } from 'react-native-svg';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { getInstalledApps } from 'device-permissions';
+import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';
 import { palette, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
@@ -24,30 +25,15 @@ type Entry = {
   icon?: string;
 };
 
+/** Shown only when the device's real app list can't be read. Categories only:
+ *  inventing app rows with drawn brand marks showed apps the user may not even
+ *  have installed, with icons that were not theirs. */
 const DEFAULT_ENTRIES: Entry[] = [
   { id: 'all', name: 'All Apps & Categories', tint: '#2f3640' },
-  { id: 'social', name: 'Social', tint: '#e0245e', expandable: true },
-  { id: 'instagram', name: 'Instagram', tint: '#e1306c', group: 'social' },
-  { id: 'facebook', name: 'Facebook', tint: '#1877f2', group: 'social' },
-  { id: 'tiktok', name: 'TikTok', tint: '#010101', group: 'social' },
-  { id: 'snapchat', name: 'Snapchat', tint: '#fffc00', group: 'social' },
-  { id: 'telegram', name: 'Telegram', tint: '#0088cc', group: 'social' },
-  { id: 'whatsapp', name: 'WhatsApp', tint: '#25d366', group: 'social' },
-  { id: 'games', name: 'Games', tint: '#f39c12', expandable: true },
-  { id: 'roblox', name: 'Roblox', tint: '#ff3b30', group: 'games' },
-  { id: 'subwaysurfers', name: 'Subway Surfers', tint: '#ff9500', group: 'games' },
-  { id: 'candycrush', name: 'Candy Crush', tint: '#ff2d55', group: 'games' },
-  { id: 'amongus', name: 'Among Us', tint: '#af52de', group: 'games' },
-  { id: 'entertainment', name: 'Entertainment', tint: '#8e44ad', expandable: true },
-  { id: 'youtube', name: 'YouTube', tint: '#ff0000', group: 'entertainment' },
-  { id: 'netflix', name: 'Netflix', tint: '#e50914', group: 'entertainment' },
-  { id: 'spotify', name: 'Spotify', tint: '#1db954', group: 'entertainment' },
-  { id: 'twitch', name: 'Twitch', tint: '#9146ff', group: 'entertainment' },
-  { id: 'productivity', name: 'Productivity', tint: '#3498db', expandable: true },
-  { id: 'slack', name: 'Slack', tint: '#4a154b', group: 'productivity' },
-  { id: 'zoom', name: 'Zoom', tint: '#2d8cff', group: 'productivity' },
-  { id: 'notion', name: 'Notion', tint: '#000000', group: 'productivity' },
-  { id: 'gmail', name: 'Gmail', tint: '#ea4335', group: 'productivity' },
+  { id: 'social', name: 'Social', tint: '#e0245e' },
+  { id: 'games', name: 'Games', tint: '#f39c12' },
+  { id: 'entertainment', name: 'Entertainment', tint: '#8e44ad' },
+  { id: 'productivity', name: 'Productivity', tint: '#3498db' },
 ];
 
 function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: string }) {
@@ -57,6 +43,10 @@ function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: str
   if (icon) {
     return <Image source={{ uri: icon }} style={{ width: '100%', height: '100%', borderRadius: 8 }} />;
   }
+  const CAT: Record<string, keyof typeof Ionicons.glyphMap> = {
+    all: 'apps', social: 'chatbubbles', games: 'game-controller', entertainment: 'film', productivity: 'briefcase', other: 'ellipsis-horizontal',
+  };
+  if (CAT[id]) return <Ionicons name={CAT[id]} size={19} color="#FFFFFF" />;
   switch (id) {
     case 'all':
       return (

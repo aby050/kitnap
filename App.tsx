@@ -532,7 +532,13 @@ export default function App() {
               The old chart paywall and the discount/referral retention screens
               stay out of the funnel; the plan picker below is the one paywall,
               and it sits between Benefits and Welcome. */}
-          {stage === 'benefits' && <BenefitsScreen onContinue={() => setStage('paywall')} />}
+          {stage === 'benefits' && (
+            <BenefitsScreen
+              onContinue={() => setStage('paywall')}
+              hours={estimateDailyHours(answers, measuredHours).hours}
+              fromUsage={estimateDailyHours(answers, measuredHours).fromUsage}
+            />
+          )}
 
           {/* The value-prop paywall comes before the plan picker: it makes the
               case, the picker takes the money.

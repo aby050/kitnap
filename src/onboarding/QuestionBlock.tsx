@@ -11,7 +11,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Question } from './questions';
-import Icon from '../ui/Icon';
+import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';
 import { Field } from '../design/primitives';
 import { fonts, palette, space } from '../design/tokens';
@@ -33,25 +33,36 @@ type Props = {
  */
 function promptSize(prompt: string) {
   const n = prompt.replace(/\*\*/g, '').length;
-  if (n > 80) return { fontSize: 24, lineHeight: 27, letterSpacing: -0.7 };
-  if (n > 48) return { fontSize: 28, lineHeight: 31, letterSpacing: -0.9 };
-  return { fontSize: 32, lineHeight: 34, letterSpacing: -1.1 };
+  if (n > 80) return { fontSize: 21, lineHeight: 28, letterSpacing: -0.3 };
+  if (n > 48) return { fontSize: 23, lineHeight: 30, letterSpacing: -0.4 };
+  return { fontSize: 26, lineHeight: 33, letterSpacing: -0.5 };
 }
 
 /** Display-only icons. Answer values stay the plain labels, so nothing that
  *  reads them back (rules, schedule, block-screen voice) is affected. */
-const ICONS: Record<string, string> = {
-  'Focus better': 'target', 'Sleep better': 'moon', 'Be more present': 'eye', 'Improve mental health': 'heart', Other: 'plus',
-  'Drawing / painting': 'edit', Reading: 'book', Exercise: 'pulse', Meditation: 'leaf', Study: 'note', 'Work / a project': 'rocket',
-  'Family / relationships': 'heart', Music: 'headphones', Cooking: 'flame', 'Learning a skill': 'bolt',
-  'First thing in the morning': 'sunrise', 'Through the working day': 'clock', 'The evening': 'sun', 'Late at night, in bed': 'moon',
-  'Adult sites': 'lock', 'Betting and gambling': 'alert', 'Short-form video': 'play', 'News and doomscroll': 'mist',
-  'Push-ups': 'pulse', Squats: 'pulse', 'Jumping jacks': 'bolt', 'I’d rather not move': 'pause',
-  'At a desk': 'grid', 'In bed': 'moon', 'On the sofa': 'home', 'Out and about': 'door',
+const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  'Focus better': 'locate-outline', 'Sleep better': 'moon-outline', 'Be more present': 'sparkles-outline',
+  'Improve mental health': 'heart-outline', Other: 'ellipsis-horizontal-circle-outline',
+  'Drawing / painting': 'color-palette-outline', Reading: 'book-outline', Exercise: 'barbell-outline',
+  Meditation: 'leaf-outline', Study: 'school-outline', 'Work / a project': 'briefcase-outline',
+  'Family / relationships': 'people-outline', Music: 'musical-notes-outline', Cooking: 'restaurant-outline',
+  'Learning a skill': 'bulb-outline',
+  'First thing in the morning': 'sunny-outline', 'Through the working day': 'time-outline',
+  'The evening': 'partly-sunny-outline', 'Late at night, in bed': 'moon-outline',
+  'Adult sites': 'eye-off-outline', 'Betting and gambling': 'dice-outline', 'Short-form video': 'play-circle-outline',
+  'News and doomscroll': 'newspaper-outline',
+  'Push-ups': 'fitness-outline', Squats: 'walk-outline', 'Jumping jacks': 'flash-outline', 'I’d rather not move': 'hand-left-outline',
+  'At a desk': 'desktop-outline', 'In bed': 'bed-outline', 'On the sofa': 'tv-outline', 'Out and about': 'navigate-outline',
 };
 
 /** One line under the question: why it is being asked. Makes the flow feel
  *  like a conversation rather than a form. */
+const EYEBROWS: Record<string, string> = {
+  matters: 'YOUR WHY', interests: 'YOUR TIME', slipWindow: 'YOUR WEAK SPOT', hardBlock: 'OFF LIMITS',
+  name: 'YOU', healthLimit: 'YOUR BODY', movement: 'YOUR KEY', repBaseline: 'YOUR BASELINE',
+  whereBlocked: 'YOUR SPOT', controlScale: 'YOUR STARTING LINE',
+};
+
 const HINTS: Record<string, string> = {
   matters: 'This sets the voice of your block screen.',
   interests: 'We’ll show these back to you when the urge hits.',
@@ -78,11 +89,12 @@ function OptionButton({ label, selected, onPress, tile }: { label: string; selec
       >
         {ICONS[label] ? (
           <View style={tile ? styles.tileEmoji : styles.rowEmoji}>
-            <Icon name={ICONS[label] as any} size={tile ? 26 : 20} color={selected ? palette.onLight : '#FFFFFF'} />
+            <Ionicons name={ICONS[label]} size={tile ? 28 : 22} color={selected ? palette.onLight : '#FFFFFF'} />
           </View>
         ) : null}
         <Text
-          style={[styles.optionText, tile && { fontSize: 15, textAlign: 'center' }, selected && styles.optionTextSelected, !tile && { flex: 1 }]}
+          numberOfLines={tile ? 2 : undefined}
+          style={[styles.optionText, tile && { fontSize: 14.5, textAlign: 'center' }, selected && styles.optionTextSelected, !tile && { flex: 1 }]}
         >
           {label}
         </Text>
@@ -263,6 +275,11 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       // tradeoff for not showing broken overlap.
       style={styles.block}
     >
+      {EYEBROWS[question.id] ? (
+        <View style={styles.eyebrow}>
+          <Text style={styles.eyebrowText}>{EYEBROWS[question.id]}</Text>
+        </View>
+      ) : null}
       <TypewriterText
         text={question.prompt}
         onComplete={handleTypewriterComplete}
@@ -443,16 +460,25 @@ const styles = StyleSheet.create({
    * the whole flow reads as one voice rather than a funnel bolted onto an app. */
   prompt: {
     color: palette.text,
-    fontFamily: fonts.extrabold,
-    fontSize: 32,
-    fontWeight: '800',
+    fontFamily: fonts.bold,
+    fontSize: 26,
+    fontWeight: '700',
     textAlign: 'left',
     alignSelf: 'stretch',
-    // Leading under the size, as on the education headlines.
-    lineHeight: 34,
-    letterSpacing: -1.1,
-    textTransform: 'lowercase',
+    lineHeight: 33,
+    letterSpacing: -0.5,
   },
+  eyebrow: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: palette.accentSoft,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.accentBorder,
+    marginBottom: 14,
+  },
+  eyebrowText: { color: palette.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
   promptEmphasis: { color: palette.accent },
   fullWidth: {
     width: '100%',
@@ -488,7 +514,7 @@ const styles = StyleSheet.create({
   tileEmoji: { marginBottom: 10 },
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginHorizontal: -4 },
   tileCell: { width: '50%', padding: 4 },
-  optionTile: { flexDirection: 'column', paddingVertical: 18, paddingHorizontal: 10, justifyContent: 'center', minHeight: 104 },
+  optionTile: { flexDirection: 'column', paddingVertical: 18, paddingHorizontal: 10, justifyContent: 'center', height: 112 },
   tileTick: {
     position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10,
     backgroundColor: palette.onLight, alignItems: 'center', justifyContent: 'center',
