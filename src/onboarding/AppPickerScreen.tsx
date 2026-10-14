@@ -92,7 +92,7 @@ export default function AppPickerScreen({
 }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(['social']); // start with social expanded
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['social', 'games', 'entertainment', 'productivity', 'other']);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -176,6 +176,22 @@ export default function AppPickerScreen({
         }
       }
       
+      if (Platform.OS === 'web') {
+        // Browser preview only: there is no package manager here, so show sample
+        // rows to review the layout. Never reached on a device.
+        const sample = (cat: string, tint: string, names: string[]): Entry[] =>
+          names.map((n) => ({ id: n.toLowerCase().replace(/\W/g, ''), name: n, tint, group: cat }));
+        defaults.length = 0;
+        defaults.push(
+          { id: 'all', name: 'All Apps & Categories', tint: '#2f3640' },
+          { id: 'social', name: 'Social', tint: '#e0245e', expandable: true },
+          ...sample('social', '#e0245e', ['Instagram', 'Facebook', 'WhatsApp', 'Snapchat', 'Telegram', 'Reddit', 'X', 'Pinterest']),
+          { id: 'games', name: 'Games', tint: '#f39c12', expandable: true },
+          ...sample('games', '#f39c12', ['Roblox', 'Subway Surfers', 'Candy Crush', 'Among Us']),
+          { id: 'entertainment', name: 'Entertainment', tint: '#8e44ad', expandable: true },
+          ...sample('entertainment', '#8e44ad', ['YouTube', 'Netflix', 'Spotify', 'Twitch', 'TikTok']),
+        );
+      }
       setEntries(defaults);
       const fallback = suggestedPackages.length > 0 ? suggestedPackages : [];
       setSelected(fallback.filter((id) => defaults.some((e) => e.id === id)));
@@ -186,7 +202,7 @@ export default function AppPickerScreen({
   // Open every category that already holds a pre-selected app, so what is
   // ticked is visible without hunting for it.
   useEffect(() => {
-    const open = new Set<string>(['social']);
+    const open = new Set<string>(['social', 'games', 'entertainment', 'productivity', 'other']);
     selected.forEach((id) => {
       const g = entries.find((e) => e.id === id)?.group;
       if (g) open.add(g);
