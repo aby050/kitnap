@@ -363,7 +363,7 @@ export default function TrialTimelineScreen({
             stated in full beneath the CTA, where guideline 3.1.2 expects
             them anyway. */}
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          Everything Phonewise does
+          everything Phonewise does
         </Animated.Text>
         <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={styles.subheading}>
           Pick how to pay. What you get is listed underneath.
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   restore: { color: palette.textTertiary, fontSize: 12, textAlign: 'center', marginTop: 10, textDecorationLine: 'underline' },
   scroll: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 150 },
   scrollWithClose: { paddingTop: 104 },
-  heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 32, marginBottom: 22 },
+  heading: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 34, fontWeight: '800', textAlign: 'left', lineHeight: 36, letterSpacing: -1.2, textTransform: 'lowercase', alignSelf: 'stretch', marginBottom: 22 },
   timeline: {},
   step: { flexDirection: 'row', gap: 14 },
   rail: { alignItems: 'center', width: 40 },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
@@ -22,33 +22,24 @@ const PROMISES: { icon: IconName; title: string; body: string }[] = [
   },
   {
     icon: 'lock',
-    title: 'No VPN, no device-admin, no accessibility spying',
-    body: "We use Apple's sanctioned Screen Time API only. Nothing runs in the background eating your data plan.",
+    title: Platform.OS === 'android' ? 'Accessibility is used for one thing only' : 'No VPN, no device-admin, no accessibility spying',
+    body:
+      Platform.OS === 'android'
+        ? 'To notice which app just opened, so the block screen can appear. It never reads your screen, your typing or your messages.'
+        : "We use Apple's sanctioned Screen Time API only. Nothing runs in the background eating your data plan.",
   },
   {
     icon: 'bars',
     title: 'Your data never leaves this device',
-    body: 'No account. No cloud. We literally cannot see which apps you picked — Apple gives us opaque tokens, not names.',
+    body:
+      Platform.OS === 'android'
+        ? 'No account. No cloud. The app name is checked on your phone and discarded straight after.'
+        : 'No account. No cloud. We literally cannot see which apps you picked — Apple gives us opaque tokens, not names.',
   },
   {
     icon: 'alert',
     title: 'Emergency access is free and instant, forever',
     body: 'One tap, zero questions, no payment. We will never charge you at your moment of weakness.',
-  },
-  {
-    icon: 'trash',
-    title: 'One tap to uninstall',
-    body: 'No hostage-taking, no hidden deactivation flow. If you want to leave, leave.',
-  },
-  {
-    icon: 'message',
-    title: 'Nothing preachy on your block screen',
-    body: 'No scripture, no politics. You choose the voice, and you can write it yourself.',
-  },
-  {
-    icon: 'card',
-    title: 'What you get free stays free',
-    body: "We will never move a feature you already use behind a paywall in an update.",
   },
 ];
 
@@ -57,11 +48,12 @@ export default function TrustPromiseScreen({ onContinue }: { onContinue: () => v
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          Before we start, here's what we{'\n'}promise not to do.
+          Five promises,{'\n'}before we start.
         </Animated.Text>
 
         {PROMISES.map((p, i) => (
           <Animated.View key={p.title} entering={FadeInDown.delay(60 * i).duration(380)} style={styles.row}>
+            <Text style={styles.num}>{String(i + 1).padStart(2, '0')}</Text>
             <View style={styles.glyphBox}>
               <Icon name={p.icon} size={19} color={palette.accent} strokeWidth={1.8} />
             </View>
@@ -84,7 +76,18 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: 22, paddingTop: 26, paddingBottom: 10 },
   heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 33, marginBottom: 28 },
-  row: { flexDirection: 'row', gap: 14, marginBottom: 22 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderRadius: 20,
+    backgroundColor: palette.onColor,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: palette.onColorBorder,
+  },
+  num: { position: 'absolute', top: 8, right: 14, color: 'rgba(255,255,255,0.28)', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   glyphBox: {
     width: 40,
     height: 40,
@@ -94,6 +97,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: { color: palette.text, fontSize: 16, fontWeight: '700', lineHeight: 22 },
-  body: { color: palette.textSecondary, fontSize: 14, lineHeight: 20.5, marginTop: 5 },
+  body: { color: 'rgba(255,255,255,0.78)', fontSize: 14, lineHeight: 20.5, marginTop: 5 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14, paddingTop: 8 },
 });

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { palette, radius } from '../design/tokens';
+import { palette, radius, fonts } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 
 const BENEFITS: { icon: IconName; title: string; desc: string }[] = [
@@ -18,7 +18,7 @@ export default function BenefitsScreen({ onContinue }: { onContinue: () => void 
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.body}>
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          Here's how this can help you in the next week
+          here's what changes in your {<Text style={{ color: palette.accent }}>first week.</Text>}
         </Animated.Text>
 
         <View style={styles.list}>
@@ -46,7 +46,7 @@ export default function BenefitsScreen({ onContinue }: { onContinue: () => void 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   body: { flex: 1, paddingHorizontal: 28, paddingTop: 40 },
-  heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
+  heading: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 34, fontWeight: '800', textAlign: 'left', lineHeight: 36, letterSpacing: -1.2, textTransform: 'lowercase', alignSelf: 'stretch' },
   list: { marginTop: 32, gap: 22 },
   row: { flexDirection: 'row', gap: 16, alignItems: 'center' },
   iconTile: {

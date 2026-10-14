@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoider } from '../components/KeyboardAware';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { GradientButton } from '../components/ui';
-import { palette, space } from '../design/tokens';
+import { palette, space, fonts } from '../design/tokens';
 import Icon from '../ui/Icon';
 
 /** Plays back at unlock #4 and above. A user's own voice at 11pm beats every
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { flex: 1, color: palette.text, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   body: { flex: 1, justifyContent: 'center', paddingHorizontal: 26, gap: 18 },
-  heading: { color: palette.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
+  heading: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 34, fontWeight: '800', textAlign: 'left', lineHeight: 36, letterSpacing: -1.2, textTransform: 'lowercase', alignSelf: 'stretch' },
   sub: { color: palette.textSecondary, fontSize: 16, textAlign: 'center', lineHeight: 23 },
   inputWrap: { marginTop: 10 },
   input: {
