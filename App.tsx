@@ -177,6 +177,11 @@ export default function App() {
         setStage('app');
       } else {
         setStage('splash');
+        // DEV-PREVIEW-JUMP
+        if (__DEV__ && Platform.OS === 'web' && typeof window !== 'undefined') {
+          const q = new URLSearchParams(window.location.search);
+          if (q.get('stage')) setStage(q.get('stage') as Stage);
+        }
       }
       setLoaded(true);
     });
