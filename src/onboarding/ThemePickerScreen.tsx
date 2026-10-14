@@ -47,7 +47,7 @@ export default function ThemePickerScreen({
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          What are you protecting?
+          Choose what your block screen says
         </Animated.Text>
         <Text style={styles.sub}>
           Phonewise doesn’t show a grey “blocked” wall. It says this to you, in your own reason’s words.

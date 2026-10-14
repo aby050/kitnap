@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { palette } from '../design/tokens';
 import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAware';
@@ -79,6 +79,10 @@ export default function OnboardingFlow({
    * otherwise flip the two modes back and forth on a question that fits
    * exactly.
    */
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [stepIndex]);
   const [viewportH, setViewportH] = useState(0);
   const [contentH, setContentH] = useState(0);
   const fits = viewportH > 0 && contentH > 0 && contentH <= viewportH + 1;
@@ -134,6 +138,9 @@ export default function OnboardingFlow({
       <OnboardingMarkSlot />
 
       <View style={styles.progressWrap}>
+        <Text style={styles.stepLabel}>
+          {`STEP ${Math.min(progressFrom + stepIndex + 1, progressDenom)} OF ${progressDenom}`}
+        </Text>
         <View style={styles.progressTrack}>
           <Animated.View style={[styles.progressFill, progressFillStyle]} />
         </View>
@@ -146,8 +153,15 @@ export default function OnboardingFlow({
             not clip overflow by default — the block drew itself straight over
             the mark and the progress bar above it. */}
         <ScrollView
+          ref={scrollRef}
           style={styles.currentArea}
-          contentContainerStyle={[styles.currentContent, fits && styles.currentContentCentered]}
+          contentContainerStyle={[
+            styles.currentContent,
+            // Centre by padding, not justifyContent: a block taller than the
+            // viewport then just scrolls from a sane top instead of spilling
+            // above the scroll view.
+            { paddingTop: Math.max(24, (viewportH - (contentH - 92) - 48) / 2) },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
@@ -172,14 +186,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   progressWrap: { paddingHorizontal: 28, marginTop: 4 },
+  stepLabel: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    marginBottom: 8,
+  },
   progressTrack: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     overflow: 'hidden',
   },
   progressFill: {
-    height: 3,
+    height: 4,
     borderRadius: 2,
     width: '100%',
     backgroundColor: palette.accent,

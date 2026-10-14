@@ -202,7 +202,7 @@ export const QUESTIONS: Question[] = [
   {
     id: 'healthLimit',
     kind: 'text',
-    prompt: 'Any **illness, injury, or physical limitation** we should know about? Some unlock challenges involve light movement.',
+    prompt: 'Any **injury or limitation** we should know about?',
     placeholder: 'e.g. bad knee — or leave blank',
     optional: true,
   },
