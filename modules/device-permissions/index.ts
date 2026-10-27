@@ -24,6 +24,8 @@ type Native = {
   isPowerSaveMode?(): boolean;
   setLockdown?(on: boolean): boolean;
   isLockdownOn?(): boolean;
+  setLockdownUntil?(untilMs: number): void;
+  launchApp?(packageName: string): boolean;
   hasUsageAccess?(): boolean;
   openUsageAccessSettings?(): boolean;
   queryUsageStats?(startMs: number, endMs: number): UsageRow[];
@@ -162,6 +164,13 @@ export const isPowerSaveMode = (): boolean => native?.isPowerSaveMode?.() ?? fal
  * not a commitment.
  */
 export const setLockdown = (on: boolean): boolean => native?.setLockdown?.(on) ?? false;
+
+/** Session deadline, held natively so the lock expires without JS running. */
+export const setLockdownUntil = (untilMs: number): void => native?.setLockdownUntil?.(untilMs);
+
+/** Opens an installed app. The home screen is shielded during a session, so
+ *  the timer screen launches apps itself. */
+export const launchApp = (packageName: string): boolean => native?.launchApp?.(packageName) ?? false;
 
 export const isLockdownOn = (): boolean => native?.isLockdownOn?.() ?? false;
 

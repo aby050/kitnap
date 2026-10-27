@@ -13,23 +13,18 @@ import {
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
 import SplashFlow from './src/onboarding/SplashFlow';
+import IntroStories from './src/onboarding/IntroStories';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
 import PermissionBoardingPassScreen from './src/onboarding/PermissionBoardingPassScreen';
-import PostOnboardingFlow from './src/onboarding/PostOnboardingFlow';
-import TrustPromiseScreen from './src/onboarding/TrustPromiseScreen';
 import GoalScreen from './src/onboarding/GoalScreen';
 import EducationScreen from './src/onboarding/EducationScreen';
 import OnboardingMark from './src/onboarding/OnboardingMark';
-import AffirmationScreen from './src/onboarding/AffirmationScreen';
-import BenefitsScreen from './src/onboarding/BenefitsScreen';
 import TrialTimelineScreen from './src/onboarding/TrialTimelineScreen';
 import PlanCompareScreen from './src/onboarding/PlanCompareScreen';
 import PurchaseSuccessScreen, { PurchaseResult } from './src/onboarding/PurchaseSuccessScreen';
-import ThemePickerScreen from './src/onboarding/ThemePickerScreen';
 import IntensityScreen from './src/onboarding/IntensityScreen';
 import FutureSelfScreen from './src/onboarding/FutureSelfScreen';
 import PaywallScreen from './src/onboarding/PaywallScreen';
-import GroundRulesScreen from './src/onboarding/GroundRulesScreen';
 import AppPickerScreen from './src/onboarding/AppPickerScreen';
 import IOSAppPickerScreen from './src/onboarding/IOSAppPickerScreen';
 import ProposedRulesScreen from './src/onboarding/ProposedRulesScreen';
@@ -105,6 +100,8 @@ type Stage =
 
 type Answer = { value: string; label: string };
 
+import { KaushanScript_400Regular } from '@expo-google-fonts/kaushan-script';
+
 export default function App() {
   // Every weight the type scale names has to be loaded here: with a bundled
   // family React Native will not synthesise a missing weight, it silently
@@ -117,6 +114,7 @@ export default function App() {
     Poppins_600SemiBold,
     Poppins_700Bold,
     Poppins_800ExtraBold,
+    KaushanScript_400Regular,
   });
 
   const [stage, setStage] = useState<Stage>('loading');
@@ -380,7 +378,7 @@ export default function App() {
           <PersistentBackground />
           <StatusBar style="light" />
 
-          {stage === 'splash' && <SplashFlow onDone={() => setStage('education')} />}
+          {stage === 'splash' && <IntroStories onDone={() => setStage('onboarding')} />}
 
           {(stage === 'education' || stage === 'onboarding') && (
             <OnboardingMark large={stage === 'education'} />
@@ -390,11 +388,7 @@ export default function App() {
             <EducationScreen onContinue={() => setStage('onboarding')} />
           )}
 
-          {/* All permissions asked upfront, boarding-pass style, before any
-              onboarding question — matches the reference flow instead of
-              interleaving asks mid-questionnaire. Real usage data is
-              available for the rest of onboarding and for
-              PostOnboardingFlow's projections from this point on. */}
+          {/* Questions first, then the permission asks they justify. */}
           {stage === 'onboarding' && !askingPermission && (
             <OnboardingFlow
               key={`chunk-${chunk}`}
@@ -407,8 +401,7 @@ export default function App() {
                 setAnswers(a);
                 if (h) setHistory(h);
                 // The slip window becomes a real schedule rather than a
-                // stored string — seeded once, and editable in Settings from
-                // the moment setup ends.
+                // stored string, editable in Settings from then on.
                 const seeded = scheduleFromSlipWindow(a);
                 if (seeded) {
                   patch({
@@ -430,57 +423,18 @@ export default function App() {
               onContinue={() => {
                 setAskingPermission(false);
                 if (chunk < QUESTION_CHUNKS.length - 1) setChunk((c) => c + 1);
-                else setStage('momentum');
+                else setStage('goal');
               }}
             />
           )}
 
-          {stage === 'momentum' && (
-            <AffirmationScreen
-              headline="Momentum unlocked."
-              body="That's the first step to reclaiming your time. Now let's look at what it's actually costing you."
-              onContinue={() => setStage('post')}
-            />
-          )}
-
-          {stage === 'post' && (
-            <PostOnboardingFlow
-              name={name}
-              answers={answers}
-              onFinish={({ dailyHours: h, fromUsage: u, suggestedPackages: pkgs }) => {
-                setMeasuredHours(h);
-                setHoursFromUsage(u);
-                setSuggestedPackages(pkgs);
-                if (pkgs.length > 0) patch({ blockedPackages: pkgs });
-                setStage('trust');
-              }}
-            />
-          )}
-
-          {stage === 'trust' && <TrustPromiseScreen onContinue={() => setStage('goal')} />}
 
           {stage === 'goal' && (
             <GoalScreen
               onContinue={(g) => {
                 setGoal(g);
-                setStage('theme');
+                setStage(Platform.OS === 'ios' ? 'iosAppPicker' : 'appPicker');
               }}
-            />
-          )}
-
-          {stage === 'theme' && (
-            <ThemePickerScreen
-              suggested={suggestedTheme}
-              onContinue={(k) => {
-                setThemeKey(k);
-                setStage('groundRules');
-              }}
-            />
-          )}
-
-          {stage === 'groundRules' && (
-            <GroundRulesScreen
-              onContinue={() => setStage(Platform.OS === 'ios' ? 'iosAppPicker' : 'appPicker')}
             />
           )}
 
@@ -492,51 +446,15 @@ export default function App() {
                   const packages = selected.filter((id) => id.includes('.'));
                   patch({ blockedPackages: packages.length > 0 ? packages : setup.suggestedPackages });
                 }
-                setStage('intensity');
+                setStage('paywall');
               }}
             />
           )}
 
           {stage === 'iosAppPicker' && (
             <IOSAppPickerScreen
-              hint={
-                hoursFromUsage
-                  ? 'Start with the apps that already eat most of your day. Phonewise never sees the names you pick.'
-                  : 'Block the apps that usually steal the hours you described. Phonewise never sees the names you pick.'
-              }
-              onContinue={() => setStage('intensity')}
-            />
-          )}
-
-          {stage === 'intensity' && (
-            <IntensityScreen
-              recommended={intensityRecommendation.key}
-              recommendedReasons={intensityRecommendation.reasons}
-              onContinue={(k) => {
-                setIntensityKey(k);
-                setStage('futureSelf');
-              }}
-            />
-          )}
-
-          {stage === 'futureSelf' && (
-            <FutureSelfScreen
-              onContinue={(m) => {
-                setFutureSelfMessage(m);
-                setStage('benefits');
-              }}
-            />
-          )}
-
-          {/* World Seed (landmarks chrome) is skipped — world is deprioritized.
-              The old chart paywall and the discount/referral retention screens
-              stay out of the funnel; the plan picker below is the one paywall,
-              and it sits between Benefits and Welcome. */}
-          {stage === 'benefits' && (
-            <BenefitsScreen
+              hint="Block the apps that usually steal your hours. Phonewise never sees the names you pick."
               onContinue={() => setStage('paywall')}
-              hours={estimateDailyHours(answers, measuredHours).hours}
-              fromUsage={estimateDailyHours(answers, measuredHours).fromUsage}
             />
           )}
 

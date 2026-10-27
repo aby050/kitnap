@@ -17,7 +17,7 @@
       "buildNumber": "3",
       "infoPlist": {
         "NSSupportsLiveActivities": true,
-        "NSCameraUsageDescription": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone.",
+        "NSCameraUsageDescription": "Used for your progress photo. Photos stay on your phone.",
         "LSApplicationQueriesSchemes": [
           "instagram",
           "youtube",
@@ -60,7 +60,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Used for your progress photo, and during Hard unlock challenges to confirm you're actually up and moving. Photos stay on your phone."
+          "cameraPermission": "Used for your progress photo. Photos stay on your phone."
         }
       ],
       [

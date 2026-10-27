@@ -749,6 +749,7 @@ export function Editorial({
   color = palette.accent,
   style,
   voice = false,
+  compact = false,
 }: {
   lead: string;
   emphasis?: string;
@@ -759,16 +760,19 @@ export function Editorial({
    *  For the app speaking — block screens, focus rooms — rather than the app
    *  labelling. See `type.voice`. */
   voice?: boolean;
+  /** Smaller pair, for screens where the headline should not dominate. */
+  compact?: boolean;
 }) {
-  const base = voice ? type.voice : type.editorial;
-  const strong = voice ? type.voiceStrong : type.editorialStrong;
+  const size = compact ? { fontSize: 22, lineHeight: 28, letterSpacing: -0.5 } : null;
+  const base = [voice ? type.voice : type.editorial, size];
+  const strong = [voice ? type.voiceStrong : type.editorialStrong, size];
   return (
-    <Text style={[base, { textAlign: align }, style]}>
+    <Text style={[...base, { textAlign: align }, style]}>
       {lead}
       {!!emphasis && (
         <>
           {' '}
-          <Text style={[strong, { color }]}>{emphasis}</Text>
+          <Text style={[...strong, { color }]}>{emphasis}</Text>
         </>
       )}
     </Text>

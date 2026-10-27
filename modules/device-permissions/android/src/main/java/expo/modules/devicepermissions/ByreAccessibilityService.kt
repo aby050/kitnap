@@ -1,6 +1,8 @@
 package expo.modules.devicepermissions
 
 import android.accessibilityservice.AccessibilityService
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
@@ -40,6 +42,28 @@ class ByreAccessibilityService : AccessibilityService() {
   override fun onServiceConnected() {
     super.onServiceConnected()
     applyMonitoringLevelIfChanged()
+    // The system rebinds this service after the process is killed (swiping
+    // Phonewise out of recents). The user may already be standing in front of
+    // a blocked app or the home screen, and no window event will fire for it,
+    // so look at what is in front now rather than wait for the next change.
+    // Read from usage events, not the window tree, which would need the
+    // retrieve-window-content capability this service deliberately lacks.
+    recentForegroundPackage()?.let { handlePackage(it) }
+  }
+
+  private fun recentForegroundPackage(): String? = try {
+    val usm = getSystemService(USAGE_STATS_SERVICE) as UsageStatsManager
+    val now = System.currentTimeMillis()
+    val events = usm.queryEvents(now - 15_000, now)
+    val e = UsageEvents.Event()
+    var last: String? = null
+    while (events.hasNextEvent()) {
+      events.getNextEvent(e)
+      if (e.eventType == UsageEvents.Event.ACTIVITY_RESUMED) last = e.packageName
+    }
+    last
+  } catch (ex: Exception) {
+    null
   }
 
   override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -49,6 +73,10 @@ class ByreAccessibilityService : AccessibilityService() {
 
     val pkg = event?.packageName?.toString() ?: return
     if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+    handlePackage(pkg)
+  }
+
+  private fun handlePackage(pkg: String) {
     if (pkg == packageName) {
       // Byre's own window. This includes the overlay we just added — adding a
       // window fires TYPE_WINDOW_STATE_CHANGED attributed to *us*, so hiding
@@ -73,12 +101,16 @@ class ByreAccessibilityService : AccessibilityService() {
     // app's window never changed, nothing fired to bring the cover back.
     if (isTransientSystemWindow(pkg)) return
 
-    // Lockdown inverts the rule: everything is blocked unless it is on the
-    // short allowlist. Evaluated before the blocklist because during a
-    // lockdown the user's own app selection is beside the point.
+    // Lockdown adds the home screen to the blocklist: the timer screen lists
+    // every app that is not blocked and opens it directly, so nothing needs
+    // the launcher during a session.
     val lockdown = LockdownStore.isOn(applicationContext)
     val blocked = if (lockdown) {
-      !LockdownStore.allowed(applicationContext).contains(pkg)
+      LockdownStore.isBlocked(
+        applicationContext,
+        pkg,
+        BlockedPackagesStore.get(applicationContext),
+      )
     } else {
       BlockedPackagesStore.get(applicationContext).contains(pkg)
     }

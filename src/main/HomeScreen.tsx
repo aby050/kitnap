@@ -33,6 +33,8 @@ import { AMBIENCES, mediaFor } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
 import { dataRamp, motion, palette, radius, space, type } from '../design/tokens';
 import KnockoutLabel from '../components/KnockoutLabel';
+import BlockedSelection from '../components/BlockedSelection';
+import { installedLabel } from '../data/installedApps';
 
 /** A commitment runs from half an hour up to a week. */
 /** The three whose posters read best at thumbnail size — a strip of muddy
@@ -80,12 +82,12 @@ function formatBlockLength(minutes: number): string {
 
 /** Two [number, unit] pairs for the big light-weight time figure — the digit
  *  is hero-sized, the unit small and dim, matching the app's stat treatment. */
-function timePairs(pairs: [string, string][]) {
+function timePairs(pairs: [string, string][], compact = false) {
   return (
     <View style={styles.heroRow}>
       {pairs.map(([n, u], i) => (
         <View key={i} style={styles.heroPair}>
-          <Text style={type.hero}>{n}</Text>
+          <Text style={[type.hero, compact && styles.heroCompact]}>{n}</Text>
           <Text style={type.unit}>{u}</Text>
         </View>
       ))}
@@ -241,8 +243,7 @@ export default function HomeScreen({
     return [[String(m), 'min'], ['', '']];
   })();
 
-  const ringProgress = 0;
-
+  
   // ---- Screen time card data ----
   const totalMinutes = usage?.totalMinutes ?? null;
   const topApps = (usage?.apps ?? []).slice(0, 3);
@@ -307,27 +308,38 @@ export default function HomeScreen({
           <IconButton name="user" onPress={onOpenProfile} accessibilityLabel="Open profile" bordered />
         </View>
 
-        {/* Voice line */}
+        {/* The promise, up front. */}
         <Animated.View entering={FadeInDown.duration(motion.transition)}>
-          <Editorial
-            lead="Give yourself"
-            emphasis="a quieter stretch."
-            style={styles.voice}
-          />
+          <Editorial lead="A serious block." emphasis="No way around it." compact style={styles.voice} />
+          <Text style={styles.promise}>
+            No push-ups, no puzzles, no bypass. Use it only when you are serious about changing your
+            life.
+          </Text>
         </Animated.View>
 
-        {/* Commitment hero */}
-        <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={[styles.hero, heroAnimStyle]}>
-          <Ring progress={ringProgress} size={248} thickness={4}>
-            <Text style={[type.overline, styles.heroLabel]}>
-              {/* Blocking is already on by default (see BlockedAppsPill above)
-                  — this timer is a stricter lockdown on top of that, not what
-                  starts the block. "Commit a block" read as if nothing was
-                  blocked until this ran. */}
-              {Platform.OS === 'ios' ? 'Focus lock' : 'Commit a block'}
-            </Text>
-            {timePairs(heroPairs)}
-          </Ring>
+        {/* What will be locked: the apps they chose, as icons. */}
+        <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={[styles.lockCard, heroAnimStyle]}>
+          <Text style={[type.overline, styles.heroLabel]}>
+            {Platform.OS === 'ios' ? 'Focus lock' : 'Locked apps'}
+          </Text>
+          {Platform.OS === 'ios' ? (
+            <BlockedSelection compact />
+          ) : blockedPackages.length > 0 ? (
+            <Pressable style={styles.lockGrid} onPress={onOpenApps} accessibilityLabel="Blocked apps">
+              {blockedPackages.slice(0, 11).map((pkg) => (
+                <AppGlyph key={pkg} name={installedLabel(pkg) ?? pkg} packageName={pkg} size={36} />
+              ))}
+              {blockedPackages.length > 11 && (
+                <View style={styles.lockMore}>
+                  <Text style={styles.lockMoreText}>+{blockedPackages.length - 11}</Text>
+                </View>
+              )}
+            </Pressable>
+          ) : (
+            <Pressable onPress={onOpenApps} style={styles.lockEmpty}>
+              <Text style={styles.lockEmptyText}>Choose the apps to lock</Text>
+            </Pressable>
+          )}
         </Animated.View>
 
         {/* Duration stepper */}
@@ -421,258 +433,6 @@ export default function HomeScreen({
           </Pressable>
         </Animated.View>
 
-        {/* Today, at a glance — the three numbers people open a screen-time app
-            to see. They used to sit below the shield demo, Guardian, rooms and
-            photos; now they come straight after the one action on the page. */}
-        <Animated.View entering={FadeIn.delay(120).duration(motion.transition)} style={[styles.todayRow, styles.section]}>
-          <Pressable style={styles.todayTile} onPress={onChangeGoal ? cycleGoal : onOpenApps}>
-            <Text style={[styles.todayValue, overGoal && { color: palette.warn }]}>{screenTimeLabel}</Text>
-            <Text style={styles.todayLabel} numberOfLines={1}>
-              {dailyGoalMinutes != null ? `of ${fmtMin(dailyGoalMinutes)} goal` : 'Set a goal'}
-            </Text>
-            {dailyGoalMinutes != null && totalMinutes != null && (
-              <View style={styles.todayTrack}>
-                <View
-                  style={[
-                    styles.todayFill,
-                    { width: `${Math.min(100, (totalMinutes / dailyGoalMinutes) * 100)}%` },
-                    overGoal && { backgroundColor: palette.warn },
-                  ]}
-                />
-              </View>
-            )}
-          </Pressable>
-          <View style={styles.todayTile}>
-            <Text style={styles.todayValue}>{streak}</Text>
-            <Text style={styles.todayLabel} numberOfLines={1}>
-              {streak === 0 ? 'Start a streak' : 'day streak'}
-            </Text>
-            {streak > 0 && (
-              <View style={styles.todayTrack}>
-                <View style={[styles.todayFill, { width: `${Math.min(100, (streak / streakNext) * 100)}%` }]} />
-              </View>
-            )}
-          </View>
-          <View style={styles.todayTile}>
-            <Text style={styles.todayValue}>{today?.distractionsBlocked ?? 0}</Text>
-            <Text style={styles.todayLabel} numberOfLines={1}>blocked today</Text>
-          </View>
-        </Animated.View>
-
-        {/* Your week — replaces the "For you" / "Digital detox" preset
-            shelves, which offered timers rather than telling you anything. */}
-        {progress && (
-          <View style={styles.section}>
-            <WeeklyInsight progress={progress} goalLine={goalLine} heading="This week" />
-          </View>
-        )}
-
-        {/* Session shortcuts — "For you" and "Digital detox" are hidden.
-            Both were shelves of timer presets rather than anything about this
-            user, and they pushed the two things Home actually exists for (the
-            block itself, and what it is blocking) below two carousels. The
-            component is kept intact so the shelves can come back.
-        <PresetSections
-          onStartPreset={(minutes, label, hardMode) => onStartPreset?.(minutes, label, hardMode)}
-          blockedCount={blockedPackages.length}
-          onOpenBlockedApps={onOpenBlockedApps}
-        />
-        */}
-
-        {/* Screen time */}
-        <Card onPress={Platform.OS === 'ios' ? undefined : onOpenApps} style={styles.section}>
-          {Platform.OS === 'ios' ? (
-            // Real numbers, drawn by iOS itself via the UsageReport
-            // extension — the old "Apple doesn't let any app read your
-            // screen time" line belongs to the Android usage-stats path,
-            // and was stale here since this is the one channel Apple does
-            // allow.
-            <ScreenTimeCard />
-          ) : (
-            <>
-              <View style={styles.stCardHead}>
-                <Stat
-                  value={screenTimeLabel}
-                  label={usage?.available ? 'Screen time · today' : 'Screen time · not available'}
-                />
-                <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
-              </View>
-
-              {topApps.length > 0 ? (
-                <View style={styles.appList}>
-                  {topApps.map((app, i) => (
-                    <View key={app.packageName} style={styles.appRow}>
-                      <AppGlyph name={app.label} packageName={app.packageName} size={38} />
-                      <View style={styles.appMeter}>
-                        <View style={styles.appMeterHead}>
-                          <Text style={type.body} numberOfLines={1}>{app.label}</Text>
-                          <Text style={[type.sub, styles.appValue]}>{fmtMin(app.minutes)}</Text>
-                        </View>
-                        <Meter
-                          progress={app.minutes / peakMinutes}
-                          color={dataRamp[Math.min(dataRamp.length - 1, 1 + i)]}
-                        />
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <Text style={[type.sub, styles.usageEmpty]}>
-                  {!usage?.available
-                    ? "Apple doesn't let any app read your screen time — not even with permission granted. Your numbers live in Settings › Screen Time."
-                    : !usage?.granted
-                      ? 'Turn on Usage Access to see real per-app screen time here.'
-                      : 'No app usage recorded yet today.'}
-                </Text>
-              )}
-            </>
-          )}
-        </Card>
-
-        {/* Unlock difficulty + Bailouts — both real screens already, just
-            without an entry point on Home before this. */}
-        <Animated.View entering={FadeIn.delay(200).duration(motion.transition)} style={styles.twinRow}>
-          <Pressable style={styles.twinCard} onPress={onOpenDifficulty}>
-            <Icon name="pulse" size={20} color={palette.accent} />
-            <Text style={styles.twinValue}>{intensityKey ? getIntensity(intensityKey).name : 'Steady'}</Text>
-            <Text style={styles.twinLabel}>Unlock difficulty</Text>
-          </Pressable>
-          <Pressable style={styles.twinCard} onPress={onBuyBailouts}>
-            <BailoutGlyph size={20} />
-            <Text style={styles.twinValue}>{bailoutBalance}</Text>
-            <Text style={styles.twinLabel}>{bailoutBalance === 1 ? 'Bailout' : 'Bailouts'}</Text>
-          </Pressable>
-        </Animated.View>
-
-        {/* Open a blocked app (shield demo) */}
-        <Card tone="accent" onPress={onTriggerShield} style={styles.section}>
-          <Row
-            icon="target"
-            iconColor={palette.accent}
-            title="Open a blocked app"
-            subtitle={`Next request is unlock #${unlockNumber} today`}
-            chevron
-          />
-        </Card>
-
-        {/* Focus rooms.
-            The rooms themselves live on the Timer tab, which left Home with
-            no route to the one feature that is not a blocker. This is that
-            route: it says what a room is for, shows three of them so the
-            phrase means something, and hands over rather than duplicating
-            the shelf. */}
-        {/* Guardian, surfaced where people actually are.
-            It used to live only in Settings, four taps from anywhere, which
-            meant the one feature that makes a block hold was the one almost
-            nobody found. This card is not a menu row: it says what Guardian
-            does in a sentence, and once set it becomes the status display —
-            who holds the key, and how many doors it shuts. */}
-        {/* Progress photos, where the cadence actually lives.
-            The feature asks for one photo a week, and a weekly prompt buried
-            three screens deep in Profile is a prompt nobody sees in time.
-            Home is where the week is decided, so the card sits here — and it
-            only shouts when one is actually due. */}
-        {onOpenProgressPhotos && (
-          <Card onPress={onOpenProgressPhotos} style={styles.section}>
-            <View style={styles.roomsHead}>
-              <View style={styles.roomsEyebrowRow}>
-                <View style={[styles.roomsDot, !photoDue && styles.guardDotOff]} />
-                <Text style={styles.roomsEyebrow}>PROGRESS PHOTOS</Text>
-              </View>
-              <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
-            </View>
-            <Text style={styles.roomsLine}>
-              {photoDue
-                ? 'This week’s photo is due.'
-                : progressPhotos.length > 0
-                  ? `${progressPhotos.length} week${progressPhotos.length === 1 ? '' : 's'} on record.`
-                  : 'Take the first one.'}
-            </Text>
-            {progressPhotos.length > 0 ? (
-              <View style={styles.photoStrip}>
-                {progressPhotos.slice(-4).reverse().map((ph) => (
-                  <Image key={ph.date} source={{ uri: ph.uri }} style={styles.photoThumb} />
-                ))}
-                {photoDue && (
-                  <View style={[styles.photoThumb, styles.photoAdd]}>
-                    <Icon name="camera" size={18} color={palette.accent} strokeWidth={1.9} />
-                  </View>
-                )}
-              </View>
-            ) : (
-              <Text style={styles.guardBody}>
-                One a week. Months from now it is the only record of this that isn’t a number.
-              </Text>
-            )}
-          </Card>
-        )}
-
-        {onOpenGuardian && (
-          <Card onPress={onOpenGuardian} style={styles.section}>
-            <View style={styles.roomsHead}>
-              <View style={styles.roomsEyebrowRow}>
-                <View style={[styles.roomsDot, guardianName ? null : styles.guardDotOff]} />
-                <Text style={styles.roomsEyebrow}>GUARDIAN</Text>
-              </View>
-              <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
-            </View>
-            {guardianName ? (
-              <>
-                <Text style={styles.roomsLine}>{guardianName} holds your key.</Text>
-                <Text style={styles.guardBody}>
-                  Unblocking an app, weakening a limit or deleting a schedule needs their code.
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.roomsLine}>Give the key to someone you trust.</Text>
-                <Text style={styles.guardBody}>
-                  They hold a code. Without it you cannot quietly undo your own rules — you have to
-                  ask a real person first.
-                </Text>
-                <View style={styles.guardCta}>
-                  <Icon name="shield" size={15} color={palette.accent} />
-                  <Text style={styles.guardCtaText}>Set up Guardian</Text>
-                </View>
-              </>
-            )}
-          </Card>
-        )}
-
-        {onOpenRooms && (
-          <Card onPress={onOpenRooms} style={styles.section}>
-            <View style={styles.roomsHead}>
-              <View style={styles.roomsEyebrowRow}>
-                <View style={styles.roomsDot} />
-                <Text style={styles.roomsEyebrow}>FOCUS ROOMS</Text>
-              </View>
-              <Icon name="chevronRight" size={16} color={palette.textQuaternary} />
-            </View>
-            <Text style={styles.roomsLine}>Somewhere to be while your apps are shut.</Text>
-            <View style={styles.roomsStrip}>
-              {ROOM_PREVIEW.map((a) => {
-                const still = mediaFor(a.key).still;
-                return (
-                  <View key={a.key} style={styles.roomsThumb}>
-                    <LinearGradient
-                      colors={a.wash}
-                      start={{ x: 0.1, y: 0 }}
-                      end={{ x: 0.9, y: 1 }}
-                      style={StyleSheet.absoluteFill}
-                    />
-                    {still ? (
-                      <Image source={still} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                    ) : null}
-                  </View>
-                );
-              })}
-              <Text style={styles.roomsMore}>+{AMBIENCES.length - ROOM_PREVIEW.length} more</Text>
-            </View>
-          </Card>
-        )}
-
-
-
       </ScrollView>
 
       {showBailout && (
@@ -691,6 +451,31 @@ export default function HomeScreen({
 }
 
 const styles = StyleSheet.create({
+  promise: { ...type.sub, color: palette.onColorTextDim, marginTop: space.xs, lineHeight: 19 },
+  lockCard: {
+    alignItems: 'center',
+    marginTop: space.base,
+    paddingVertical: space.base,
+    paddingHorizontal: space.base,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(220,235,203,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(220,235,203,0.16)',
+    gap: space.sm,
+  },
+  heroCompact: { fontSize: 44, lineHeight: 48, letterSpacing: -2 },
+  lockGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 },
+  lockMore: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.glass,
+  },
+  lockMoreText: { ...type.sub, color: palette.onColorText, fontWeight: '600' },
+  lockEmpty: { paddingVertical: space.sm },
+  lockEmptyText: { ...type.body, color: palette.accent },
   todayRow: { flexDirection: 'row', gap: 10 },
   todayTile: {
     flex: 1,

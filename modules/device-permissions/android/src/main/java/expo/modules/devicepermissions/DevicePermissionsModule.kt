@@ -62,6 +62,23 @@ class DevicePermissionsModule : Module() {
       true
     }
 
+    /** Session deadline (epoch ms), so the lock expires without JS. */
+    Function("setLockdownUntil") { untilMs: Double ->
+      val ctx = appContext.reactContext ?: return@Function null
+      LockdownStore.setUntil(ctx, untilMs.toLong())
+      null
+    }
+
+    /** Opens an installed app directly — the timer screen's app list, used
+     *  because the home screen is shielded during a session. */
+    Function("launchApp") { pkg: String ->
+      val ctx = appContext.reactContext ?: return@Function false
+      val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
+        ?: return@Function false
+      ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+      true
+    }
+
     Function("isLockdownOn") {
       val ctx = appContext.reactContext ?: return@Function false
       LockdownStore.isOn(ctx)

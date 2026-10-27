@@ -59,6 +59,26 @@ const SCHEMES = {
     accentFill: ['#5FE8E0', '#08A9F4'],
     chartGood: ['#D2FBF4', '#17D3D0', '#08A9F4', '#073A4E'],
   },
+  /** Forest — deep canopy green rising to sage, leaf-green accent. */
+  forest: {
+    accent: '#8FD694',
+    accentPressed: '#74C37B',
+    accentSoft: 'rgba(143,214,148,0.14)',
+    accentBorder: 'rgba(143,214,148,0.30)',
+    accentRamp: 'rgba(143,214,148,0.38)',
+    accentRampMid: '#C9E8A8',
+    onLight: '#0E3B2A',
+    secondary: '#DCEBCB',
+    onSecondary: '#2C5A3E',
+    surface: '#08140F',
+    surfaceRaised: '#0F211A',
+    surfaceHigh: '#173128',
+    ground: ['#061510', '#061510', '#0A2419', '#0F3A29', '#14503A', '#1E6B4C', '#3C8A62', '#6FAF86'],
+    rise: ['rgba(6,21,16,0)', 'rgba(10,36,25,0.75)', 'rgba(15,58,41,0.9)', 'rgba(20,80,58,0.95)', 'rgba(30,107,76,0.97)', 'rgba(60,138,98,0.98)', 'rgba(111,175,134,1)'],
+    bloom: ['rgba(143,214,148,0.20)', 'rgba(143,214,148,0.05)', 'rgba(0,0,0,0)'],
+    accentFill: ['#B4E8A6', '#3C8A62'],
+    chartGood: ['#E4F6C8', '#8FD694', '#3C8A62', '#0F3A29'],
+  },
 } as const;
 
 const SCHEME = SCHEMES[appearance];

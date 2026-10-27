@@ -20,9 +20,12 @@ import { MediaSource } from '../data/ambienceMedia';
 export default function AmbienceVideoLayer({
   source,
   onFirstFrame,
+  contentFit = 'cover',
 }: {
   source: MediaSource;
   onFirstFrame?: () => void;
+  /** 'contain' shows the whole frame, uncropped, with the ground behind any bars. */
+  contentFit?: 'cover' | 'contain' | 'fill';
 }) {
   // expo-video takes a require id as-is and a remote clip as a bare URL
   // string, so a streamed loop needs unwrapping from the {uri} the rest of
@@ -37,13 +40,21 @@ export default function AmbienceVideoLayer({
   return (
     <VideoView
       player={player}
-      style={StyleSheet.absoluteFill}
-      contentFit="cover"
+      // width/height as well as absoluteFill: on web a <video> is a replaced
+      // element, so inset:0 alone leaves it at its intrinsic 720x1280 and the
+      // container just crops it.
+      style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
+      contentFit={contentFit}
       nativeControls={false}
       // Picture-in-picture is what drags `audio` into UIBackgroundModes on
       // iOS. Phonewise was rejected under 2.5.4 for exactly that key. Never enable.
       allowsPictureInPicture={false}
-      onFirstFrameRender={onFirstFrame}
+      onFirstFrameRender={() => {
+        // On web the play() in the setup callback can fire before the element
+        // has data and is dropped, leaving the clip frozen on frame one.
+        player.play();
+        onFirstFrame?.();
+      }}
       {...(Platform.OS === 'android' ? { useExoShutter: false } : null)}
     />
   );

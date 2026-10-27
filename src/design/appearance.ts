@@ -7,9 +7,10 @@ import { createMMKV } from 'react-native-mmkv';
  * Shield's *voice* and block-screen gradient (Deep Work, Health, Quiet…).
  * This picks the accent and ground colours for the whole app.
  */
-export type Appearance = 'blue' | 'green';
+export type Appearance = 'blue' | 'green' | 'forest';
 
 export const APPEARANCES: { key: Appearance; name: string; blurb: string; swatch: string }[] = [
+  { key: 'forest', name: 'Forest', blurb: 'Deep canopy green, leaf accent', swatch: '#8FD694' },
   { key: 'green', name: 'Phonewise', blurb: 'The mark’s own blue and mint', swatch: '#17D3D0' },
   { key: 'blue', name: 'Midnight', blurb: 'Electric blue on black', swatch: '#3B4FF2' },
 ];
@@ -33,10 +34,11 @@ const KEY = 'appearance';
 
 function read(): Appearance {
   try {
-    return store.getString(KEY) === 'blue' ? 'blue' : 'green';
+    const v = store.getString(KEY);
+    return v === 'blue' || v === 'green' ? v : 'forest';
   } catch {
     // A corrupt or unavailable store must never stop the app booting.
-    return 'green';
+    return 'forest';
   }
 }
 

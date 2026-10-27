@@ -150,25 +150,6 @@ export const QUESTIONS: Question[] = [
     options: ['Focus better', 'Sleep better', 'Be more present', 'Improve mental health', 'Other'],
   },
   {
-    id: 'interests',
-    kind: 'multi',
-    prompt: 'What would you **rather be doing** with that time? Pick as many as you like.',
-    options: [
-      'Drawing / painting',
-      'Reading',
-      'Exercise',
-      'Meditation',
-      'Study',
-      'Work / a project',
-      'Family / relationships',
-      'Music',
-      'Cooking',
-      'Learning a skill',
-      'Other',
-    ],
-    optional: true,
-  },
-  {
     id: 'slipWindow',
     kind: 'choice',
     prompt: 'When does the phone usually **win**?',
@@ -189,57 +170,11 @@ export const QUESTIONS: Question[] = [
    * worded: a list nobody can tick without admitting something is a list
    * nobody ticks.
    */
-  {
-    id: 'hardBlock',
-    kind: 'multi',
-    prompt: 'Anything you want **gone completely**?',
-    options: HARD_BLOCKS.map((h) => h.label),
-    optional: true,
-  },
 
   /* ── 2. Who you are, and how you get back in ───────────────────────── */
-  { id: 'name', kind: 'text', prompt: "What should we **call you**?", placeholder: 'John' },
-  {
-    id: 'healthLimit',
-    kind: 'text',
-    prompt: 'Any **injury or limitation** we should know about?',
-    placeholder: 'e.g. bad knee — or leave blank',
-    optional: true,
-  },
-  {
-    id: 'movement',
-    kind: 'choice',
-    prompt: 'Pick your **key**. This is what gets you back into a blocked app.',
-    options: [...MOVEMENTS],
-  },
 
   /* ── 3. Calibration ────────────────────────────────────────────────── */
-  {
-    id: 'repBaseline',
-    kind: 'slider',
-    prompt: 'Honestly — how many can you do **right now**, in one go?',
-    min: 1,
-    max: 30,
-    default: 8,
-    maxPlus: true,
-  },
-  {
-    id: 'whereBlocked',
-    kind: 'choice',
-    prompt: 'Where are you usually **sitting** when you reach for the phone?',
-    options: [...BLOCK_PLACES],
-  },
-  {
-    id: 'controlScale',
-    kind: 'slider',
-    prompt: 'Right now, how much **control** do you feel you have over your phone?',
-    min: 1,
-    max: 10,
-    default: 5,
-    labels: CONTROL_LEVEL_NAMES,
-  },
 
-  { id: 'review', kind: 'review', prompt: 'Reviewing your responses…' },
 ];
 
 /** Substitutes tokens like {matters} with the label of an earlier answer,
@@ -277,28 +212,12 @@ export function resolvePrompt(prompt: string, answers: Record<string, { value: s
  * chosen push-ups and said how many they can do understands exactly why the
  * camera is being asked for, which is the only moment that ask is easy.
  */
-const at = (id: string) => QUESTIONS.findIndex((q) => q.id === id);
 
 export const QUESTION_CHUNKS: { questions: Question[]; permissions: string[] }[] = [
   {
-    // Why you are here, and when you need it. `intro` rides along at the
-    // front; it is a statement, not a question.
-    questions: QUESTIONS.slice(0, at('slipWindow') + 1),
-    // Everything the next screens say about your usage rests on this, and the
-    // window they just picked is the thing it measures.
-    permissions: ['usage', 'screenTime'],
-  },
-  {
-    // Who you are, and the key you will use.
-    questions: QUESTIONS.slice(at('slipWindow') + 1, at('movement') + 1),
-    // Immediately after they chose a movement — the one moment in the flow
-    // where "we need the camera" needs no explaining.
-    permissions: ['camera'],
-  },
-  {
-    // How hard it should be.
-    questions: QUESTIONS.slice(at('movement') + 1),
-    // The shield itself and its nudges, once blocking has been described.
-    permissions: ['overlay', 'accessibility', 'notification', 'battery'],
+    // Two questions here, and a third (the daily goal) on its own screen later.
+    // Everything else is learned from real usage rather than asked.
+    questions: QUESTIONS,
+    permissions: ['usage', 'screenTime', 'overlay', 'accessibility', 'notification', 'battery'],
   },
 ];

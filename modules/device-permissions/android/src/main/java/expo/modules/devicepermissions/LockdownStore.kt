@@ -35,6 +35,7 @@ import android.telecom.TelecomManager
 object LockdownStore {
   private const val PREFS = "byre_lockdown"
   private const val KEY_ON = "on"
+  private const val KEY_UNTIL = "until"
 
   fun set(context: Context, on: Boolean) {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -43,8 +44,54 @@ object LockdownStore {
       .apply()
   }
 
-  fun isOn(context: Context): Boolean =
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ON, false)
+  /**
+   * When the session ends, held natively. The flag alone used to depend on JS
+   * to switch it off, so a process killed mid-session either never released
+   * the lock or, after a restart, had nothing to reconcile against. With the
+   * deadline here the service enforces and expires it on its own.
+   */
+  fun setUntil(context: Context, untilMs: Long) {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+      .edit()
+      .putLong(KEY_UNTIL, untilMs)
+      .apply()
+  }
+
+  fun isOn(context: Context): Boolean {
+    val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    if (!prefs.getBoolean(KEY_ON, false)) return false
+    val until = prefs.getLong(KEY_UNTIL, 0L)
+    if (until > 0L && System.currentTimeMillis() > until) {
+      prefs.edit().putBoolean(KEY_ON, false).putLong(KEY_UNTIL, 0L).apply()
+      return false
+    }
+    return true
+  }
+
+  /**
+   * Home screens installed on the device. During lockdown these are the one
+   * thing shielded besides the user's blocklist: the timer screen lists every
+   * open app and launches it directly, so the launcher is never needed.
+   */
+  fun launchers(context: Context): Set<String> {
+    val out = HashSet<String>()
+    try {
+      val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+      context.packageManager.queryIntentActivities(intent, 0)
+        .forEach { out.add(it.activityInfo.packageName) }
+    } catch (e: Exception) {
+      // Fall through with what was found.
+    }
+    return out
+  }
+
+  /** Lockdown's rule: the blocklist plus the home screen. Everything else,
+   *  including apps installed mid-session, stays openable from the timer. */
+  fun isBlocked(context: Context, pkg: String, blocklist: Set<String>): Boolean {
+    if (pkg == context.packageName) return false
+    if (pkg in blocklist) return true
+    return pkg in launchers(context)
+  }
 
   /**
    * Packages that stay reachable while lockdown is on.

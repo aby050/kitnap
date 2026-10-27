@@ -1,117 +1,53 @@
-import React, { useEffect } from 'react';
-import { Dimensions, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
-import ByreOrb from '../components/ByreOrb';
-import { palette } from '../design/tokens';
-import Icon from '../ui/Icon';
+import { Asset } from 'expo-asset';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { getVideoLayer } from '../components/videoLayer';
+import { fonts } from '../design/tokens';
 
-const { width, height } = Dimensions.get('window');
-const CONFETTI_COLORS = ['#f5c542', '#e07a5f', '#8fb8ff', palette.accent, '#ff7ab8', '#7dd8ff', '#d9f77e'];
+const CLIP = require('../../assets/intro/meadow.mp4');
 
-function ConfettiPiece({ index }: { index: number }) {
-  const fall = useSharedValue(0);
-  const startX = (index * 37) % width;
-  const delay = (index % 8) * 180;
-  const size = 8 + (index % 3) * 4;
-  const color = CONFETTI_COLORS[index % CONFETTI_COLORS.length];
-
-  useEffect(() => {
-    fall.value = withDelay(
-      delay,
-      withRepeat(withTiming(1, { duration: 3200 + (index % 5) * 400, easing: Easing.linear }), -1, false),
-    );
-  }, []);
-
-  const style = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: -40 + fall.value * (height + 80) },
-      { translateX: Math.sin(fall.value * Math.PI * 3) * 26 },
-      { rotate: `${fall.value * 620}deg` },
-    ],
-    opacity: fall.value < 0.85 ? 1 : (1 - fall.value) / 0.15,
-  }));
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        {
-          position: 'absolute',
-          left: startX,
-          top: 0,
-          width: size,
-          height: size * 1.4,
-          backgroundColor: color,
-          borderRadius: 2,
-        },
-        style,
-      ]}
-    />
-  );
-}
-
+/** The last beat of setup, in the same full-bleed style as the intro. */
 export default function WelcomeScreen({ onDone }: { onDone: () => void }) {
+  const Video = getVideoLayer();
   return (
-    <Pressable style={{ flex: 1 }} onPress={onDone}>
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <View style={styles.body}>
-          <Animated.View entering={FadeIn.duration(800)} style={styles.orbWrap}>
-            <ByreOrb size={200} awake />
-            <View style={styles.pedestal} />
-          </Animated.View>
+    <View style={styles.root}>
+      <Animated.View entering={FadeIn.duration(600)} style={StyleSheet.absoluteFill}>
+        {Video ? <Video source={{ uri: Asset.fromModule(CLIP).uri }} contentFit="fill" /> : <View style={styles.fallback} />}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,48,32,0.45)' }]} />
+        <LinearGradient
+          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
+          locations={[0, 0.4, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(400).duration(500)} style={styles.checkCircle}>
-            <Icon name="check" size={28} color="#062a14" strokeWidth={2.8} />
-          </Animated.View>
-
-          <Animated.Text entering={FadeInDown.delay(550).duration(500)} style={styles.heading}>
-            You're all set up.{'\n'}Welcome!
-          </Animated.Text>
-
-          <Animated.Text entering={FadeIn.delay(1400).duration(600)} style={styles.tapHint}>
-            TAP TO CONTINUE
-          </Animated.Text>
-        </View>
-
-        {Array.from({ length: 24 }).map((_, i) => (
-          <ConfettiPiece key={i} index={i} />
-        ))}
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <Text style={styles.eyebrow}>YOU ARE READY</Text>
+        <View style={{ flex: 1 }} />
+        <Animated.View entering={FadeInDown.delay(300).duration(520)}>
+          <Text style={styles.title}>Lock the apps. Go find the sun.</Text>
+          <Text style={styles.body}>
+            Pick a length and press Start. The apps you chose stay shut until it ends, and the world is waiting outside.
+          </Text>
+        </Animated.View>
+        <Pressable style={styles.cta} onPress={onDone} accessibilityLabel="Continue">
+          <Text style={styles.ctaText}>Get Started</Text>
+        </Pressable>
       </SafeAreaView>
-    </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 26 },
-  orbWrap: { alignItems: 'center' },
-  pedestal: {
-    width: 90,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#111',
-    marginTop: -8,
-  },
-  checkCircle: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: '#b6f5c8',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  checkGlyph: { color: '#062a14', fontSize: 30, fontWeight: '900' },
-  heading: { color: palette.text, fontSize: 24, fontWeight: '800', textAlign: 'center', lineHeight: 32 },
-  tapHint: { color: palette.textSecondary, fontSize: 12, letterSpacing: 2, marginTop: 20 },
+  root: { flex: 1, backgroundColor: '#0A1712' },
+  fallback: { flex: 1, backgroundColor: '#12301F' },
+  safe: { flex: 1, paddingHorizontal: 20 },
+  eyebrow: { marginTop: 22, color: '#fff', fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1.2 },
+  title: { color: '#fff', fontFamily: fonts.extrabold, fontSize: 32, lineHeight: 38, letterSpacing: -0.7, marginBottom: 10 },
+  body: { color: 'rgba(255,255,255,0.86)', fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, marginBottom: 24 },
+  cta: { height: 52, borderRadius: 26, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  ctaText: { color: '#0E2A1C', fontFamily: fonts.semibold, fontSize: 15 },
 });

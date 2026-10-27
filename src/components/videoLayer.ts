@@ -4,6 +4,7 @@ import type { MediaSource } from '../data/ambienceMedia';
 export type VideoLayerProps = {
   source: MediaSource;
   onFirstFrame?: () => void;
+  contentFit?: 'cover' | 'contain' | 'fill';
 };
 
 let cached: React.ComponentType<VideoLayerProps> | null | undefined;

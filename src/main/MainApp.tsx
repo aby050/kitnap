@@ -55,6 +55,7 @@ import {
   startSessionNotification,
   stopSessionNotification,
   setLockdown,
+  setLockdownUntil,
   setShieldCopy,
   hideShieldOverlay,
 } from 'device-permissions';
@@ -396,6 +397,7 @@ export default function MainApp({
   useEffect(() => {
     if (Platform.OS !== 'android') return;
     setLockdown(timerRunning);
+    setLockdownUntil(timerRunning && session ? session.endsAt : 0);
   }, [timerRunning]);
 
   /**

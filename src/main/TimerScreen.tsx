@@ -39,6 +39,7 @@ import CancelConfirm from '../components/CancelConfirm';
 import { AmbienceShelf } from '../components/AmbienceCard';
 import { Ambience } from '../data/ambiences';
 import BlockedListSheet from '../components/BlockedListSheet';
+import OpenAppsStrip from '../components/OpenAppsStrip';
 import BlockedSelection from '../components/BlockedSelection';
 import EmergencyDialer from '../components/EmergencyDialer';
 import SessionSoundCard from '../components/SessionSoundCard';
@@ -210,6 +211,7 @@ export default function TimerScreen({
   const [selectedMinutes, setSelectedMinutes] = useState(initialMinutes);
   // Locked-session sheets: the icon grid, and the per-app unlock confirm.
   const [showLockedApps, setShowLockedApps] = useState(false);
+  const [callPadOpen, setCallPadOpen] = useState(false);
   const [showEssentials, setShowEssentials] = useState(false);
   const [unlockTarget, setUnlockTarget] = useState<{ name: string; packageName: string } | null>(null);
   const secsLeft = (sn: FocusSession | null) =>
@@ -642,13 +644,7 @@ export default function TimerScreen({
             <Pill
               label="Call"
               icon="phone"
-              onPress={() => {
-                Linking.openURL('tel:').catch(() => {
-                  // No dialer (a tablet, mostly) — the essentials sheet at
-                  // least explains what is still reachable.
-                  setShowEssentials(true);
-                });
-              }}
+              onPress={() => setCallPadOpen(true)}
             />
             <Pill
               label="Emergency"
@@ -669,6 +665,7 @@ export default function TimerScreen({
               <Text style={[type.unit, styles.unitLine]}>{showHours ? 'hours · minutes' : 'minutes · seconds'}</Text>
             </Ring>
             {motivationLine ? <Text style={[type.callout, styles.lockedMotivation]}>{motivationLine}</Text> : null}
+            <OpenAppsStrip blockedPackages={blockedPackages} />
 
             {/* Sound rides with the chrome. It is a control, and the point of
                 hiding the chrome is to leave nothing but the time — a card
@@ -727,6 +724,8 @@ export default function TimerScreen({
 
 
         {pickPrompt}
+
+        <EmergencyDialer visible={callPadOpen} onClose={() => setCallPadOpen(false)} />
 
         {Platform.OS === 'ios' && (
           <BlockedListSheet
