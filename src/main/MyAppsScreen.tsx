@@ -138,25 +138,6 @@ export default function MyAppsScreen({
         <View style={styles.headerRow} />
         <Editorial lead="Decide once," emphasis="stay out of reach." style={styles.voice} />
 
-        {/* Primary entry — Android only. Its destination is per-app daily
-            minute limits, which Family Controls does not expose on iOS; the
-            picker below is the whole-app blocking that works on both.
-            The "Block Shorts" and "Block Websites" rows this card used to
-            advertise are gone: Screen Time cannot block one feature inside an
-            app (Shorts rides the same surface as YouTube itself), so they
-            were permanently-disabled rows promising something unbuildable. */}
-        {Platform.OS !== 'ios' && (
-          <Card tone="accent" onPress={onOpenBlocks} style={styles.blockCard}>
-            <Row
-              icon="sliders"
-              iconColor={palette.accent}
-              title="Block apps & limits"
-              subtitle="Set a daily minute limit for any app."
-              chevron
-            />
-          </Card>
-        )}
-
         {/* Blocked apps */}
         <SectionHeader
           title="Blocked apps"
@@ -164,16 +145,6 @@ export default function MyAppsScreen({
           onAction={Platform.OS !== 'ios' && blockedApps.length > 0 ? onOpenBlockedApps : undefined}
           style={styles.section}
         />
-        {/* The unlock level is global — one setting for every blocked app —
-            so it belongs here rather than repeated on each row. On iOS the
-            row list is drawn natively and can't carry it at all, which is why
-            the level was invisible on that platform entirely. */}
-        <Pressable style={styles.levelRow} onPress={onOpenDifficulty} hitSlop={6}>
-          <Text style={[type.sub, styles.levelLabel]}>Unlock difficulty</Text>
-          <Pill label={strictnessLabel} tone="accent" />
-          <Icon name="chevronRight" size={13} color={palette.textQuaternary} />
-        </Pressable>
-
         {/* iOS never tells the app which apps were picked, so the row list is
             Android-only: there the package names are real. */}
         {Platform.OS === 'ios' ? (
@@ -187,7 +158,7 @@ export default function MyAppsScreen({
                   <AppGlyph name={app.name} packageName={app.packageName} source={app.icon} size={44} />
                   <View style={styles.shrink}>
                     <Text style={type.body} numberOfLines={1}>{app.name}</Text>
-                    <Text style={[type.sub, styles.rowSub]}>Locked · {strictnessLabel}</Text>
+                    <Text style={[type.sub, styles.rowSub]}>Locked</Text>
                   </View>
                   <Pill label="Unblock" onPress={() => onUnblockPackage?.(app.packageName)} />
                 </View>
@@ -204,9 +175,9 @@ export default function MyAppsScreen({
           />
         )}
 
-        {/* Rules */}
+        {/* Scheduled blocks */}
         <SectionHeader
-          title="Rules"
+          title="Auto-blocks"
           actionLabel={schedules.length > 0 ? 'Edit' : undefined}
           onAction={schedules.length > 0 ? onOpenSchedules : undefined}
           style={styles.section}
@@ -235,9 +206,9 @@ export default function MyAppsScreen({
         ) : (
           <EmptyState
             icon="calendar"
-            title="No recurring rules"
-            body="Add a window like Work Time or Sleep and Phonewise will block on schedule."
-            actionLabel="Add a rule"
+            title="No auto-blocks yet"
+            body="Add a window like Work Time or Sleep and Phonewise locks your apps on its own."
+            actionLabel="Add an auto-block"
             onAction={onOpenSchedules}
           />
         )}
@@ -294,42 +265,6 @@ export default function MyAppsScreen({
           </Card>
         )}
 
-        {/* "Essentials & always-allowed" is an Android idea and it is hidden
-            here on iOS.
-            Android blocks by package and therefore needs a whitelist. iOS
-            does the opposite: the Family Activity Picker defines what is
-            blocked and everything the user did not pick is allowed already,
-            so a screen promising to keep Maps and the dialer "always allowed"
-            describes a permission Phonewise never grants — nothing reads these
-            toggles on the way to the shield. It stays on the locked session
-            screen, where it is what it actually is: shortcuts out to the
-            dialer, maps and your bank while everything else is shut. */}
-        {Platform.OS !== 'ios' && (onOpenEssentials || onOpenBlockedApps) && (
-          <>
-            <SectionHeader title="Manage" style={styles.section} />
-            <Card padded={false} style={styles.list}>
-              {onOpenEssentials && (
-                <Row
-                  icon="shield"
-                  title="Essentials & always-allowed"
-                  subtitle="Never blocked, never counted"
-                  onPress={onOpenEssentials}
-                  chevron
-                />
-              )}
-              {onOpenEssentials && onOpenBlockedApps && <Divider inset={56} />}
-              {onOpenBlockedApps && (
-                <Row
-                  icon="lock"
-                  title="All blocked apps"
-                  subtitle={`${blockedApps.length} app${blockedApps.length === 1 ? '' : 's'} in the list`}
-                  onPress={onOpenBlockedApps}
-                  chevron
-                />
-              )}
-            </Card>
-          </>
-        )}
       </ScrollView>
     </Screen>
   );
