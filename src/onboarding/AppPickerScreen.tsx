@@ -86,9 +86,20 @@ function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: str
 export default function AppPickerScreen({
   onContinue,
   suggestedPackages = [],
+  initialSelected,
+  onBack,
+  title = 'What should we block?',
+  confirmLabel,
 }: {
   onContinue: (selected: string[]) => void;
   suggestedPackages?: string[];
+  /** Editing an existing list: start from it instead of guessing from usage. */
+  initialSelected?: string[];
+  /** Shown as a back button when editing. */
+  onBack?: () => void;
+  title?: string;
+  /** Overrides the "Block N apps" button label, e.g. "Save". */
+  confirmLabel?: string;
 }) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -168,7 +179,7 @@ export default function AppPickerScreen({
             if (preselect.length === 0) {
               preselect = DEFAULT_BLOCKED_PACKAGES.filter((p) => installedIds.has(p)).slice(0, 4);
             }
-            setSelected(preselect);
+            setSelected(initialSelected ?? preselect);
             return;
           }
         } catch (e) {
@@ -194,7 +205,7 @@ export default function AppPickerScreen({
       }
       setEntries(defaults);
       const fallback = suggestedPackages.length > 0 ? suggestedPackages : [];
-      setSelected(fallback.filter((id) => defaults.some((e) => e.id === id)));
+      setSelected(initialSelected ?? fallback.filter((id) => defaults.some((e) => e.id === id)));
     };
     load();
   }, [suggestedPackages]);
@@ -327,9 +338,18 @@ export default function AppPickerScreen({
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoider>
         <View style={styles.centerStack}>
-          <Text style={styles.title}>What should we block?</Text>
+          {onBack && (
+            <Pressable onPress={onBack} style={styles.backBtn} hitSlop={10} accessibilityLabel="Back">
+              <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            </Pressable>
+          )}
+          <Text style={styles.title}>{title}</Text>
           <Text style={styles.recommendHint}>
-            {selectedAppCount > 0 ? 'Pre-selected from what you use. Tap to change.' : 'Pick the apps that steal your day.'}
+            {initialSelected
+              ? 'Tap to add or remove apps.'
+              : selectedAppCount > 0
+                ? 'Pre-selected from what you use. Tap to change.'
+                : 'Pick the apps that steal your day.'}
           </Text>
 
           <View style={styles.searchBar}>
@@ -405,7 +425,7 @@ export default function AppPickerScreen({
 
           <View style={styles.ctaWrap}>
             <GradientButton
-              label={selectedAppCount > 0 ? `Block ${selectedAppCount} ${selectedAppCount === 1 ? 'app' : 'apps'}` : 'Continue'}
+              label={confirmLabel ?? (selectedAppCount > 0 ? `Block ${selectedAppCount} ${selectedAppCount === 1 ? 'app' : 'apps'}` : 'Continue')}
               onPress={() => onContinue(selected)}
             />
           </View>
@@ -416,6 +436,7 @@ export default function AppPickerScreen({
 }
 
 const styles = StyleSheet.create({
+  backBtn: { alignSelf: 'flex-start', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 8 },
   container: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 18 },
   centerStack: { flex: 1, paddingTop: 14 },
   title: { color: '#FFFFFF', fontSize: 26, fontFamily: fonts.bold, fontWeight: '700', letterSpacing: -0.5 },

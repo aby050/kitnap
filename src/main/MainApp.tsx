@@ -28,6 +28,7 @@ import AccountScreen from './AccountScreen';
 import FutureSelfScreen from '../onboarding/FutureSelfScreen';
 import IntensityScreen from '../onboarding/IntensityScreen';
 import BlockedAppsScreen from './BlockedAppsScreen';
+import AppPickerScreen from '../onboarding/AppPickerScreen';
 import BlocksScreen from './BlocksScreen';
 import ShieldScreen from '../shield/ShieldScreen';
 import GateScreen from '../shield/GateScreen';
@@ -787,7 +788,9 @@ export default function MainApp({
    *  LOOSEN_DELAY_MS, the "24 hour delay" the Strict card promises. Without
    *  this, Strict delayed leaving Strict but not quietly emptying the list,
    *  which is the same escape by a side door. */
-  const changeBlocked = (next: string[], back: Overlay, intent: GuardedIntent) => {
+  /** Returns true when the change was handed to the guardian prompt, which
+   *  owns the screen until it resolves. */
+  const changeBlocked = (next: string[], back: Overlay, intent: GuardedIntent): boolean => {
     const removed = blockedPackages.filter((p) => !next.includes(p));
     const apply = (list: string[]) => {
       setBlockedPackagesState(list);
@@ -795,11 +798,11 @@ export default function MainApp({
     };
     if (removed.length === 0) {
       apply(next);
-      return;
+      return false;
     }
     if (guardian?.enabled || activeIntensityKey !== 'strict') {
       requireGuardian(() => apply(next), back, intent);
-      return;
+      return true;
     }
     // Strict, no guardian: keep the removed apps blocked for now, schedule them.
     apply([...next, ...removed]);
@@ -814,6 +817,7 @@ export default function MainApp({
       'Unblocks in 24 hours',
       "You're on Strict, so taking an app off the list waits a day. It stays blocked until then. If you still want it gone tomorrow, it will be.",
     );
+    return false;
   };
 
   // Land any unblock whose day has passed. Stored deadlines, settled on
@@ -1380,50 +1384,21 @@ export default function MainApp({
       );
     if (ov === 'blockedApps')
       return (
-        <BlockedAppsScreen
-          /* Android only: iOS has no way to interpose on an app launch, so
-             the whole section is absent rather than present and inert. */
-          pausedPackages={Platform.OS === 'android' ? persisted.pausedPackages : undefined}
-          onChangePaused={
-            Platform.OS === 'android'
-              ? (next) => onPatch({ pausedPackages: next })
-              : undefined
-          }
-          pauseSeconds={persisted.pauseSeconds}
-          alternativeApp={persisted.alternativeApp ?? null}
-          onChangeAlternative={
-            Platform.OS === 'android' ? (pkg) => onPatch({ alternativeApp: pkg }) : undefined
-          }
-          onChangePauseSeconds={
-            Platform.OS === 'android'
-              ? (seconds) => onPatch({ pauseSeconds: seconds })
-              : undefined
-          }
-          blockedPackages={blockedPackages}
-          onChange={(next) => {
-            /* Adding is free; taking something off is the loosening. Guarding
-               both would make the guardian a tax on tightening, which is the
-               opposite of the point. */
-            changeBlocked(next, 'blockedApps', 'blockedApps');
+        <AppPickerScreen
+          title="Your blocked apps"
+          confirmLabel="Save"
+          initialSelected={blockedPackages}
+          onBack={() => setOverlay(null)}
+          onContinue={(selected) => {
+            // Adding is free; taking something off is the loosening, and
+            // changeBlocked asks for the guardian's code in that case.
+            const handedOff = changeBlocked(
+              selected.filter((id) => id.includes('.')),
+              'blockedApps',
+              'blockedApps',
+            );
+            if (!handedOff) setOverlay(null);
           }}
-          appModes={blockedAppModes}
-          onChangeModes={(next) => {
-            /* Per-app Strict → Steady is exactly the loosening the global
-               dial asks for a code before allowing. Leaving it free here made
-               the guarded dial pointless: drop every app to Steady one at a
-               time and you have loosened everything without ever touching it. */
-            const wasStrict = (m?: Record<string, string>) =>
-              Object.values(m ?? {}).filter((v) => v === 'strict').length;
-            const loosening = wasStrict(next) < wasStrict(blockedAppModes);
-            const apply = () => {
-              setBlockedAppModes(next);
-              onPatch({ blockedAppModes: next });
-            };
-            if (loosening) requireGuardian(apply, 'blockedApps', 'blockedApps');
-            else apply();
-          }}
-          defaultMode={activeIntensityKey}
-          onBack={() => setOverlay('settings')}
         />
       );
     if (ov === 'blocks')
