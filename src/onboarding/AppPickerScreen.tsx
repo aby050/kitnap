@@ -209,7 +209,10 @@ export default function AppPickerScreen({
       setSelected(initialSelected ?? fallback.filter((id) => defaults.some((e) => e.id === id)));
     };
     load();
-  }, [suggestedPackages]);
+  // Keyed on the contents, not the arrays: a default `[]` is a new array every
+  // render, which re-ran this load on each tap and reset the selection and the
+  // open/closed state.
+  }, [suggestedPackages.join(','), (initialSelected ?? []).join(',')]);
 
   // Open every category that already holds a pre-selected app, so what is
   // ticked is visible without hunting for it.
@@ -401,28 +404,36 @@ export default function AppPickerScreen({
                 const all = apps.length > 0 && chosen === apps.length;
                 return (
                   <View key={cat.id} style={styles.section}>
-                    <Pressable
-                      onPress={() => (apps.length ? handleRowPress(cat) : toggle(cat.id))}
-                      style={styles.sectionHead}
-                    >
-                      <View style={styles.catIcon}>
-                        <CategoryGlyph name={cat.id} size={24} color={palette.accent} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.catName}>{cat.name}</Text>
-                        <Text style={styles.catCount}>
-                          {apps.length ? `${chosen} of ${apps.length} selected` : selected.includes(cat.id) ? 'Selected' : 'Tap to block all'}
-                        </Text>
-                      </View>
+                    {/* Siblings, not nested: a pill inside the header's Pressable
+                        also fired the header's open/close. */}
+                    <View style={styles.sectionHead}>
+                      <Pressable
+                        onPress={() => (apps.length ? handleRowPress(cat) : toggle(cat.id))}
+                        style={styles.sectionTap}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${cat.name}, ${open ? 'collapse' : 'expand'}`}
+                      >
+                        <View style={styles.catIcon}>
+                          <CategoryGlyph name={cat.id} size={24} color={palette.accent} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.catName}>{cat.name}</Text>
+                          <Text style={styles.catCount}>
+                            {apps.length ? `${chosen} of ${apps.length} selected` : selected.includes(cat.id) ? 'Selected' : 'Tap to block all'}
+                          </Text>
+                        </View>
+                      </Pressable>
                       {apps.length > 0 && (
                         <Pressable onPress={() => toggle(cat.id)} style={[styles.allPill, all && styles.allPillOn]} hitSlop={6}>
                           <Text style={[styles.allPillText, all && { color: '#06232B' }]}>{all ? 'All' : 'Select all'}</Text>
                         </Pressable>
                       )}
                       {apps.length > 0 && (
-                        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.5)" />
+                        <Pressable onPress={() => handleRowPress(cat)} hitSlop={10} accessibilityLabel={open ? 'Collapse' : 'Expand'}>
+                          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.5)" />
+                        </Pressable>
                       )}
-                    </Pressable>
+                    </View>
                     {open && apps.length > 0 && (
                       <View style={styles.grid}>
                         {apps.map((a) => (
@@ -452,6 +463,7 @@ export default function AppPickerScreen({
 }
 
 const styles = StyleSheet.create({
+  sectionTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   bulkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 10 },
   bulkCount: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
   bulkBtn: { color: palette.accent, fontSize: 14, fontWeight: '700' },
