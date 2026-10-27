@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { palette, space, radius } from '../design/tokens';
+import { gradients, palette, space, radius } from '../design/tokens';
 import Icon from '../ui/Icon';
 import {
   ACHIEVEMENTS,
@@ -63,95 +63,53 @@ export default function MilestonesScreen({
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={[...gradients.ground]}
+        locations={[...gradients.groundLocations]}
+        style={StyleSheet.absoluteFill}
+      />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
+          <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10} accessibilityLabel="Back">
             <Icon name="chevronLeft" size={20} color={palette.text} strokeWidth={2} />
           </Pressable>
-          <Text style={styles.headerTitle}>Awards</Text>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.collected}>{earnedCount}/{ACHIEVEMENTS.length}</Text>
-            <View style={styles.collectedTrack}>
-              <View style={[styles.collectedBar, { width: `${Math.max(8, (earnedCount / ACHIEVEMENTS.length) * 100)}%` }]} />
-            </View>
-          </View>
+          <Text style={styles.headerTitle}>Milestones</Text>
+          <Text style={styles.collected}>
+            {earnedCount}/{ACHIEVEMENTS.length}
+          </Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {/* Streak hero */}
-          <Animated.View entering={FadeInDown.duration(400)} style={styles.streakCard}>
-            <LinearGradient
-              colors={['rgba(233,174,98,0.16)', 'rgba(233,174,98,0.02)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.flameWrap}>
-              <Icon name="flame" size={30} color="#E9AE62" strokeWidth={1.8} />
-              <Text style={styles.flameCount}>{progress.currentStreak}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.streakTitle}>Day Streak</Text>
-              <Text style={styles.streakSub}>
-                {progress.currentStreak > 0
-                  ? `${progress.currentStreak} days in a row. Best: ${progress.bestStreak}.`
-                  : progress.bestStreak > 0
-                    ? `Paused for now. Best streak is still ${progress.bestStreak} days.`
-                    : 'Your first focused day lights the streak.'}
-              </Text>
-            </View>
-          </Animated.View>
-
-          {/* Category filter */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-            {CATEGORIES.map((c) => (
-              <Pressable key={c.key} onPress={() => setFilter(c.key)} style={[styles.filterChip, filter === c.key && styles.filterChipOn]}>
-                <Text style={[styles.filterText, filter === c.key && styles.filterTextOn]}>{c.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          {/* Reward timeline */}
-          <View style={styles.timeline}>
-            {list.map((m, i) => {
+          <View style={styles.grid}>
+            {ACHIEVEMENTS.map((m, i) => {
               const earnedAt = earnedMap.get(m.id);
               const earned = !!earnedAt;
               const pct = achievementProgress(m, progress, joinedDays);
-              const isNext = i === nextIndex;
               return (
-                <View key={m.id}>
-                  {i > 0 && <TierConnector />}
-                  <Animated.View entering={FadeInDown.delay(Math.min(i, 8) * 45).duration(340)}>
-                    <Pressable
-                      onPress={() => setSelectedBadge(m)}
-                      style={[styles.tier, earned && styles.tierEarned, isNext && styles.tierNext]}
-                    >
-                      <TierThumb def={m} earned={earned} size={84} />
-                      <View style={styles.tierBody}>
-                        <View style={styles.tierEyebrowRow}>
-                          <Text style={[styles.tierEyebrow, earned && styles.tierEyebrowEarned, isNext && styles.tierEyebrowNext]}>
-                            {earned ? 'EARNED' : isNext ? 'NEXT UP' : m.statLabel.toUpperCase()}
-                          </Text>
-                          {earned && <Icon name="checkCircle" size={14} color={palette.accent} strokeWidth={2} />}
-                        </View>
-                        <Text style={styles.tierName} numberOfLines={1}>{m.name}</Text>
-                        <Text style={styles.tierDesc} numberOfLines={2}>
-                          {earned ? formatPrettyDate(earnedAt!) : m.description}
-                        </Text>
-                        <View style={styles.tierMeterRow}>
-                          <GradientMeter
-                            progress={earned ? 1 : pct}
-                            colors={earned ? [palette.accent, '#1C3FA8'] : isNext ? [palette.accent, palette.accent] : ['#5FE0D6', '#7F92E0']}
-                            height={7}
-                            style={{ flex: 1 }}
-                          />
-                          <Text style={styles.tierPct}>{earned ? '100%' : `${Math.round(pct * 100)}%`}</Text>
-                        </View>
+                <Animated.View
+                  key={m.id}
+                  entering={FadeInDown.delay(Math.min(i, 10) * 35).duration(320)}
+                  style={styles.cell}
+                >
+                  <Pressable
+                    onPress={() => setSelectedBadge(m)}
+                    style={[styles.badgeTile, earned && styles.badgeTileOn]}
+                    accessibilityLabel={`${m.name}, ${earned ? 'earned' : `${Math.round(pct * 100)} percent`}`}
+                  >
+                    <TierThumb def={m} earned={earned} size={76} />
+                    <Text style={styles.badgeName} numberOfLines={1}>
+                      {m.name}
+                    </Text>
+                    <Text style={styles.badgeSub} numberOfLines={1}>
+                      {earned ? `Earned ${new Date(earnedAt!).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : m.statLabel}
+                    </Text>
+                    {!earned && (
+                      <View style={styles.badgeTrack}>
+                        <View style={[styles.badgeFill, { width: `${Math.max(4, Math.round(pct * 100))}%` }]} />
                       </View>
-                    </Pressable>
-                  </Animated.View>
-                </View>
+                    )}
+                  </Pressable>
+                </Animated.View>
               );
             })}
           </View>
@@ -243,11 +201,29 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.gutter, paddingVertical: space.sm, gap: space.md },
   circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.glass, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
+  headerTitle: { flex: 1, color: palette.text, fontSize: 18, fontWeight: '700', textAlign: 'center' },
   collected: { color: palette.textSecondary, fontSize: 12.5, fontWeight: '600' },
   collectedTrack: { width: 84, height: 4, borderRadius: 2, backgroundColor: palette.surfaceHigh, marginTop: 5, overflow: 'hidden' },
   collectedBar: { height: '100%', backgroundColor: palette.accent, borderRadius: 2 },
-  scroll: { paddingHorizontal: space.gutter, paddingBottom: 110 },
+  scroll: { paddingHorizontal: space.gutter, paddingBottom: 110, paddingTop: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  cell: { width: '47.8%' },
+  badgeTile: {
+    alignItems: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    gap: 4,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    minHeight: 170,
+  },
+  badgeTileOn: { backgroundColor: 'rgba(255,255,255,0.09)', borderColor: 'rgba(255,255,255,0.16)' },
+  badgeName: { color: palette.text, fontSize: 15, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+  badgeSub: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center' },
+  badgeTrack: { width: 54, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.12)', marginTop: 6, overflow: 'hidden' },
+  badgeFill: { height: '100%', borderRadius: 3, backgroundColor: palette.accent },
 
   streakCard: {
     flexDirection: 'row',
