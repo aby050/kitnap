@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';
 import { palette, radius, fonts } from '../design/tokens';
 import Icon from '../ui/Icon';
+import CategoryGlyph from './CategoryGlyph';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { DEFAULT_BLOCKED_PACKAGES } from '../data/blockedApps';
 
@@ -77,7 +78,7 @@ function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: str
   const CAT: Record<string, keyof typeof Ionicons.glyphMap> = {
     all: 'apps', social: 'chatbubbles', games: 'game-controller', entertainment: 'film', productivity: 'briefcase', other: 'ellipsis-horizontal',
   };
-  if (CAT[id]) return <Ionicons name={CAT[id]} size={19} color="#FFFFFF" />;
+  if (CAT[id]) return <CategoryGlyph name={id} size={22} color={palette.accent} />;
   const brand = BRAND[id] ?? BRAND[label.toLowerCase()];
   if (brand) return <Ionicons name={brand} size={20} color="#FFFFFF" />;
   return <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }}>{label.slice(0, 1).toUpperCase()}</Text>;
@@ -318,7 +319,7 @@ export default function AppPickerScreen({
     return (
       <Pressable onPress={() => toggle(e.id)} style={styles.tile} accessibilityRole="button" accessibilityState={{ selected: on }}>
         <View style={[styles.tileIcon, on && styles.tileIconOn]}>
-          <View style={[styles.tileImg, !e.icon && { backgroundColor: e.tint }]}>
+          <View style={[styles.tileImg, !e.icon && { backgroundColor: 'rgba(255,255,255,0.09)' }]}>
             <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
           </View>
           {on && (
@@ -368,6 +369,21 @@ export default function AppPickerScreen({
             ) : null}
           </View>
 
+          {hasApps && !q && (
+            <View style={styles.bulkRow}>
+              <Text style={styles.bulkCount}>
+                {selectedAppCount} of {entries.filter((e) => !!e.group).length} selected
+              </Text>
+              <Pressable onPress={() => toggle('all')} hitSlop={8} accessibilityRole="button">
+                <Text style={styles.bulkBtn}>
+                  {selected.includes('all') || selectedAppCount === entries.filter((e) => !!e.group).length
+                    ? 'Clear all'
+                    : 'Select all'}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }} showsVerticalScrollIndicator={false} {...keyboardScrollProps}>
             {q ? (
               <View style={styles.grid}>
@@ -389,8 +405,8 @@ export default function AppPickerScreen({
                       onPress={() => (apps.length ? handleRowPress(cat) : toggle(cat.id))}
                       style={styles.sectionHead}
                     >
-                      <View style={[styles.catIcon, { backgroundColor: meta.tint }]}>
-                        <Ionicons name={meta.icon} size={22} color="#FFFFFF" />
+                      <View style={styles.catIcon}>
+                        <CategoryGlyph name={cat.id} size={24} color={palette.accent} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.catName}>{cat.name}</Text>
@@ -436,6 +452,9 @@ export default function AppPickerScreen({
 }
 
 const styles = StyleSheet.create({
+  bulkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 10 },
+  bulkCount: { color: 'rgba(255,255,255,0.6)', fontSize: 13 },
+  bulkBtn: { color: palette.accent, fontSize: 14, fontWeight: '700' },
   backBtn: { alignSelf: 'flex-start', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.1)', marginBottom: 8 },
   container: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: 18 },
   centerStack: { flex: 1, paddingTop: 14 },
@@ -461,7 +480,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  catIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  catIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   catName: { color: '#FFFFFF', fontSize: 17, fontFamily: fonts.semibold, fontWeight: '700' },
   catCount: { color: 'rgba(255,255,255,0.6)', fontSize: 12.5, marginTop: 2 },
   allPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' },
