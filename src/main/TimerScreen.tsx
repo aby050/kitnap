@@ -40,6 +40,7 @@ import { AmbienceShelf } from '../components/AmbienceCard';
 import { Ambience } from '../data/ambiences';
 import BlockedListSheet from '../components/BlockedListSheet';
 import OpenAppsStrip from '../components/OpenAppsStrip';
+import SessionBackdrop from '../components/SessionBackdrop';
 import BlockedSelection from '../components/BlockedSelection';
 import EmergencyDialer from '../components/EmergencyDialer';
 import SessionSoundCard from '../components/SessionSoundCard';
@@ -581,6 +582,7 @@ export default function TimerScreen({
 
     return (
       <Screen edges={['top', 'bottom']}>
+        <SessionBackdrop />
         {/* Full screen for the length of the session — the status bar is one
             more thing to look at, and glancing at it is how a session ends
             early. It comes straight back when the timer does. */}
