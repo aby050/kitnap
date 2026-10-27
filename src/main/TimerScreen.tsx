@@ -657,16 +657,20 @@ export default function TimerScreen({
           </View>
 
           <View style={styles.lockedBody}>
-            <Text style={[type.overline, styles.lockedLabel]}>{label}</Text>
-            <Ring progress={progress} size={288} thickness={4}>
-              <Text style={styles.bigTime}>
-                {lcdLeft}
-                <Text style={styles.colon}>:</Text>
-                {lcdRight}
-              </Text>
-              <Text style={[type.unit, styles.unitLine]}>{showHours ? 'hours · minutes' : 'minutes · seconds'}</Text>
-            </Ring>
-            {motivationLine ? <Text style={[type.callout, styles.lockedMotivation]}>{motivationLine}</Text> : null}
+            {motivationLine ? (
+              <Editorial
+                lead={motivationLine.split(' ').slice(0, Math.ceil(motivationLine.split(' ').length / 2)).join(' ')}
+                emphasis={motivationLine.split(' ').slice(Math.ceil(motivationLine.split(' ').length / 2)).join(' ')}
+                align="center"
+                voice
+                style={styles.lockedMessage}
+              />
+            ) : null}
+            <Text style={styles.lockedClock}>
+              {lcdLeft}:{lcdRight}
+            </Text>
+            <Text style={styles.lockedName}>{label}</Text>
+            <Text style={styles.lockedUnit}>{showHours ? 'hours · minutes' : 'minutes · seconds'}</Text>
             <OpenAppsStrip blockedPackages={blockedPackages} />
 
             {/* Sound rides with the chrome. It is a control, and the point of
@@ -1387,9 +1391,30 @@ const styles = StyleSheet.create({
   // Matches DeleteAccountScreen's `confirmHold` — same control, same width.
   exitHold: { width: '100%' },
   cornerRight: { position: 'absolute', top: space.sm, right: space.gutter, zIndex: 5, flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  lockedBody: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingHorizontal: space.xxl },
+  lockedBody: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: space.xs, paddingHorizontal: space.xl, paddingBottom: 150 },
+  lockedMessage: {
+    maxWidth: 330,
+    color: '#FFFFFF',
+    marginBottom: space.base,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 14,
+  },
+  lockedClock: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bold,
+    fontSize: 60,
+    lineHeight: 68,
+    fontWeight: '700',
+    letterSpacing: -1.5,
+    fontVariant: ['tabular-nums'],
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowRadius: 10,
+  },
+  lockedName: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 18 },
+  lockedUnit: { color: 'rgba(255,255,255,0.72)', fontFamily: fonts.regular, fontSize: 13.5, marginBottom: space.base },
   lockedLabel: { color: palette.textTertiary },
-  lockedMotivation: { color: palette.textSecondary, textAlign: 'center', maxWidth: 300 },
+  lockedMotivation: { color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: 280, textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 8 },
 
   // ── Cancel confirm ──
   blockedPill: { marginTop: 14 },
