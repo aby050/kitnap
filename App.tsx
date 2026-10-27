@@ -14,6 +14,7 @@ import {
 } from '@expo-google-fonts/poppins';
 import SplashFlow from './src/onboarding/SplashFlow';
 import IntroStories from './src/onboarding/IntroStories';
+import UsageRevealScreen from './src/onboarding/UsageRevealScreen';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
 import PermissionBoardingPassScreen from './src/onboarding/PermissionBoardingPassScreen';
 import GoalScreen from './src/onboarding/GoalScreen';
@@ -35,7 +36,7 @@ import PersistentBackground from './src/components/PersistentBackground';
 import { IntensityKey, ThemeKey } from './src/data/themes';
 import { EMPTY_GOAL, GoalData } from './src/data/goal';
 import { clearState, DEFAULT_STATE, loadState, PersistedState, saveState } from './src/data/store';
-import { HARD_BLOCKS, QUESTION_CHUNKS } from './src/onboarding/questions';
+import { HARD_BLOCKS, QUESTION_CHUNKS, REST_PERMISSIONS } from './src/onboarding/questions';
 import { setAdultContentFilter } from './src/data/iosScreenTime';
 import { recommendIntensity, suggestTheme } from './src/data/evaluation';
 import { estimateDailyHours, recommendSetup, scheduleFromSlipWindow } from './src/data/setupPlan';
@@ -78,6 +79,7 @@ type Stage =
   | 'splash'
   | 'education'
   | 'onboarding'
+  | 'usageReveal'
   | 'momentum'
   | 'post'
   | 'trust'
@@ -140,6 +142,8 @@ export default function App() {
   // Which run of questions we are on, and whether its permission ask is showing.
   const [chunk, setChunk] = useState(0);
   const [askingPermission, setAskingPermission] = useState(false);
+  /** 0 = usage access, then the reveal; 1 = the remaining permissions. */
+  const [permPhase, setPermPhase] = useState<0 | 1>(0);
   const [history, setHistory] = useState<{ id: string; prompt: string; label: string }[]>([]);
 
   /* Room loops: read what is already on disk, then quietly pull the rest.
@@ -419,11 +423,22 @@ export default function App() {
 
           {stage === 'onboarding' && askingPermission && (
             <PermissionBoardingPassScreen
-              only={QUESTION_CHUNKS[chunk].permissions}
+              key={`perm-${permPhase}`}
+              only={permPhase === 0 ? QUESTION_CHUNKS[chunk].permissions : REST_PERMISSIONS}
               onContinue={() => {
                 setAskingPermission(false);
-                if (chunk < QUESTION_CHUNKS.length - 1) setChunk((c) => c + 1);
+                if (permPhase === 0) setStage('usageReveal');
                 else setStage('goal');
+              }}
+            />
+          )}
+
+          {stage === 'usageReveal' && (
+            <UsageRevealScreen
+              onContinue={() => {
+                setPermPhase(1);
+                setAskingPermission(true);
+                setStage('onboarding');
               }}
             />
           )}

@@ -154,7 +154,16 @@ export const QUESTIONS: Question[] = [
     kind: 'choice',
     prompt: 'When does the phone usually **win**?',
     options: SLIP_WINDOWS.map((w) => w.label),
+  },  {
+    id: 'controlScale',
+    kind: 'slider',
+    prompt: 'Right now, how much **control** do you feel you have over your phone?',
+    min: 1,
+    max: 10,
+    default: 5,
+    labels: CONTROL_LEVEL_NAMES,
   },
+
   /**
    * Asked, never inferred.
    *
@@ -218,6 +227,10 @@ export const QUESTION_CHUNKS: { questions: Question[]; permissions: string[] }[]
     // Two questions here, and a third (the daily goal) on its own screen later.
     // Everything else is learned from real usage rather than asked.
     questions: QUESTIONS,
-    permissions: ['usage', 'screenTime', 'overlay', 'accessibility', 'notification', 'battery'],
+    // Usage access first: the next screen shows what it found. The rest follow.
+    permissions: ['usage', 'screenTime'],
   },
 ];
+
+/** Asked after the usage reveal. */
+export const REST_PERMISSIONS = ['overlay', 'accessibility', 'notification', 'battery'];
