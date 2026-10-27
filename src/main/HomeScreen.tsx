@@ -16,9 +16,11 @@ import { dateKey, getDay, nextStreakMilestone, ProgressState } from '../data/pro
 import {
   Button,
   Card,
+  Divider,
   Editorial,
   IconButton,
   Meter,
+  Pill,
   Ring,
   Row,
   Screen,
@@ -31,8 +33,9 @@ import Icon from '../ui/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AMBIENCES, mediaFor } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
-import { dataRamp, motion, palette, radius, space, type } from '../design/tokens';
+import { dataRamp, fonts, motion, palette, radius, space, type } from '../design/tokens';
 import KnockoutLabel from '../components/KnockoutLabel';
+import { ruleIcon, scheduleStatus } from './MyAppsScreen';
 import BlockedSelection from '../components/BlockedSelection';
 import { installedLabel } from '../data/installedApps';
 
@@ -128,6 +131,8 @@ export default function HomeScreen({
   usage,
   dailyGoalMinutes = null,
   onChangeGoal,
+  schedules = [],
+  onOpenSchedules,
 }: {
   onOpenProfile: () => void;
   onOpenApps: () => void;
@@ -185,6 +190,9 @@ export default function HomeScreen({
   /** Daily screen-time goal in minutes, or null when none is set. */
   dailyGoalMinutes?: number | null;
   onChangeGoal?: (minutes: number | null) => void;
+  /** Recurring auto-blocks, shown under the start button. */
+  schedules?: { id: string; name: string; start: string; end: string; days: string }[];
+  onOpenSchedules?: () => void;
 }) {
   // ---- Commitment timer state ----
   // Held in minutes, not days+hours: the floor is half an hour, which whole
@@ -433,6 +441,39 @@ export default function HomeScreen({
           </Pressable>
         </Animated.View>
 
+        {/* Auto-blocks: what will lock on its own, and when. */}
+        {schedules.length > 0 && (
+          <View style={styles.autoWrap}>
+            <View style={styles.autoHead}>
+              <Text style={styles.autoTitle}>AUTO-BLOCKS</Text>
+              {onOpenSchedules && (
+                <Pressable onPress={onOpenSchedules} hitSlop={8}>
+                  <Text style={styles.autoEdit}>Edit</Text>
+                </Pressable>
+              )}
+            </View>
+            <Card padded={false}>
+              {schedules.map((rule, i) => {
+                const status = scheduleStatus(rule.start, rule.end);
+                return (
+                  <View key={rule.id}>
+                    {i > 0 && <Divider inset={56} />}
+                    <Row
+                      icon={ruleIcon(rule.name, rule.start)}
+                      iconColor={status.active ? palette.accent : palette.textSecondary}
+                      title={rule.name}
+                      subtitle={`${rule.days} · ${rule.start}–${rule.end}`}
+                      right={<Pill label={status.label} tone={status.active ? 'accent' : 'neutral'} />}
+                      onPress={onOpenSchedules}
+                      chevron={false}
+                    />
+                  </View>
+                );
+              })}
+            </Card>
+          </View>
+        )}
+
       </ScrollView>
 
       {showBailout && (
@@ -451,6 +492,10 @@ export default function HomeScreen({
 }
 
 const styles = StyleSheet.create({
+  autoWrap: { marginTop: space.xl },
+  autoHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space.sm, paddingHorizontal: 4 },
+  autoTitle: { color: palette.onColorTextDim, fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1.3 },
+  autoEdit: { color: palette.accent, fontFamily: fonts.semibold, fontSize: 14 },
   promise: { ...type.sub, color: palette.onColorTextDim, marginTop: space.xs, lineHeight: 19 },
   lockCard: {
     alignItems: 'center',

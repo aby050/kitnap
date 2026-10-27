@@ -1721,6 +1721,8 @@ export default function MainApp({
           {tab === 'home' && (
             <HomeScreen
               onOpenProfile={() => setOverlay('profile')}
+              schedules={schedules}
+              onOpenSchedules={() => setOverlay('schedules')}
               dailyGoalMinutes={persisted.dailyGoalMinutes ?? null}
               onChangeGoal={(m) => onPatch({ dailyGoalMinutes: m })}
               onOpenApps={() => setTab('apps')}

@@ -47,7 +47,7 @@ function toMinutes(hhmm: string): number | null {
 /** Rule name → glyph. Matched on the words people actually use when naming a
  *  window, with the time of day as a second pass, so a custom "Gym 6am" still
  *  gets something better than a generic calendar. */
-function ruleIcon(name: string, start: string): IconName {
+export function ruleIcon(name: string, start: string): IconName {
   const n = name.toLowerCase();
   if (/sleep|bed|night/.test(n)) return 'moon';
   if (/wind ?down|evening|relax|calm/.test(n)) return 'leaf';
@@ -65,7 +65,7 @@ function ruleIcon(name: string, start: string): IconName {
   return 'clock';
 }
 
-function scheduleStatus(start: string, end: string, now = new Date()): { active: boolean; label: string } {
+export function scheduleStatus(start: string, end: string, now = new Date()): { active: boolean; label: string } {
   const s = toMinutes(start);
   const e = toMinutes(end);
   if (s === null || e === null) return { active: false, label: 'Not set' };
