@@ -10,6 +10,10 @@ import Icon from '../ui/Icon';
 const CARD_H = 208;
 
 function label(minutes: number) {
+  if (minutes >= 1440 && minutes % 1440 === 0) {
+    const d = minutes / 1440;
+    return d === 1 ? '1 day' : `${d} days`;
+  }
   if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
