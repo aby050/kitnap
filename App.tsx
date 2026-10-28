@@ -22,6 +22,7 @@ import {
 } from '@expo-google-fonts/nunito';
 import SplashFlow from './src/onboarding/SplashFlow';
 import MascotSplash from './src/onboarding/MascotSplash';
+import ArtGallery from './src/onboarding/ArtGallery';
 import IntroStories from './src/onboarding/IntroStories';
 import UsageRevealScreen from './src/onboarding/UsageRevealScreen';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
@@ -391,6 +392,9 @@ export default function App() {
     );
   }
 
+  if (__DEV__ && Platform.OS === 'web' && typeof window !== 'undefined' && window.location.search.includes('art=1')) {
+    return <ArtGallery />;
+  }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

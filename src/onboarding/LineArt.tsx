@@ -15,6 +15,26 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AG = Animated.createAnimatedComponent(G);
+
+/** 0→1 forever. */
+function useLoop(ms: number, ease = Easing.linear) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    v.value = withRepeat(withTiming(1, { duration: ms, easing: ease }), -1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return v;
+}
+/** 0→1→0 forever, eased. */
+function usePingPong(ms: number) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    v.value = withRepeat(withSequence(withTiming(1, { duration: ms, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: ms, easing: Easing.inOut(Easing.sin) })), -1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return v;
+}
 
 /** One looping clock per drawing: drives the marching dotted arrows. */
 const FlowClock = createContext<SharedValue<number> | null>(null);
@@ -465,31 +485,339 @@ const ART: Record<ArtName, () => React.ReactElement> = {
   ),
 };
 
+
+/* ── Per-drawing motion. Each scene moves the one thing that tells its story
+ *    and holds the rest still. ─────────────────────────────────────────── */
+
+/** Late night: the clock keeps ticking, the moon slowly turns into morning,
+ *  the stars twinkle. The sleeper and the phone stay put. */
+function NightBed() {
+  const min = useLoop(6000);
+  const hour = useLoop(72000);
+  const day = usePingPong(4200);
+  const tw = usePingPong(1400);
+  const minP = useAnimatedProps(() => ({ transform: `rotate(${min.value * 360} 60 60)` }));
+  const hourP = useAnimatedProps(() => ({ transform: `rotate(${hour.value * 360 + 120} 60 60)` }));
+  const moonP = useAnimatedProps(() => ({ opacity: 1 - day.value }));
+  const sunP = useAnimatedProps(() => ({ opacity: day.value }));
+  const tw1 = useAnimatedProps(() => ({ opacity: 0.25 + tw.value * 0.75 }));
+  const tw2 = useAnimatedProps(() => ({ opacity: 1 - tw.value * 0.75 }));
+  return (
+    <G>
+      <AG animatedProps={moonP}>
+        <Path d="M236 36 a22 22 0 1 0 22 30 a17 17 0 0 1 -22 -30z" fill={B} stroke={S} strokeWidth={2.4} />
+      </AG>
+      <AG animatedProps={sunP}>
+        <Circle cx={244} cy={52} r={18} fill={A} stroke={S} strokeWidth={2.4} />
+        {Array.from({ length: 8 }).map((_, i) => {
+          const r = (i / 8) * Math.PI * 2;
+          return <Line key={i} x1={244 + Math.cos(r) * 24} y1={52 + Math.sin(r) * 24} x2={244 + Math.cos(r) * 31} y2={52 + Math.sin(r) * 31} stroke={S} strokeWidth={2.4} strokeLinecap="round" />;
+        })}
+      </AG>
+      <AG animatedProps={tw1}><Path d="M40 28 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill={W} stroke={S} strokeWidth={1.6} /></AG>
+      <AG animatedProps={tw2}><Path d="M280 110 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill={W} stroke={S} strokeWidth={1.6} /></AG>
+      <Path d="M20 190 h260 v20 h-260z" fill={W} stroke={S} strokeWidth={sw} />
+      <Path d="M30 190 C 40 150, 90 140, 150 146 L 270 150 L 270 190 Z" fill={P} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M40 150 C 40 130, 70 124, 86 132 L 84 158 C 66 160, 46 160, 40 150 Z" fill={W} stroke={S} strokeWidth={sw} />
+      <Circle cx={100} cy={124} r={22} fill={W} stroke={S} strokeWidth={sw} />
+      <Path d="M92 122 q4 3 8 0 M106 122 q4 3 8 0" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" />
+      <G transform="rotate(-18 136 108)">
+        <Rect x={124} y={84} width={26} height={44} rx={6} fill={S} />
+        <Rect x={127} y={88} width={20} height={34} rx={3} fill={A} />
+      </G>
+      <Path d="M150 96 L 196 70 L 200 120 Z" fill={A} opacity={0.18} />
+      <Circle cx={60} cy={60} r={30} fill={W} stroke={S} strokeWidth={sw} />
+      <AG animatedProps={hourP}><Line x1={60} y1={60} x2={60} y2={44} stroke={S} strokeWidth={3.4} strokeLinecap="round" /></AG>
+      <AG animatedProps={minP}><Line x1={60} y1={60} x2={60} y2={38} stroke={A} strokeWidth={2.4} strokeLinecap="round" /></AG>
+      <Circle cx={60} cy={60} r={3.5} fill={S} />
+      <SvgText x={60} y={108} fill={S} fontFamily={fonts.semibold} fontSize={12} textAnchor="middle">1:30 am</SvgText>
+    </G>
+  );
+}
+
+/** Control: the needle strains toward "You", gets pulled back, tries again. */
+function Gauge() {
+  const strain = usePingPong(900);
+  const shake = useLoop(160);
+  const p = useAnimatedProps(() => {
+    const jitter = Math.sin(shake.value * Math.PI * 2) * 1.6 * strain.value;
+    return { transform: `rotate(${-20 + strain.value * 52 + jitter} 150 170)` };
+  });
+  return (
+    <G>
+      <Bricks x={24} y={40} />
+      <Bricks x={246} y={44} />
+      <Path d="M50 170 A100 100 0 0 1 250 170" fill={W} stroke={S} strokeWidth={sw} />
+      <Path d="M68 170 A82 82 0 0 1 110 98" fill="none" stroke={P} strokeWidth={14} />
+      <Path d="M114 96 A82 82 0 0 1 186 96" fill="none" stroke={B} strokeWidth={14} />
+      <Path d="M190 98 A82 82 0 0 1 232 170" fill="none" stroke={A} strokeWidth={14} />
+      <AG animatedProps={p}><Line x1={150} y1={170} x2={150} y2={92} stroke={S} strokeWidth={5} strokeLinecap="round" /></AG>
+      <Circle cx={150} cy={170} r={10} fill={S} />
+      <Line x1={40} y1={170} x2={260} y2={170} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Label x={64} y={194}>Phone</Label>
+      <Label x={236} y={194}>You</Label>
+    </G>
+  );
+}
+
+/** Small brand-coloured app tiles used around the usage and overlay scenes. */
+function AppTile({ kind, x, y, size = 30 }: { kind: 'ig' | 'tt' | 'yt' | 'fb'; x: number; y: number; size?: number }) {
+  const r = size / 2;
+  const cx = x + r;
+  const cy = y + r;
+  const bg = { ig: '#E1306C', tt: '#111111', yt: '#FF0000', fb: '#1877F2' }[kind];
+  return (
+    <G>
+      <Rect x={x} y={y} width={size} height={size} rx={size * 0.28} fill={bg} stroke={S} strokeWidth={2} />
+      {kind === 'ig' && (
+        <G>
+          <Rect x={cx - r * 0.55} y={cy - r * 0.55} width={r * 1.1} height={r * 1.1} rx={r * 0.32} fill="none" stroke={W} strokeWidth={2} />
+          <Circle cx={cx} cy={cy} r={r * 0.25} fill="none" stroke={W} strokeWidth={2} />
+        </G>
+      )}
+      {kind === 'tt' && <Path d={`M${cx - 2} ${cy - r * 0.55} v${r * 0.85} a${r * 0.28} ${r * 0.28} 0 1 1 -${r * 0.3} -${r * 0.28} M${cx - 2} ${cy - r * 0.55} q${r * 0.2} ${r * 0.4} ${r * 0.55} ${r * 0.4}`} fill="none" stroke={W} strokeWidth={2.2} strokeLinecap="round" />}
+      {kind === 'yt' && <Path d={`M${cx - r * 0.25} ${cy - r * 0.32} l${r * 0.6} ${r * 0.32} -${r * 0.6} ${r * 0.32}z`} fill={W} />}
+      {kind === 'fb' && (
+        <SvgText x={cx + 1} y={cy + r * 0.48} fill={W} fontFamily={fonts.extrabold} fontSize={size * 0.62} textAnchor="middle">f</SvgText>
+      )}
+    </G>
+  );
+}
+
+/** Usage access: the chart stays still; the apps eating the day circle it. */
+function Chart() {
+  const t = useLoop(9000);
+  const tiles: { kind: 'ig' | 'tt' | 'yt' | 'fb'; phase: number }[] = [
+    { kind: 'ig', phase: 0 },
+    { kind: 'tt', phase: 0.25 },
+    { kind: 'yt', phase: 0.5 },
+    { kind: 'fb', phase: 0.75 },
+  ];
+  return (
+    <G>
+      <G transform="rotate(-4 150 110)">
+        <Rect x={60} y={30} width={180} height={152} rx={28} fill={W} stroke={S} strokeWidth={sw} />
+        {[64, 92, 120, 148].map((y) => (
+          <Line key={y} x1={78} y1={y} x2={222} y2={y} stroke={M} strokeWidth={1.6} />
+        ))}
+        <Path d="M80 72 C 106 82, 116 96, 140 98 S 172 124, 190 130 S 214 144, 222 150" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" />
+        <SvgText x={80} y={170} fill={S} fontFamily={fonts.bold} fontSize={14}>Your day, in hours</SvgText>
+      </G>
+      {tiles.map(({ kind, phase }) => (
+        <Orbit key={kind} t={t} phase={phase}>
+          <AppTile kind={kind} x={-15} y={-15} />
+        </Orbit>
+      ))}
+    </G>
+  );
+}
+
+function Orbit({ t, phase, children }: { t: SharedValue<number>; phase: number; children: React.ReactNode }) {
+  const p = useAnimatedProps(() => {
+    const a = (t.value + phase) * Math.PI * 2;
+    return { transform: `translate(${150 + Math.cos(a) * 128} ${108 + Math.sin(a) * 92})` };
+  });
+  return <AG animatedProps={p}>{children}</AG>;
+}
+
+/** Display over apps: apps fly at the phone, a cover slides down over them
+ *  and the lock snaps shut. The hand holds still. */
+function HandPhone() {
+  const cycle = useLoop(3600);
+  const icons: { kind: 'ig' | 'tt' | 'yt' | 'fb'; fx: number; fy: number }[] = [
+    { kind: 'ig', fx: 30, fy: 24 },
+    { kind: 'tt', fx: 262, fy: 30 },
+    { kind: 'yt', fx: 270, fy: 120 },
+    { kind: 'fb', fx: 92, fy: 6 },
+  ];
+  const cover = useAnimatedProps(() => {
+    const k = Math.min(1, Math.max(0, (cycle.value - 0.35) / 0.2));
+    const out = cycle.value > 0.9 ? (cycle.value - 0.9) / 0.1 : 0;
+    return { height: 150 * k * (1 - out) };
+  });
+  const lock = useAnimatedProps(() => {
+    const k = Math.min(1, Math.max(0, (cycle.value - 0.5) / 0.12));
+    const out = cycle.value > 0.9 ? 1 - (cycle.value - 0.9) / 0.1 : 1;
+    return { opacity: k * out, transform: `translate(170 110) scale(${0.6 + k * 0.4}) translate(-170 -110)` };
+  });
+  return (
+    <G>
+      <G transform="rotate(-6 170 110)">
+        <Rect x={118} y={14} width={104} height={184} rx={22} fill={W} stroke={S} strokeWidth={sw} />
+        <Line x1={152} y1={28} x2={188} y2={28} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+        <AppTile kind="ig" x={132} y={44} size={22} />
+        <AppTile kind="tt" x={159} y={44} size={22} />
+        <AppTile kind="yt" x={186} y={44} size={22} />
+        <AppTile kind="fb" x={132} y={72} size={22} />
+        <AnimatedRectCover animatedProps={cover} />
+        <AG animatedProps={lock}>
+          <Rect x={150} y={100} width={40} height={34} rx={7} fill={A} stroke={S} strokeWidth={sw} />
+          <Path d="M158 100v-10a12 12 0 0 1 24 0v10" fill="none" stroke={S} strokeWidth={sw} />
+          <Circle cx={170} cy={116} r={4} fill={S} />
+          <SvgText x={170} y={160} fill={S} fontFamily={fonts.semibold} fontSize={12} textAnchor="middle">Locked</SvgText>
+        </AG>
+      </G>
+      {icons.map((ic) => (
+        <Incoming key={ic.kind} cycle={cycle} {...ic} />
+      ))}
+      <Path d="M-6 230 L-6 150 C 20 140, 48 132, 74 128 C 96 124, 112 126, 124 134 C 136 142, 132 156, 118 158 L 92 160 C 104 168, 104 182, 92 186 L 60 196 C 40 214, 20 226, -6 230 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M92 160 C 80 160, 70 156, 64 150" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+      <Path d="M88 186 C 76 186, 66 182, 60 176" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+    </G>
+  );
+}
+
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+function AnimatedRectCover({ animatedProps }: { animatedProps: any }) {
+  return <AnimatedRect x={124} y={36} width={92} rx={14} fill="rgba(232,130,26,0.22)" stroke={A} strokeWidth={2} animatedProps={animatedProps} />;
+}
+
+/** An app tile drifts toward the phone, then is pushed back out. */
+function Incoming({ cycle, kind, fx, fy }: { cycle: SharedValue<number>; kind: 'ig' | 'tt' | 'yt' | 'fb'; fx: number; fy: number }) {
+  const p = useAnimatedProps(() => {
+    const c = cycle.value;
+    const pull = c < 0.4 ? c / 0.4 : c < 0.55 ? 1 : Math.max(0, 1 - (c - 0.55) / 0.3);
+    const x = fx + (156 - fx) * pull * 0.35;
+    const y = fy + (90 - fy) * pull * 0.35;
+    return { transform: `translate(${x} ${y})`, opacity: 1 - pull * 0.35 };
+  });
+  return (
+    <AG animatedProps={p}>
+      <AppTile kind={kind} x={0} y={0} size={28} />
+    </AG>
+  );
+}
+
+/** Accessibility: Kitnap keeps watch. A radar sweeps a phone full of apps;
+ *  when it passes the distracting one, a return arrow brings you home. */
+function Watch() {
+  const sweep = useLoop(3200);
+  const ring = useLoop(2400, Easing.out(Easing.quad));
+  const sweepP = useAnimatedProps(() => ({ transform: `rotate(${sweep.value * 360} 150 112)` }));
+  const ringP = useAnimatedProps(() => ({ r: 20 + ring.value * 70, opacity: 1 - ring.value }));
+  const hit = useAnimatedProps(() => {
+    const d = Math.abs(((sweep.value * 360 + 360) % 360) - 40);
+    return { opacity: d < 40 ? 1 - d / 40 : 0 };
+  });
+  return (
+    <G>
+      <Bricks x={22} y={170} />
+      <Bricks x={248} y={30} />
+      <Rect x={100} y={20} width={100} height={184} rx={20} fill={W} stroke={S} strokeWidth={sw} />
+      <Line x1={134} y1={34} x2={166} y2={34} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <AppTile kind="ig" x={114} y={52} size={22} />
+      <AppTile kind="tt" x={139} y={52} size={22} />
+      <AppTile kind="yt" x={164} y={52} size={22} />
+      <Rect x={114} y={150} width={22} height={22} rx={6} fill={M} stroke={S} strokeWidth={2} />
+      <Rect x={139} y={150} width={22} height={22} rx={6} fill={M} stroke={S} strokeWidth={2} />
+      <Rect x={164} y={150} width={22} height={22} rx={6} fill={M} stroke={S} strokeWidth={2} />
+      <AnimatedCircle cx={150} cy={112} fill="none" stroke={A} strokeWidth={2} animatedProps={ringP} />
+      <AG animatedProps={sweepP}>
+        <Path d="M150 112 L150 78 A34 34 0 0 1 180 96 Z" fill={A} opacity={0.25} />
+        <Line x1={150} y1={112} x2={150} y2={78} stroke={A} strokeWidth={2.4} strokeLinecap="round" />
+      </AG>
+      <Circle cx={150} cy={112} r={14} fill={A} stroke={S} strokeWidth={2.4} />
+      <Path d="M144 112 l4 4 8 -9" fill="none" stroke={W} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+      <AG animatedProps={hit}>
+        <Path d="M190 60 C 240 60, 252 120, 210 150" fill="none" stroke={S} strokeWidth={2.4} strokeDasharray="4 5" strokeLinecap="round" />
+        <Path d="M216 142 l-8 10 -2 -12" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+        <Circle cx={252} cy={176} r={20} fill={W} stroke={S} strokeWidth={sw} />
+        <Face x={252} y={174} r={0.7} />
+      </AG>
+    </G>
+  );
+}
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/** Notifications: only the bell moves — it swings and its sound pulses. */
+function BellPhone() {
+  const swing = usePingPong(380);
+  const wave = useLoop(1200);
+  const bell = useAnimatedProps(() => ({ transform: `rotate(${-14 + swing.value * 28} 236 46)` }));
+  const w1 = useAnimatedProps(() => ({ opacity: 1 - wave.value }));
+  const w2 = useAnimatedProps(() => ({ opacity: wave.value < 0.5 ? wave.value * 2 : 2 - wave.value * 2 }));
+  return (
+    <G>
+      <Bricks x={24} y={170} />
+      <Bricks x={244} y={176} />
+      <G transform="rotate(6 130 110)">
+        <Rect x={84} y={20} width={96} height={180} rx={20} fill={W} stroke={S} strokeWidth={sw} />
+        <Rect x={100} y={52} width={64} height={30} rx={8} fill={M} stroke={S} strokeWidth={2} />
+        <Path d="M108 64h40M108 72h26" stroke={S} strokeWidth={2} strokeLinecap="round" />
+        <SvgText x={132} y={130} fill={S} fontFamily={fonts.bold} fontSize={22} textAnchor="middle">0:00</SvgText>
+      </G>
+      <AG animatedProps={bell}>
+        <Path d="M212 96 C 212 70, 220 52, 236 52 C 252 52, 260 70, 260 96 L 268 104 L 204 104 Z" fill={A} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+        <Circle cx={236} cy={112} r={7} fill={W} stroke={S} strokeWidth={2.4} />
+        <Line x1={236} y1={44} x2={236} y2={52} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      </AG>
+      <AG animatedProps={w1}><Path d="M276 60 q10 10 0 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" /></AG>
+      <AG animatedProps={w2}><Path d="M286 52 q16 18 0 40 M196 52 q-16 18 0 40" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" /></AG>
+    </G>
+  );
+}
+
+/** Uninterrupted sessions: the rays turn slowly, the sun blinks now and then. */
+function Sun() {
+  const turn = useLoop(14000);
+  const blink = useSharedValue(1);
+  useEffect(() => {
+    blink.value = withRepeat(withSequence(withDelay(2600, withTiming(0.1, { duration: 120 })), withTiming(1, { duration: 160 })), -1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const rays = useAnimatedProps(() => ({ transform: `rotate(${turn.value * 360} 150 96)` }));
+  const eyes = useAnimatedProps(() => ({ transform: `translate(0 ${88 * (1 - blink.value)}) scale(1 ${blink.value})` }));
+  return (
+    <G>
+      <Bricks x={30} y={60} />
+      <Bricks x={240} y={30} />
+      <AG animatedProps={rays}>
+        {Array.from({ length: 10 }).map((_, i) => {
+          const a = (i / 10) * Math.PI * 2;
+          return <Line key={i} x1={150 + Math.cos(a) * 52} y1={96 + Math.sin(a) * 52} x2={150 + Math.cos(a) * 66} y2={96 + Math.sin(a) * 66} stroke={S} strokeWidth={sw} strokeLinecap="round" />;
+        })}
+      </AG>
+      <Circle cx={150} cy={96} r={40} fill={A} stroke={S} strokeWidth={sw} />
+      <AG animatedProps={eyes}>
+        <Circle cx={141.6} cy={88} r={3.1} fill={S} />
+        <Circle cx={158.4} cy={88} r={3.1} fill={S} />
+      </AG>
+      <Path d="M144 100 q6 6 12 0" fill="none" stroke={S} strokeWidth={2.2} strokeLinecap="round" />
+      <Circle cx={134.4} cy={99} r={3.6} fill="#F4A9A0" opacity={0.8} />
+      <Circle cx={165.6} cy={99} r={3.6} fill="#F4A9A0" opacity={0.8} />
+      <Path d="M20 196 C 70 160, 110 176, 150 186 S 240 160, 280 190" fill="none" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Path d="M60 176 l0 -22 M54 160 l6 -6 6 6" stroke={S} strokeWidth={2.4} fill="none" strokeLinecap="round" />
+      <Path d="M236 172 l0 -18 M230 158 l6 -6 6 6" stroke={S} strokeWidth={2.4} fill="none" strokeLinecap="round" />
+    </G>
+  );
+}
+
+ART.nightBed = NightBed;
+ART.gauge = Gauge;
+ART.chart = Chart;
+ART.handPhone = HandPhone;
+ART.shield = Watch;
+ART.bellPhone = BellPhone;
+ART.sun = Sun;
+
 /**
- * Every drawing pops in with a soft spring, then breathes: a slow float and a
- * small tilt, while its dotted arrows keep flowing. Gentle enough to sit
- * behind text without pulling the eye off it.
+ * Every drawing pops in with a soft spring; after that only the part that
+ * tells its story moves (see the scenes above), and dotted arrows flow.
  */
 export default function LineArt({ name, height = 200 }: { name: ArtName; height?: number }) {
   const Draw = ART[name];
   const enter = useSharedValue(0);
-  const breathe = useSharedValue(0);
   const flow = useSharedValue(0);
   useEffect(() => {
     enter.value = withSpring(1, { damping: 11, stiffness: 120 });
-    breathe.value = withRepeat(
-      withSequence(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: 2200, easing: Easing.inOut(Easing.sin) })),
-      -1,
-    );
     flow.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.linear }), -1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const style = useAnimatedStyle(() => ({
     opacity: Math.min(1, enter.value * 1.4),
     transform: [
-      { translateY: (1 - enter.value) * 18 + (breathe.value - 0.5) * 8 },
+      { translateY: (1 - enter.value) * 18 },
       { scale: 0.9 + enter.value * 0.1 },
-      { rotate: `${(breathe.value - 0.5) * 2}deg` },
     ],
   }));
   return (
