@@ -97,7 +97,7 @@ function StreakRing({ value, next, size = 96 }: { value: number; next: number; s
             cx={size / 2}
             cy={size / 2}
             r={r}
-            stroke={palette.text}
+            stroke={palette.accent}
             strokeWidth={stroke}
             strokeLinecap="round"
             fill="none"
@@ -133,7 +133,7 @@ function DotHeat({ data, cols }: { data: { value: number; today?: boolean }[]; c
                   width: dot,
                   height: dot,
                   borderRadius: dot / 2,
-                  backgroundColor: !cell ? 'transparent' : on ? `rgba(143,214,148,${a})` : 'rgba(46,49,54,0.13)',
+                  backgroundColor: !cell ? 'transparent' : on ? `rgba(232,130,26,${a})` : 'rgba(46,49,54,0.13)',
                   borderWidth: cell?.today ? 1.5 : 0,
                   borderColor: palette.text,
                 }}
@@ -281,7 +281,7 @@ export default function ProfileScreen({
 
           {/* Streak and today, side by side. */}
           <View style={styles.row}>
-            <Tile style={styles.half} onPress={onOpenMilestones} label="Day streak">
+            <Tile style={[styles.half, { backgroundColor: '#FBEBD8' }]} onPress={onOpenMilestones} label="Day streak">
               <StreakRing value={progress.currentStreak} next={streakGoal.next} />
               <View style={{ flex: 1 }} />
               <Text style={styles.tileTitle}>{progress.currentStreak === 1 ? 'Day streak' : 'Day streak'}</Text>
@@ -289,7 +289,7 @@ export default function ProfileScreen({
                 {streakBroken ? `Best ${progress.bestStreak}. Start again today` : `${daysToGo} ${daysToGo === 1 ? 'day' : 'days'} to a ${streakGoal.next}-day award`}
               </Text>
             </Tile>
-            <Tile style={styles.half}>
+            <Tile style={[styles.half, { backgroundColor: '#E6F0FC' }]}>
               <DurationBig minutes={todayLog.focusMinutes} size={44} />
               <View style={{ flex: 1 }} />
               <Text style={styles.tileTitle}>Focused today</Text>
@@ -310,7 +310,7 @@ export default function ProfileScreen({
           </Tile>
 
           {/* One big number, full width. */}
-          <Tile style={styles.wideRow}>
+          <Tile style={[styles.wideRow, { backgroundColor: '#E3F4E1' }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.tileTitle}>Time reclaimed</Text>
               <Text style={styles.tileSub}>{compactDuration(Math.round(avgDailyAll))} focus a day on average</Text>
@@ -320,13 +320,13 @@ export default function ProfileScreen({
 
           {/* The week, and what is next. */}
           <View style={styles.row}>
-            <Tile style={styles.half}>
+            <Tile style={[styles.half, { backgroundColor: '#EFEDFE' }]}>
               <Text style={styles.tileTitle}>This week</Text>
               <Text style={styles.tileSub}>{week.daysWithFocus}/7 days</Text>
               <View style={{ flex: 1 }} />
               <WeekBars values={weekValues} labels={weekLabels} />
             </Tile>
-            <Tile style={styles.half} onPress={onOpenMilestones} label="Awards">
+            <Tile style={[styles.half, { backgroundColor: '#FCE6EA' }]} onPress={onOpenMilestones} label="Awards">
               <Text style={styles.tileTitle}>Awards</Text>
               <Text style={styles.tileSub}>
                 {progress.achievements.length} of {ACHIEVEMENTS.length}
@@ -461,13 +461,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tileHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  tileTitle: { color: palette.text, fontFamily: fonts.semibold, fontSize: 16, lineHeight: 21 },
-  tileSub: { color: palette.textTertiary, fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
-  ringNum: { color: palette.text, fontFamily: fonts.system, fontSize: 34, fontWeight: '600', letterSpacing: -1 },
-  durNum: { color: palette.text, fontFamily: fonts.system, fontWeight: '300', letterSpacing: -2 },
+  tileTitle: { color: palette.text, fontFamily: fonts.bold, fontSize: 17, lineHeight: 22 },
+  tileSub: { color: palette.textSecondary, fontFamily: fonts.regular, fontSize: 13.5, lineHeight: 18 },
+  ringNum: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 34, letterSpacing: -0.5 },
+  durNum: { color: palette.text, fontFamily: fonts.extrabold, letterSpacing: -1 },
   durUnit: { color: palette.textTertiary, fontFamily: fonts.medium, marginLeft: 2 },
-  bigNum: { color: palette.text, fontFamily: fonts.system, fontSize: 56, fontWeight: '300', letterSpacing: -2.5 },
-  bigNumSm: { color: palette.text, fontFamily: fonts.system, fontSize: 40, fontWeight: '300', letterSpacing: -1.5 },
+  bigNum: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 52, letterSpacing: -1.5 },
+  bigNumSm: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 38, letterSpacing: -1 },
   wideRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 20 },
   dotGrid: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 10 },
   dotCol: { gap: 6 },

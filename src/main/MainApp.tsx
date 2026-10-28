@@ -768,6 +768,15 @@ export default function MainApp({
     setOverlay(null);
     setTab('home');
   };
+  // Web preview only, development builds only: `?demo=1` fills every screen
+  // with the six months of sample history so the populated layouts can be
+  // reviewed. Never reachable in a store build.
+  useEffect(() => {
+    if (!__DEV__ || Platform.OS !== 'web') return;
+    const q = typeof window !== 'undefined' ? window.location.search : '';
+    if (q.includes('demo=1')) applyDevState(buildDemoState());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Computed once at mount so finishing (or skipping) the check-in doesn't
   // immediately re-trigger it within the same session.
   const [checkInDue, setCheckInDue] = useState(() =>
