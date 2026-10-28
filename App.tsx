@@ -572,7 +572,15 @@ export default function App() {
           )}
 
           {showMascot && (
-            <MascotSplash waitForStart={stage === 'splash'} onDone={() => setShowMascot(false)} />
+            <MascotSplash
+              waitForStart={stage === 'splash'}
+              onDone={() => {
+                setShowMascot(false);
+                // First run: Get Started goes straight to the questions; the
+                // photo intro slides are no longer shown.
+                if (stage === 'splash') setStage('onboarding');
+              }}
+            />
           )}
         </View>
       </SafeAreaProvider>
