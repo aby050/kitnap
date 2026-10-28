@@ -1,6 +1,23 @@
-import React from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { fonts } from '../design/tokens';
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
+import Animated, {
+  Easing,
+  SharedValue,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+/** One looping clock per drawing: drives the marching dotted arrows. */
+const FlowClock = createContext<SharedValue<number> | null>(null);
 
 /** Hand-drawn style spot illustrations for onboarding: dark outlines, white
  *  fills, a single warm accent and dotted "flow" arrows. All original. */
@@ -14,8 +31,23 @@ const P = '#B57EDC';
 const M = '#E8E4DC';
 const sw = 3;
 
+/** Dotted "flow" arrows march along their path, so the drawing reads as
+ *  something moving from one thing into another. */
 function Dots({ d }: { d: string }) {
-  return <Path d={d} stroke={S} strokeWidth={1.6} strokeDasharray="3 5" fill="none" strokeLinecap="round" />;
+  const flow = useContext(FlowClock);
+  const props = useAnimatedProps(() => ({ strokeDashoffset: flow ? -flow.value * 16 : 0 }));
+  return <AnimatedPath d={d} stroke={S} strokeWidth={1.6} strokeDasharray="3 5" fill="none" strokeLinecap="round" animatedProps={props} />;
+}
+
+/** A line that draws itself in once, like a pen stroke (chart lines, trails). */
+function DrawLine({ d, color = A, width = 4, length = 320, delay = 350 }: { d: string; color?: string; width?: number; length?: number; delay?: number }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.value = withDelay(delay, withTiming(1, { duration: 1100, easing: Easing.out(Easing.cubic) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const props = useAnimatedProps(() => ({ strokeDashoffset: length * (1 - p.value) }));
+  return <AnimatedPath d={d} fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeDasharray={`${length} ${length}`} animatedProps={props} />;
 }
 
 function Label({ x, y, children }: { x: number; y: number; children: string }) {
@@ -227,7 +259,7 @@ const ART: Record<ArtName, () => React.ReactElement> = {
   sprout: () => (
     <G>
       <Bricks x={22} y={60} />
-      <Path d="M30 170 C 80 160, 110 120, 150 120 S 230 70, 272 30" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" strokeDasharray="1 0" />
+      <DrawLine d="M30 170 C 80 160, 110 120, 150 120 S 230 70, 272 30" length={340} />
       <Path d="M262 28 l12 0 -2 12" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
       <Path d="M112 150 h76 l-8 60 h-60z" fill={P} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
       <Path d="M106 150 h88" stroke={S} strokeWidth={sw} strokeLinecap="round" />
@@ -335,7 +367,7 @@ const ART: Record<ArtName, () => React.ReactElement> = {
         {[60, 90, 120, 150].map((y) => (
           <Line key={y} x1={70} y1={y} x2={230} y2={y} stroke={M} strokeWidth={1.6} />
         ))}
-        <Path d="M72 70 C 100 80, 110 96, 136 98 S 170 126, 190 134 S 220 150, 230 158" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" />
+        <DrawLine d="M72 70 C 100 80, 110 96, 136 98 S 170 126, 190 134 S 220 150, 230 158" />
         <SvgText x={72} y={176} fill={S} fontFamily={fonts.bold} fontSize={15} fontWeight="700">Your day, in hours</SvgText>
       </G>
       <Dots d="M28 40 C 30 70, 40 80, 52 84" />
@@ -433,11 +465,40 @@ const ART: Record<ArtName, () => React.ReactElement> = {
   ),
 };
 
+/**
+ * Every drawing pops in with a soft spring, then breathes: a slow float and a
+ * small tilt, while its dotted arrows keep flowing. Gentle enough to sit
+ * behind text without pulling the eye off it.
+ */
 export default function LineArt({ name, height = 200 }: { name: ArtName; height?: number }) {
   const Draw = ART[name];
+  const enter = useSharedValue(0);
+  const breathe = useSharedValue(0);
+  const flow = useSharedValue(0);
+  useEffect(() => {
+    enter.value = withSpring(1, { damping: 11, stiffness: 120 });
+    breathe.value = withRepeat(
+      withSequence(withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: 2200, easing: Easing.inOut(Easing.sin) })),
+      -1,
+    );
+    flow.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.linear }), -1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const style = useAnimatedStyle(() => ({
+    opacity: Math.min(1, enter.value * 1.4),
+    transform: [
+      { translateY: (1 - enter.value) * 18 + (breathe.value - 0.5) * 8 },
+      { scale: 0.9 + enter.value * 0.1 },
+      { rotate: `${(breathe.value - 0.5) * 2}deg` },
+    ],
+  }));
   return (
-    <Svg width="100%" height={height} viewBox="0 0 300 220">
-      <Draw />
-    </Svg>
+    <FlowClock.Provider value={flow}>
+      <Animated.View style={style}>
+        <Svg width="100%" height={height} viewBox="0 0 300 220">
+          <Draw />
+        </Svg>
+      </Animated.View>
+    </FlowClock.Provider>
   );
 }

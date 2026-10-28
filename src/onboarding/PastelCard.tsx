@@ -44,7 +44,7 @@ export function InkButton({ label, disabled, onPress }: { label: string; disable
     <Pressable
       onPress={disabled ? undefined : onPress}
       accessibilityRole="button"
-      style={[styles.inkBtn, disabled && { opacity: 0.35 }]}
+      style={({ pressed }) => [styles.inkBtn, disabled && { opacity: 0.35 }, pressed && !disabled && { transform: [{ scale: 0.97 }], opacity: 0.92 }]}
     >
       <Text style={styles.inkBtnText}>{label}</Text>
     </Pressable>
