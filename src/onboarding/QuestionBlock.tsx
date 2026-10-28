@@ -76,40 +76,31 @@ const HINTS: Record<string, string> = {
   controlScale: 'No wrong answer. This is your starting line.',
 };
 
-function OptionButton({ label, selected, onPress, tile }: { label: string; selected: boolean; onPress: () => void; tile?: boolean }) {
+const INK = '#1B1B1F';
+
+/** Answer pill: soft grey, centred label; fills with ink once chosen. */
+function OptionButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void; tile?: boolean; index?: number }) {
   const scale = useSharedValue(1);
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Animated.View style={style}>
       <Pressable
-        onPressIn={() => (scale.value = withTiming(0.95, { duration: 90 }))}
+        onPressIn={() => (scale.value = withTiming(0.96, { duration: 90 }))}
         onPressOut={() => (scale.value = withSpring(1, { damping: 12, stiffness: 220 }))}
         onPress={onPress}
-        style={[styles.optionBtn, tile && styles.optionTile, selected && styles.optionBtnSelected]}
+        style={[styles.pill, selected && styles.pillSelected]}
       >
-        {ICONS[label] ? (
-          <View style={tile ? styles.tileEmoji : styles.rowEmoji}>
-            <Ionicons name={ICONS[label]} size={tile ? 28 : 22} color={selected ? palette.onLight : '#FFFFFF'} />
-          </View>
-        ) : null}
-        <Text
-          numberOfLines={tile ? 2 : undefined}
-          style={[styles.optionText, tile && { fontSize: 14.5, textAlign: 'center' }, selected && styles.optionTextSelected, !tile && { flex: 1 }]}
-        >
-          {label}
-        </Text>
-        {!tile && (
-          <View style={[styles.optionDot, selected && styles.optionDotOn]}>
-            {selected && <Text style={styles.optionTick}>✓</Text>}
-          </View>
-        )}
-        {tile && selected && (
-          <View style={styles.tileTick}>
-            <Text style={styles.optionTick}>✓</Text>
-          </View>
-        )}
+        <Text style={[styles.pillText, selected && { color: '#FFFFFF' }]}>{label}</Text>
       </Pressable>
     </Animated.View>
+  );
+}
+
+function InkButton({ label, disabled, onPress }: { label: string; disabled?: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={disabled ? undefined : onPress} style={[styles.inkBtn, disabled && { opacity: 0.35 }]}>
+      <Text style={styles.inkBtnText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -275,6 +266,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       // tradeoff for not showing broken overlap.
       style={styles.block}
     >
+      <View style={styles.promptArea}>
       {EYEBROWS[question.id] ? (
         <View style={styles.eyebrow}>
           <Text style={styles.eyebrowText}>{EYEBROWS[question.id]}</Text>
@@ -292,6 +284,8 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
         </Animated.Text>
       )}
 
+      </View>
+      <View style={[styles.answerPanel, (question.kind === 'static' || !isTypingComplete) && styles.answerPanelIdle]}>
       {isTypingComplete && question.kind === 'text' && (
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
           <Field
@@ -301,7 +295,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             autoFocus
           />
           <View style={{ height: space.md }} />
-          <GradientButton
+          <InkButton
             label={question.optional && text.trim().length === 0 ? 'Skip' : 'Continue'}
             disabled={!question.optional && text.trim().length === 0}
             onPress={() => {
@@ -317,8 +311,9 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
           <View style={styles.optionsWrap}>
             {question.options.map((opt, i) => (
-              <Animated.View key={opt} entering={FadeInDown.delay(i * 60).duration(320)}>
+              <Animated.View key={opt} style={styles.pillCell} entering={FadeInDown.delay(i * 60).duration(320)}>
                 <OptionButton
+                  index={i}
                   label={opt}
                   selected={selected === opt}
                   onPress={() => {
@@ -340,14 +335,15 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 
       {isTypingComplete && question.kind === 'multi' && (
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
-          <View style={[styles.optionsWrap, question.options.length > 5 && styles.tileGrid]}>
+          <View style={styles.optionsWrap}>
             {question.options.map((opt, i) => (
               <Animated.View
                 key={opt}
                 entering={FadeInDown.delay(i * 40).duration(300)}
-                style={question.options.length > 5 ? styles.tileCell : undefined}
+                style={styles.pillCell}
               >
               <OptionButton
+                index={i}
                 tile={question.options.length > 5}
                 label={opt}
                 selected={multiSelected.includes(opt)}
@@ -362,7 +358,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             ))}
           </View>
           <View style={{ height: space.md }} />
-          <GradientButton
+          <InkButton
             label={multiSelected.length === 0 ? 'Skip' : 'Continue'}
             disabled={!question.optional && multiSelected.length === 0}
             onPress={() => onAnswer(multiSelected.join(','), multiSelected.join(', '))}
@@ -383,25 +379,35 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             const pips = question.max - question.min + 1;
             return (
               <View style={styles.sliderCard}>
-                {pips <= 12 && (
-                  <View style={styles.pipRow}>
-                    {Array.from({ length: pips }).map((_, i) => (
-                      <View
-                        key={i}
-                        style={[styles.pip, i + question.min <= rounded && styles.pipOn, i + question.min === rounded && styles.pipCurrent]}
-                      />
-                    ))}
+                <View style={styles.sliderTop}>
+                  <Text style={styles.sliderKicker}>{named ? 'YOUR LEVEL' : 'YOUR ANSWER'}</Text>
+                  <View style={styles.levelChip}>
+                    <Text style={styles.levelChipText}>{named ? `${rounded} / ${question.max}` : `${question.min}–${maxLabel}`}</Text>
                   </View>
-                )}
+                </View>
                 <Text style={named ? styles.levelName : styles.ageValue}>{named ?? shown}</Text>
-                {named ? (
-                  <Text style={styles.levelMeta}>
-                    Level {rounded} of {question.max}
-                  </Text>
-                ) : (
-                  <Text style={styles.levelMeta}>
-                    {question.min} – {maxLabel}
-                  </Text>
+                {pips <= 12 && (
+                  <View style={styles.meter}>
+                    {Array.from({ length: pips }).map((_, i) => {
+                      const v = i + question.min;
+                      return (
+                        <Pressable
+                          key={i}
+                          hitSlop={4}
+                          onPress={() => {
+                            Haptics.selectionAsync().catch(() => {});
+                            setSliderVal(v);
+                          }}
+                          style={[
+                            styles.meterBar,
+                            { height: 14 + (i / (pips - 1)) * 34 },
+                            v <= rounded && styles.meterOn,
+                            v === rounded && styles.meterCurrent,
+                          ]}
+                        />
+                      );
+                    })}
+                  </View>
                 )}
               </View>
             );
@@ -413,12 +419,18 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             step={1}
             value={sliderVal}
             onValueChange={setSliderVal}
-            minimumTrackTintColor={palette.accent}
-            maximumTrackTintColor="rgba(255,255,255,0.15)"
-            thumbTintColor={palette.accent}
+            minimumTrackTintColor={INK}
+            maximumTrackTintColor="rgba(27,27,31,0.15)"
+            thumbTintColor={INK}
           />
-          <View style={{ height: space.sm }} />
-          <GradientButton
+          {question.labels && (
+            <View style={styles.sliderEnds}>
+              <Text style={styles.sliderEndText}>Phone in charge</Text>
+              <Text style={styles.sliderEndText}>You in charge</Text>
+            </View>
+          )}
+          <View style={{ height: space.md }} />
+          <InkButton
             label="Continue"
             onPress={() => {
               const rounded = Math.round(sliderVal);
@@ -437,19 +449,32 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
           <Animated.View style={[styles.progressBar, barStyle]} />
         </View>
       )}
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  promptArea: { flexGrow: 1, minHeight: 280, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, paddingVertical: 28 },
+  answerPanel: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 22 },
+  answerPanelIdle: { backgroundColor: 'transparent' },
+  pillCell: { width: '50%', padding: 5 },
+  pill: {
+    minHeight: 56, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 12,
+    backgroundColor: '#EDEDEF', alignItems: 'center', justifyContent: 'center',
+  },
+  pillSelected: { backgroundColor: INK },
+  pillText: { color: INK, fontFamily: fonts.medium, fontSize: 15, fontWeight: '500', textAlign: 'center' },
+  inkBtn: { height: 54, borderRadius: 16, backgroundColor: INK, alignItems: 'center', justifyContent: 'center' },
+  inkBtnText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 16, fontWeight: '600' },
   block: {
+    flexGrow: 1,
     width: '100%',
     alignItems: 'stretch',
     // More air between the headline and the answers than between the answers
     // themselves, so the question reads as a question and the rows read as
     // one group rather than five separate things.
-    gap: 26,
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
   },
   /* The prompt is the screen, not a caption above a widget.
    *
@@ -459,27 +484,25 @@ const styles = StyleSheet.create({
    * editorial headline instead, on the same type as the education slides, so
    * the whole flow reads as one voice rather than a funnel bolted onto an app. */
   prompt: {
-    color: palette.text,
+    color: INK,
     fontFamily: fonts.bold,
     fontSize: 26,
     fontWeight: '700',
-    textAlign: 'left',
+    textAlign: 'center',
     alignSelf: 'stretch',
     lineHeight: 33,
     letterSpacing: -0.5,
   },
   eyebrow: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: palette.accentSoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.accentBorder,
+    backgroundColor: 'rgba(27,27,31,0.07)',
     marginBottom: 14,
   },
-  eyebrowText: { color: palette.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
-  promptEmphasis: { color: palette.accent },
+  eyebrowText: { color: 'rgba(27,27,31,0.6)', fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
+  promptEmphasis: { color: INK, textDecorationLine: 'underline' },
   fullWidth: {
     width: '100%',
     alignSelf: 'stretch',
@@ -491,33 +514,58 @@ const styles = StyleSheet.create({
    * ground has saturated — which is why they use the on-colour fills rather
    * than the dark surface ones, which vanish against it. */
   optionsWrap: {
-    flexDirection: 'column',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignSelf: 'stretch',
-    gap: 9,
+  },
+  card: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 16, paddingHorizontal: 16, borderRadius: 20,
+    backgroundColor: 'rgba(10,20,15,0.55)',
+    borderWidth: 1, borderColor: palette.border,
+  },
+  cardTile: { flexDirection: 'column', justifyContent: 'center', height: 116, paddingHorizontal: 10 },
+  cardSelected: { backgroundColor: palette.accentSoft, borderColor: palette.accent },
+  cardNum: {
+    width: 26, height: 26, borderRadius: 9, marginRight: 14,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: palette.accentSoft, borderWidth: 1, borderColor: palette.accentBorder,
+  },
+  cardNumOn: { backgroundColor: palette.accent, borderColor: palette.accent },
+  cardNumText: { color: palette.accent, fontFamily: fonts.bold, fontSize: 12, fontWeight: '700' },
+  cardTick: {
+    width: 22, height: 22, borderRadius: 11, marginLeft: 12,
+    backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center',
   },
   sliderCard: {
-    alignItems: 'center',
-    paddingVertical: 22,
-    paddingHorizontal: 16,
+    alignItems: 'stretch',
+    paddingTop: 18, paddingBottom: 22, paddingHorizontal: 20,
     borderRadius: 24,
-    backgroundColor: palette.onColor,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: palette.onColorBorder,
-    marginBottom: 12,
+    backgroundColor: '#F4F4F6',
+    marginBottom: 10,
   },
-  pipRow: { flexDirection: 'row', gap: 6, marginBottom: 18 },
-  pip: { width: 18, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
-  pipOn: { backgroundColor: palette.accent },
-  pipCurrent: { backgroundColor: '#FFFFFF', width: 26 },
-  hint: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: -4, marginBottom: 14 },
-  rowEmoji: { marginRight: 14 },
+  sliderTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sliderKicker: { color: 'rgba(27,27,31,0.5)', fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
+  levelChip: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999,
+    backgroundColor: INK,
+  },
+  levelChipText: { color: '#FFFFFF', fontFamily: fonts.bold, fontSize: 12, fontWeight: '700' },
+  meter: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: 20, height: 48 },
+  meterBar: { flex: 1, borderRadius: 4, backgroundColor: 'rgba(27,27,31,0.08)' },
+  meterOn: { backgroundColor: 'rgba(27,27,31,0.35)' },
+  meterCurrent: { backgroundColor: INK },
+  sliderEnds: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
+  sliderEndText: { color: 'rgba(27,27,31,0.45)', fontSize: 12, fontWeight: '600' },
+  hint: { color: 'rgba(27,27,31,0.6)', fontSize: 14, marginTop: 14, textAlign: 'center' },
+  rowEmoji: { marginRight: 12 },
   tileEmoji: { marginBottom: 10 },
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginHorizontal: -4 },
-  tileCell: { width: '50%', padding: 4 },
+  tileCell: { width: '50%', padding: 5 },
   optionTile: { flexDirection: 'column', paddingVertical: 18, paddingHorizontal: 10, justifyContent: 'center', height: 112 },
   tileTick: {
     position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10,
-    backgroundColor: palette.onLight, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: palette.accent, alignItems: 'center', justifyContent: 'center',
   },
   optionDot: {
     width: 22,
@@ -564,7 +612,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   skipText: {
-    color: palette.onColorTextDim,
+    color: 'rgba(27,27,31,0.55)',
     fontSize: 14,
     fontWeight: '600',
     textDecorationLine: 'underline',
@@ -573,7 +621,7 @@ const styles = StyleSheet.create({
    * hero of the screen rather than as a caption above the track — at 52pt it
    * was smaller than some of the prompts it was answering. */
   ageValue: {
-    color: palette.text,
+    color: INK,
     fontFamily: fonts.extrabold,
     fontSize: 88,
     // Poppins ExtraBold's ascenders overshoot the cap height, and React
@@ -588,14 +636,14 @@ const styles = StyleSheet.create({
    * numeric readout without wrapping — but they are the same answer in the
    * same position and are sized to match as closely as the words allow. */
   levelName: {
-    color: palette.text,
+    color: INK,
     fontFamily: fonts.extrabold,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 34,
-    letterSpacing: -1,
-    minHeight: 68,
+    textAlign: 'left',
+    lineHeight: 33,
+    letterSpacing: -0.8,
+    minHeight: 66,
   },
   levelMeta: {
     color: palette.onColorTextDim,
@@ -623,10 +671,10 @@ const styles = StyleSheet.create({
     // Was a hardcoded amber that belonged to no palette in the app and read
     // as a warning next to the prompt. Amber now means "savings" and nothing
     // else; a caret is just the accent.
-    color: palette.accent,
+    color: INK,
     fontWeight: 'bold',
     fontSize: 22,
-    textShadowColor: 'rgba(71,107,235,0.95)',
+    textShadowColor: 'transparent',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },

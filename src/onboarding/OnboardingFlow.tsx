@@ -6,6 +6,7 @@ import { KeyboardAvoider, keyboardScrollProps } from '../components/KeyboardAwar
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import QuestionBlock from './QuestionBlock';
 import LoginScreen from '../main/LoginScreen';
+import { fonts } from '../design/tokens';
 import { OnboardingMarkSlot } from './OnboardingMark';
 import {
   Question,
@@ -135,15 +136,20 @@ export default function OnboardingFlow({
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <OnboardingMarkSlot />
-
+      <View style={[styles.card, { backgroundColor: CARD_TINTS[stepIndex % CARD_TINTS.length] }]}>
+      <Text style={styles.brand}>Phonewise</Text>
       <View style={styles.progressWrap}>
-        <Text style={styles.stepLabel}>
-          {`STEP ${Math.min(progressFrom + stepIndex + 1, progressDenom)} OF ${progressDenom}`}
-        </Text>
-        <View style={styles.progressTrack}>
-          <Animated.View style={[styles.progressFill, progressFillStyle]} />
+        <View style={styles.segments}>
+          {Array.from({ length: progressDenom }).map((_, i) => (
+            <View
+              key={i}
+              style={[styles.segment, i < progressFrom + stepIndex && styles.segmentDone, i === progressFrom + stepIndex && styles.segmentNow]}
+            />
+          ))}
         </View>
+        <Text style={styles.stepLabel}>
+          {`${Math.min(progressFrom + stepIndex + 1, progressDenom)}/${progressDenom}`}
+        </Text>
       </View>
 
       <KeyboardAvoider>
@@ -160,7 +166,6 @@ export default function OnboardingFlow({
             // Centre by padding, not justifyContent: a block taller than the
             // viewport then just scrolls from a sane top instead of spilling
             // above the scroll view.
-            { paddingTop: Math.max(24, (viewportH - (contentH - 92) - 48) / 2) },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -171,27 +176,36 @@ export default function OnboardingFlow({
               when the answers overflow it, so "fits" never flipped back and a
               long multi-select list pushed its own question off the top. The
               block's own height is the honest number (plus the 44+48 padding). */}
-          <View onLayout={(e) => setContentH(e.nativeEvent.layout.height + 92)}>
+          <View style={{ flexGrow: 1 }} onLayout={(e) => setContentH(e.nativeEvent.layout.height + 92)}>
             <QuestionBlock key={question.id} question={question} onAnswer={handleAnswer} />
           </View>
         </ScrollView>
       </KeyboardAvoider>
+      </View>
     </SafeAreaView>
   );
 }
+
+/** One pastel per question, so each step reads as a fresh card. */
+const CARD_TINTS = ['#DDF5FA', '#E4E2FA', '#D8F5DA', '#FAF5D8', '#FCE1E1', '#DCE6FB'];
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-  progressWrap: { paddingHorizontal: 28, marginTop: 4 },
+  card: { flex: 1, margin: 10, borderRadius: 34, overflow: 'hidden' },
+  brand: { textAlign: 'center', color: '#1B1B1F', fontFamily: fonts.bold, fontSize: 14, fontWeight: '700', marginTop: 18 },
+  progressWrap: { paddingHorizontal: 24, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  segments: { flex: 1, flexDirection: 'row', gap: 6 },
+  segment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(27,27,31,0.15)' },
+  segmentDone: { backgroundColor: '#1B1B1F' },
+  segmentNow: { backgroundColor: '#1B1B1F' },
   stepLabel: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(27,27,31,0.6)',
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1.6,
-    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   progressTrack: {
     height: 4,
@@ -223,12 +237,12 @@ const styles = StyleSheet.create({
     // makes tall questions scroll normally, and short ones sit high — which is
     // where the headline belongs on this layout anyway.
     justifyContent: 'flex-start',
-    paddingHorizontal: 28,
+    paddingHorizontal: 0,
     // The question must never crowd the progress bar — they are different
     // kinds of information (where you are vs what is being asked) and with
     // only 12pt between them the headline read as a label on the bar.
-    paddingTop: 44,
-    paddingBottom: 48,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   /* Applied only when the measurement above says the question fits. */
   currentContentCentered: { justifyContent: 'center' },

@@ -385,7 +385,7 @@ export default function App() {
           {stage === 'splash' && <IntroStories onDone={() => setStage('onboarding')} />}
 
           {(stage === 'education' || stage === 'onboarding') && (
-            <OnboardingMark large={stage === 'education'} />
+            <OnboardingMark large={stage === 'education'} hidden={stage === 'onboarding'} />
           )}
 
           {stage === 'education' && (
