@@ -7,7 +7,7 @@ import { fonts, palette, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 
 const SUPPORT_EMAIL = 'moksha.rva@gmail.com';
-const SITE_URL = 'https://phonewise.rvastudio.in';
+const SITE_URL = 'https://kitnap.rvastudio.in';
 
 /**
  * About and contact, written into the app rather than fetched.
@@ -90,7 +90,7 @@ export default function AboutScreen({ onBack }: { onBack: () => void }) {
           />
           <LinkRow
             mark="globe"
-            title="phonewise.rvastudio.in"
+            title="kitnap.rvastudio.in"
             sub="Help, updates and the full story"
             onPress={() => Linking.openURL(SITE_URL)}
             last

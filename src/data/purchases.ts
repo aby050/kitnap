@@ -29,8 +29,8 @@ export const ENTITLEMENT_ID = 'byre_pro';
  *  in the binary and next to the purchase: the title, the length, the price,
  *  a link to the privacy policy and a link to the terms. Missing links is one
  *  of the most common rejections there is, and it is entirely avoidable. */
-export const PRIVACY_POLICY_URL = 'https://phonewise.rvastudio.in/privacy';
-export const TERMS_URL = 'https://phonewise.rvastudio.in/terms';
+export const PRIVACY_POLICY_URL = 'https://kitnap.rvastudio.in/privacy';
+export const TERMS_URL = 'https://kitnap.rvastudio.in/terms';
 
 /** The retention offer shown only when someone declines the main paywall.
  *  A separate RevenueCat offering rather than a discounted price on the same

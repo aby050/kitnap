@@ -35,5 +35,5 @@ Kitnap is free, and the free version really blocks apps. Pro is an optional mont
 
 Less scrolling. More living.
 
-Terms: https://phonewise.rvastudio.in/terms
-Privacy: https://phonewise.rvastudio.in/privacy
+Terms: https://kitnap.rvastudio.in/terms
+Privacy: https://kitnap.rvastudio.in/privacy

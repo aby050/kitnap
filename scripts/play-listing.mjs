@@ -32,7 +32,7 @@ try {
   const cur = await call('GET', `${E}/listings/en-US`);
   await call('PUT', `${E}/listings/en-US`, JSON.stringify({ ...cur, title, shortDescription, fullDescription }));
   const d = await call('GET', `${E}/details`);
-  await call('PUT', `${E}/details`, JSON.stringify({ ...d, contactEmail: 'work@rvastudio.in', contactWebsite: 'https://phonewise.rvastudio.in' }));
+  await call('PUT', `${E}/details`, JSON.stringify({ ...d, contactEmail: 'work@rvastudio.in', contactWebsite: 'https://kitnap.rvastudio.in' }));
   const done = await call('POST', `${E}:commit`);
   console.log(`listing "${title}" committed in edit ${done.id}`);
 } catch (e) {
