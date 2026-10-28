@@ -1,3 +1,4 @@
+import WelcomeTribute from '../onboarding/WelcomeTribute';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Alert, AppState, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -121,6 +122,7 @@ type Overlay =
   | 'schedules'
   | 'account'
   | 'futureSelf'
+  | 'tribute'
   | 'progressPhotos'
   | 'calendar'
   | 'realUsage'
@@ -1319,6 +1321,7 @@ export default function MainApp({
           onOpenAccount={() => setOverlay('account')}
           accountLabel={account ? account.identifier : undefined}
           onOpenFutureSelf={() => setOverlay('futureSelf')}
+          onOpenTribute={() => setOverlay('tribute')}
           onOpenBlockedApps={() => setOverlay('blockedApps')}
           onOpenSubscription={() => setOverlay('subscription')}
           /* The biggest door of the three: deleting the account takes the
@@ -1591,6 +1594,8 @@ export default function MainApp({
           onBack={() => setOverlay('settings')}
         />
       );
+    if (ov === 'tribute')
+      return <WelcomeTribute cta="Back to settings" onContinue={() => setOverlay('settings')} />;
     if (ov === 'futureSelf')
       return (
         <FutureSelfScreen

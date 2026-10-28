@@ -23,6 +23,7 @@ import {
 import SplashFlow from './src/onboarding/SplashFlow';
 import MascotSplash from './src/onboarding/MascotSplash';
 import ArtGallery from './src/onboarding/ArtGallery';
+import WelcomeTribute from './src/onboarding/WelcomeTribute';
 import IntroStories from './src/onboarding/IntroStories';
 import UsageRevealScreen from './src/onboarding/UsageRevealScreen';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
@@ -98,6 +99,7 @@ type Stage =
   | 'appPicker'
   | 'iosAppPicker'
   | 'intensity'
+  | 'tribute'
   | 'proposedRules'
   | 'futureSelf'
   | 'benefits'
@@ -402,7 +404,7 @@ export default function App() {
           <PersistentBackground />
           <StatusBar style="dark" />
 
-          {stage === 'splash' && <IntroStories onDone={() => setStage('onboarding')} />}
+          {stage === 'tribute' && <WelcomeTribute onContinue={() => setStage('onboarding')} />}
 
           {(stage === 'education' || stage === 'onboarding') && (
             <OnboardingMark large={stage === 'education'} hidden={stage === 'onboarding'} />
@@ -580,9 +582,9 @@ export default function App() {
               waitForStart={stage === 'splash'}
               onDone={() => {
                 setShowMascot(false);
-                // First run: Get Started goes straight to the questions; the
-                // photo intro slides are no longer shown.
-                if (stage === 'splash') setStage('onboarding');
+                // First run: the splash hands over to the welcome and its
+                // story; the photo intro slides are no longer shown.
+                if (stage === 'splash') setStage('tribute');
               }}
             />
           )}

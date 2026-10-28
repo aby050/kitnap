@@ -86,6 +86,7 @@ export default function SettingsScreen({
   onOpenAccount,
   accountLabel,
   onOpenFutureSelf,
+  onOpenTribute,
   onOpenBlockedApps,
   onOpenDifficulty,
   onOpenDeleteAccount,
@@ -104,6 +105,7 @@ export default function SettingsScreen({
   onOpenAccount?: () => void;
   accountLabel?: string;
   onOpenFutureSelf?: () => void;
+  onOpenTribute?: () => void;
   onOpenBlockedApps?: () => void;
   onOpenDifficulty?: () => void;
   onOpenDeleteAccount?: () => void;
@@ -191,6 +193,12 @@ export default function SettingsScreen({
             title="Message to future you"
             subtitle="Re-record what plays back at the gate"
             onPress={onOpenFutureSelf}
+          />
+          <SettingRow
+            icon={<RowIcon name="heart" />}
+            title="Why Kitnap"
+            subtitle="The little cat this app is made for"
+            onPress={onOpenTribute}
             last
           />
         </Group>
