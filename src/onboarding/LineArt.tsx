@@ -492,14 +492,32 @@ const ART: Record<ArtName, () => React.ReactElement> = {
 /** Late night: the clock keeps ticking, the moon slowly turns into morning,
  *  the stars twinkle. The sleeper and the phone stay put. */
 function NightBed() {
-  const min = useLoop(6000);
-  const hour = useLoop(72000);
-  const day = usePingPong(4200);
-  const tw = usePingPong(1400);
-  const minP = useAnimatedProps(() => ({ transform: `rotate(${min.value * 360} 60 60)` }));
-  const hourP = useAnimatedProps(() => ({ transform: `rotate(${hour.value * 360 + 120} 60 60)` }));
-  const moonP = useAnimatedProps(() => ({ opacity: 1 - day.value }));
-  const sunP = useAnimatedProps(() => ({ opacity: day.value }));
+  // One night-to-morning-to-night cycle. The clock runs forward with it:
+  // 1:30 am under the moon, 7:00 am once the sun is up, then on to the next
+  // night. `day` is how much sun is showing.
+  const t = useLoop(12000);
+  const tw = usePingPong(1600);
+  const dayOf = (v: number) => {
+    'worklet';
+    if (v < 0.35) return 0;
+    if (v < 0.5) return (v - 0.35) / 0.15;
+    if (v < 0.85) return 1;
+    return 1 - (v - 0.85) / 0.15;
+  };
+  // Hours past 1:30 am: +5.5 during the dawn, +18.5 more through the day and evening.
+  const hoursOf = (v: number) => {
+    'worklet';
+    if (v < 0.35) return 0;
+    if (v < 0.5) return ((v - 0.35) / 0.15) * 5.5;
+    if (v < 0.85) return 5.5;
+    return 5.5 + ((v - 0.85) / 0.15) * 18.5;
+  };
+  const hourP = useAnimatedProps(() => ({ transform: `rotate(${45 + hoursOf(t.value) * 30} 60 60)` }));
+  const minP = useAnimatedProps(() => ({ transform: `rotate(${180 + hoursOf(t.value) * 360} 60 60)` }));
+  const moonP = useAnimatedProps(() => ({ opacity: 1 - dayOf(t.value) }));
+  const sunP = useAnimatedProps(() => ({ opacity: dayOf(t.value) }));
+  const nightLabel = useAnimatedProps(() => ({ opacity: 1 - dayOf(t.value) }));
+  const dayLabel = useAnimatedProps(() => ({ opacity: dayOf(t.value) }));
   const tw1 = useAnimatedProps(() => ({ opacity: 0.25 + tw.value * 0.75 }));
   const tw2 = useAnimatedProps(() => ({ opacity: 1 - tw.value * 0.75 }));
   return (
@@ -530,18 +548,24 @@ function NightBed() {
       <AG animatedProps={hourP}><Line x1={60} y1={60} x2={60} y2={44} stroke={S} strokeWidth={3.4} strokeLinecap="round" /></AG>
       <AG animatedProps={minP}><Line x1={60} y1={60} x2={60} y2={38} stroke={A} strokeWidth={2.4} strokeLinecap="round" /></AG>
       <Circle cx={60} cy={60} r={3.5} fill={S} />
-      <SvgText x={60} y={108} fill={S} fontFamily={fonts.semibold} fontSize={12} textAnchor="middle">1:30 am</SvgText>
+      <AG animatedProps={nightLabel}>
+        <SvgText x={60} y={108} fill={S} fontFamily={fonts.semibold} fontSize={12} textAnchor="middle">1:30 am</SvgText>
+      </AG>
+      <AG animatedProps={dayLabel}>
+        <SvgText x={60} y={108} fill={S} fontFamily={fonts.semibold} fontSize={12} textAnchor="middle">7:00 am</SvgText>
+      </AG>
     </G>
   );
 }
 
-/** Control: the needle strains toward "You", gets pulled back, tries again. */
+/** Control: the needle sits on the "You" side and pushes further toward it,
+ *  trembling, as if wrestling the last bit of control back. */
 function Gauge() {
-  const strain = usePingPong(900);
+  const strain = usePingPong(1100);
   const shake = useLoop(160);
   const p = useAnimatedProps(() => {
     const jitter = Math.sin(shake.value * Math.PI * 2) * 1.6 * strain.value;
-    return { transform: `rotate(${-20 + strain.value * 52 + jitter} 150 170)` };
+    return { transform: `rotate(${34 + strain.value * 36 + jitter} 150 170)` };
   });
   return (
     <G>
@@ -586,7 +610,13 @@ function AppTile({ kind, x, y, size = 30 }: { kind: 'ig' | 'tt' | 'yt' | 'fb'; x
 
 /** Usage access: the chart stays still; the apps eating the day circle it. */
 function Chart() {
-  const t = useLoop(9000);
+  const t = useLoop(16000);
+  const day = useLoop(7000, Easing.inOut(Easing.quad));
+  const lineP = useAnimatedProps(() => {
+    const v = day.value;
+    const k = v < 0.6 ? v / 0.6 : v < 0.85 ? 1 : 1 - (v - 0.85) / 0.15;
+    return { strokeDashoffset: 260 * (1 - k) };
+  });
   const tiles: { kind: 'ig' | 'tt' | 'yt' | 'fb'; phase: number }[] = [
     { kind: 'ig', phase: 0 },
     { kind: 'tt', phase: 0.25 },
@@ -600,7 +630,7 @@ function Chart() {
         {[64, 92, 120, 148].map((y) => (
           <Line key={y} x1={78} y1={y} x2={222} y2={y} stroke={M} strokeWidth={1.6} />
         ))}
-        <Path d="M80 72 C 106 82, 116 96, 140 98 S 172 124, 190 130 S 214 144, 222 150" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" />
+        <AnimatedPath d="M80 72 C 106 82, 116 96, 140 98 S 172 124, 190 130 S 214 144, 222 150" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" strokeDasharray="260 260" animatedProps={lineP} />
         <SvgText x={80} y={170} fill={S} fontFamily={fonts.bold} fontSize={14}>Your day, in hours</SvgText>
       </G>
       {tiles.map(({ kind, phase }) => (
@@ -612,18 +642,34 @@ function Chart() {
   );
 }
 
+/** An app tile circling the chart on a dashed tether, tilting as it goes,
+ *  like something tugging at your day. */
 function Orbit({ t, phase, children }: { t: SharedValue<number>; phase: number; children: React.ReactNode }) {
+  const pos = (v: number) => {
+    'worklet';
+    const a = (v + phase) * Math.PI * 2;
+    return [150 + Math.cos(a) * 128, 108 + Math.sin(a) * 92, Math.sin(a * 2) * 10];
+  };
   const p = useAnimatedProps(() => {
-    const a = (t.value + phase) * Math.PI * 2;
-    return { transform: `translate(${150 + Math.cos(a) * 128} ${108 + Math.sin(a) * 92})` };
+    const [x, y, r] = pos(t.value);
+    return { transform: `translate(${x} ${y}) rotate(${r})` };
   });
-  return <AG animatedProps={p}>{children}</AG>;
+  const tether = useAnimatedProps(() => {
+    const [x, y] = pos(t.value);
+    return { d: `M${x} ${y} Q ${(x + 150) / 2} ${(y + 108) / 2 - 14} ${150 + (x - 150) * 0.55} ${108 + (y - 108) * 0.55}` };
+  });
+  return (
+    <G>
+      <AnimatedPath stroke={S} strokeWidth={1.4} strokeDasharray="3 5" fill="none" strokeLinecap="round" animatedProps={tether} />
+      <AG animatedProps={p}>{children}</AG>
+    </G>
+  );
 }
 
 /** Display over apps: apps fly at the phone, a cover slides down over them
  *  and the lock snaps shut. The hand holds still. */
 function HandPhone() {
-  const cycle = useLoop(3600);
+  const cycle = useLoop(6400);
   const icons: { kind: 'ig' | 'tt' | 'yt' | 'fb'; fx: number; fy: number }[] = [
     { kind: 'ig', fx: 30, fy: 24 },
     { kind: 'tt', fx: 262, fy: 30 },
@@ -640,6 +686,12 @@ function HandPhone() {
     const out = cycle.value > 0.9 ? 1 - (cycle.value - 0.9) / 0.1 : 1;
     return { opacity: k * out, transform: `translate(170 110) scale(${0.6 + k * 0.4}) translate(-170 -110)` };
   });
+  // The moment the lock lands, a ring pulses out from it.
+  const pulse = useAnimatedProps(() => {
+    const k = (cycle.value - 0.6) / 0.18;
+    const on = k > 0 && k < 1;
+    return { r: on ? 16 + k * 40 : 0, opacity: on ? 1 - k : 0 };
+  });
   return (
     <G>
       <G transform="rotate(-6 170 110)">
@@ -650,6 +702,7 @@ function HandPhone() {
         <AppTile kind="yt" x={186} y={44} size={22} />
         <AppTile kind="fb" x={132} y={72} size={22} />
         <AnimatedRectCover animatedProps={cover} />
+        <AnimatedCircle cx={170} cy={117} fill="none" stroke={A} strokeWidth={2} animatedProps={pulse} />
         <AG animatedProps={lock}>
           <Rect x={150} y={100} width={40} height={34} rx={7} fill={A} stroke={S} strokeWidth={sw} />
           <Path d="M158 100v-10a12 12 0 0 1 24 0v10" fill="none" stroke={S} strokeWidth={sw} />
@@ -679,7 +732,8 @@ function Incoming({ cycle, kind, fx, fy }: { cycle: SharedValue<number>; kind: '
     const pull = c < 0.4 ? c / 0.4 : c < 0.55 ? 1 : Math.max(0, 1 - (c - 0.55) / 0.3);
     const x = fx + (156 - fx) * pull * 0.35;
     const y = fy + (90 - fy) * pull * 0.35;
-    return { transform: `translate(${x} ${y})`, opacity: 1 - pull * 0.35 };
+    const bounced = c > 0.55 && c < 0.85 ? Math.sin(((c - 0.55) / 0.3) * Math.PI) * 18 : 0;
+    return { transform: `translate(${x} ${y}) rotate(${bounced} 14 14)`, opacity: 1 - pull * 0.35 };
   });
   return (
     <AG animatedProps={p}>
@@ -691,8 +745,8 @@ function Incoming({ cycle, kind, fx, fy }: { cycle: SharedValue<number>; kind: '
 /** Accessibility: Kitnap keeps watch. A radar sweeps a phone full of apps;
  *  when it passes the distracting one, a return arrow brings you home. */
 function Watch() {
-  const sweep = useLoop(3200);
-  const ring = useLoop(2400, Easing.out(Easing.quad));
+  const sweep = useLoop(5600);
+  const ring = useLoop(3800, Easing.out(Easing.quad));
   const sweepP = useAnimatedProps(() => ({ transform: `rotate(${sweep.value * 360} 150 112)` }));
   const ringP = useAnimatedProps(() => ({ r: 20 + ring.value * 70, opacity: 1 - ring.value }));
   const hit = useAnimatedProps(() => {
@@ -719,6 +773,12 @@ function Watch() {
       <Circle cx={150} cy={112} r={14} fill={A} stroke={S} strokeWidth={2.4} />
       <Path d="M144 112 l4 4 8 -9" fill="none" stroke={W} strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
       <AG animatedProps={hit}>
+        {[125, 150, 175].map((x) => (
+          <G key={x}>
+            <Circle cx={x + 6} cy={56} r={6} fill={A} stroke={S} strokeWidth={1.4} />
+            <Path d={`M${x + 3.5} 56.5 v-2 a2.5 2.5 0 0 1 5 0 v2`} fill="none" stroke={W} strokeWidth={1.4} />
+          </G>
+        ))}
         <Path d="M190 60 C 240 60, 252 120, 210 150" fill="none" stroke={S} strokeWidth={2.4} strokeDasharray="4 5" strokeLinecap="round" />
         <Path d="M216 142 l-8 10 -2 -12" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
         <Circle cx={252} cy={176} r={20} fill={W} stroke={S} strokeWidth={sw} />
@@ -731,8 +791,14 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /** Notifications: only the bell moves — it swings and its sound pulses. */
 function BellPhone() {
-  const swing = usePingPong(380);
-  const wave = useLoop(1200);
+  const swing = usePingPong(620);
+  const wave = useLoop(1800);
+  const note = useLoop(5200);
+  const bubble = useAnimatedProps(() => {
+    const v = note.value;
+    const k = v < 0.15 ? v / 0.15 : v < 0.7 ? 1 : v < 0.8 ? 1 - (v - 0.7) / 0.1 : 0;
+    return { opacity: k, transform: `translate(210 19) scale(${0.7 + k * 0.3}) translate(-210 -19)` };
+  });
   const bell = useAnimatedProps(() => ({ transform: `rotate(${-14 + swing.value * 28} 236 46)` }));
   const w1 = useAnimatedProps(() => ({ opacity: 1 - wave.value }));
   const w2 = useAnimatedProps(() => ({ opacity: wave.value < 0.5 ? wave.value * 2 : 2 - wave.value * 2 }));
@@ -750,6 +816,11 @@ function BellPhone() {
         <Path d="M212 96 C 212 70, 220 52, 236 52 C 252 52, 260 70, 260 96 L 268 104 L 204 104 Z" fill={A} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
         <Circle cx={236} cy={112} r={7} fill={W} stroke={S} strokeWidth={2.4} />
         <Line x1={236} y1={44} x2={236} y2={52} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      </AG>
+      <AG animatedProps={bubble}>
+        <Rect x={150} y={4} width={120} height={30} rx={15} fill={W} stroke={S} strokeWidth={2} />
+        <Circle cx={166} cy={19} r={6} fill={A} />
+        <SvgText x={218} y={24} fill={S} fontFamily={fonts.bold} fontSize={12} textAnchor="middle">Time's up!</SvgText>
       </AG>
       <AG animatedProps={w1}><Path d="M276 60 q10 10 0 24" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" /></AG>
       <AG animatedProps={w2}><Path d="M286 52 q16 18 0 40 M196 52 q-16 18 0 40" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" /></AG>
