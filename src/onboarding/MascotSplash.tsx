@@ -72,7 +72,7 @@ export default function MascotSplash({ onDone }: { onDone: () => void }) {
           ))}
         </Animated.View>
       </View>
-      <Animated.Text style={[styles.word, wordStyle]}>phonewise</Animated.Text>
+      <Animated.Text style={[styles.word, wordStyle]}>kitnap</Animated.Text>
       <Animated.Text style={[styles.tag, tagStyle]}>
         Less scrolling. <Text style={{ color: '#E8821A' }}>More living.</Text>
       </Animated.Text>

@@ -113,7 +113,7 @@ export default function RealUsageScreen({ onBack }: { onBack: () => void }) {
             <StateCard
               icon="lock"
               title="Usage Access isn't granted yet"
-              body="Android treats this as a special permission — there's no in-app prompt for it. You'll be sent to Settings; find Phonewise in the list and turn the toggle on, then come back here."
+              body="Android treats this as a special permission — there's no in-app prompt for it. You'll be sent to Settings; find Kitnap in the list and turn the toggle on, then come back here."
             >
               <Button label="Open Usage Access settings" variant="outline" icon="arrowUpRight" onPress={openUsageAccessSettings} />
             </StateCard>

@@ -17,14 +17,14 @@ type Props = {
 };
 
 /**
- * The Phonewise mark.
+ * The Kitnap mark.
  *
  * The real artwork rather than a redraw: the mark's whole character is in the
  * rounded tube and its gloss, and a hand-built SVG of it read as a flat blob.
  * The source is transparent PNG, so it sits on the app's near-black without a
  * plate, and nothing is drawn behind it.
  */
-export default function ByreOrb({ size = 160, awake, style }: Props) {
+export default function KitnapOrb({ size = 160, awake, style }: Props) {
   const lit = useSharedValue(0);
   const breath = useSharedValue(0);
 
@@ -52,7 +52,7 @@ export default function ByreOrb({ size = 160, awake, style }: Props) {
           source={brandMark}
           style={{ width: size, height: size }}
           resizeMode="contain"
-          accessibilityLabel="Phonewise"
+          accessibilityLabel="Kitnap"
         />
       </Animated.View>
     </View>

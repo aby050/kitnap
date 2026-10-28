@@ -3,7 +3,7 @@ import { Image } from 'react-native';
 import { brandMark } from './brandMark';
 
 /**
- * The Phonewise mark.
+ * The Kitnap mark.
  *
  * Drawn from the raster artwork: the only vector export of the logo is a
  * coarse polygon trace whose curves visibly step at the sizes this is shown.
@@ -13,7 +13,7 @@ export type MarkTone = 'brand' | 'dark';
 
 const ASPECT = 1275 / 1092;
 
-export default function ByreMark({
+export default function KitnapMark({
   size = 64,
   tone = 'brand',
   color,

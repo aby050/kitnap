@@ -297,7 +297,7 @@ export default function HomeScreen({
               </View>
             )}
           </View>
-          <Text style={P.wordmark}>phonewise</Text>
+          <Text style={P.wordmark}>kitnap</Text>
           <Pressable onPress={onOpenProfile} style={P.iconBtn} accessibilityLabel="Open profile" hitSlop={6}>
             <Icon name="user" size={20} color={INK} />
           </Pressable>

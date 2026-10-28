@@ -4,7 +4,7 @@ import ManagedSettings
 import SwiftUI
 
 /**
- * Renders Phonewise's in-app "Screen Time today" view.
+ * Renders Kitnap's in-app "Screen Time today" view.
  *
  * This is the one place Apple allows real per-app usage numbers to be drawn
  * at all — DeviceActivityResults never crosses back into the host app as

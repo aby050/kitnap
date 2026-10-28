@@ -119,7 +119,7 @@ export default function PermissionBoardingPassScreen({
       key: 'notification',
       icon: 'bell',
       title: 'Notifications',
-      desc: 'Lets Phonewise tell you when a timed unlock ends and keep a running session visible.',
+      desc: 'Lets Kitnap tell you when a timed unlock ends and keep a running session visible.',
       granted: notification,
       onRequest: async () => {
         await Notifications.requestPermissionsAsync();
@@ -141,7 +141,7 @@ export default function PermissionBoardingPassScreen({
       key: 'screenTime',
       icon: 'chart',
       title: 'Screen Time',
-      desc: "Uses Apple's Screen Time controls so Phonewise can block the apps you pick. A system prompt follows.",
+      desc: "Uses Apple's Screen Time controls so Kitnap can block the apps you pick. A system prompt follows.",
       granted: screenTime,
       onRequest: async () => {
         await requestScreenTimeAuthorization();
@@ -152,7 +152,7 @@ export default function PermissionBoardingPassScreen({
       key: 'notification',
       icon: 'bell',
       title: 'Notifications',
-      desc: 'Lets Phonewise ping you when a timed unlock ends, even if the app is in the background.',
+      desc: 'Lets Kitnap ping you when a timed unlock ends, even if the app is in the background.',
       granted: notification,
       onRequest: async () => {
         await Notifications.requestPermissionsAsync();

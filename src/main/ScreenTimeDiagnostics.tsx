@@ -103,7 +103,7 @@ export default function ScreenTimeDiagnostics({
         {onAddBailouts && <Action label="Add 50 bailouts" onPress={() => onAddBailouts(50)} />}
 
         <Text style={styles.note}>
-          After "Block now" reads active, leave Phonewise and open one of the apps you picked — iOS draws
+          After "Block now" reads active, leave Kitnap and open one of the apps you picked — iOS draws
           the shield, not us. Nothing here works in the Simulator.
         </Text>
         <Text style={styles.tick}>read #{tick}</Text>

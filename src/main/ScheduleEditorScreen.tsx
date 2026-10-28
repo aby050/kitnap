@@ -292,7 +292,7 @@ export default function ScheduleEditorScreen({
       <ProGateDialog
         visible={showProGate}
         title="One schedule on the free plan"
-        body="Phonewise Pro adds as many recurring windows as you want. Your existing schedule keeps working either way."
+        body="Kitnap Pro adds as many recurring windows as you want. Your existing schedule keeps working either way."
         icon="calendar"
         onDismiss={() => setShowProGate(false)}
         onSeePlans={() => {

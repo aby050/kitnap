@@ -2,7 +2,7 @@ import React from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
-import ByreMark from '../ui/ByreMark';
+import KitnapMark from '../ui/KitnapMark';
 import { fonts, palette, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 
@@ -60,8 +60,8 @@ export default function AboutScreen({ onBack }: { onBack: () => void }) {
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.brand}>
-          <ByreMark size={96} />
-          <Text style={styles.name}>Phonewise</Text>
+          <KitnapMark size={96} />
+          <Text style={styles.name}>Kitnap</Text>
           <Text style={styles.version}>
             Version {version}
             {build ? ` (${build})` : ''}
@@ -69,7 +69,7 @@ export default function AboutScreen({ onBack }: { onBack: () => void }) {
         </View>
 
         <Text style={styles.blurb}>
-          Most blockers let you out the moment you push. Phonewise asks for something instead — a few
+          Most blockers let you out the moment you push. Kitnap asks for something instead — a few
           real press-ups, counted on camera, or a code only a friend has. The block is the resting
           state, not a mode you have to remember to switch on.
         </Text>
@@ -83,7 +83,7 @@ export default function AboutScreen({ onBack }: { onBack: () => void }) {
             onPress={() =>
               Linking.openURL(
                 `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-                  `Phonewise ${version}${build ? ` (${build})` : ''}`,
+                  `Kitnap ${version}${build ? ` (${build})` : ''}`,
                 )}`,
               )
             }

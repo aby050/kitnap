@@ -4,7 +4,7 @@ import android.content.Context
 
 /**
  * The app the shield offers instead of the blocked one — a book, a language
- * app, a notes app. Picked by the user in Phonewise; empty means no offer.
+ * app, a notes app. Picked by the user in Kitnap; empty means no offer.
  *
  * A block that only says no leaves the reach with nowhere to go, and the
  * reach comes straight back. Naming a better place to put it is the cheapest

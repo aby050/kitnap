@@ -11,7 +11,7 @@ import android.view.inputmethod.InputMethodManager
 
 /**
  * Watches for foreground-app changes and, when the app that just came to
- * the foreground is on the blocked list, brings Byre to the front via a
+ * the foreground is on the blocked list, brings Kitnap to the front via a
  * `phonewise://shield?package=<pkg>` deep link — the RN side (App.tsx) listens
  * for that URL and shows the Shield/Gate/Grant flow already built for the
  * chosen intensity level.
@@ -20,7 +20,7 @@ import android.view.inputmethod.InputMethodManager
  * category (Opal, Freedom, One Sec): Android gives no 3rd-party app the
  * ability to force-close another app or block it at the OS level without
  * Device Owner / MDM enrollment, which is a different, heavier product
- * decision. What this does is put Byre on top immediately and make it the
+ * decision. What this does is put Kitnap on top immediately and make it the
  * thing the user has to interact with — going back to the blocked app is
  * still technically possible (swipe from recents), same as the real apps
  * this category is built on.
@@ -43,7 +43,7 @@ class ByreAccessibilityService : AccessibilityService() {
     super.onServiceConnected()
     applyMonitoringLevelIfChanged()
     // The system rebinds this service after the process is killed (swiping
-    // Phonewise out of recents). The user may already be standing in front of
+    // Kitnap out of recents). The user may already be standing in front of
     // a blocked app or the home screen, and no window event will fire for it,
     // so look at what is in front now rather than wait for the next change.
     // Read from usage events, not the window tree, which would need the
@@ -78,7 +78,7 @@ class ByreAccessibilityService : AccessibilityService() {
 
   private fun handlePackage(pkg: String) {
     if (pkg == packageName) {
-      // Byre's own window. This includes the overlay we just added — adding a
+      // Kitnap's own window. This includes the overlay we just added — adding a
       // window fires TYPE_WINDOW_STATE_CHANGED attributed to *us*, so hiding
       // here tore the cover down a few milliseconds after drawing it. The
       // shield fired correctly and then deleted itself, which looked exactly
@@ -87,7 +87,7 @@ class ByreAccessibilityService : AccessibilityService() {
       // Nothing needs hiding on this path anyway: the cover comes down when a
       // different, unblocked app comes forward (below), when a grant is
       // earned (JS calls hideShieldOverlay), or when its own button is
-      // pressed. Byre's UI coming to the front is not a reason to unblock
+      // pressed. Kitnap's UI coming to the front is not a reason to unblock
       // anything.
       return
     }

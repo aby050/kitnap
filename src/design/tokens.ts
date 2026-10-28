@@ -37,7 +37,7 @@ const SCHEMES = {
        four-stop gradient at small sizes where that shows. */
     chartGood: ['#C7E4FF', '#6E8CF5', '#3355D4', '#0F3B73'],
   },
-  /** The Phonewise mark's own colours — sky blue rising through teal to mint. */
+  /** The Kitnap mark's own colours — sky blue rising through teal to mint. */
   green: {
     accent: '#17D3D0',
     accentPressed: '#12BAB8',
@@ -108,7 +108,7 @@ void appearance;
 const SCHEME = SCHEMES.paper;
 
 /**
- * Phonewise design tokens — the single source of truth for colour, type, spacing,
+ * Kitnap design tokens — the single source of truth for colour, type, spacing,
  * radius, elevation and motion.
  *
  * Why this file exists: the app had grown six competing accent colours (mint,
@@ -120,7 +120,7 @@ const SCHEME = SCHEMES.paper;
 /* ─────────────────────────────────────────────────────────────
  * COLOUR
  *
- * Neutrals are true-black-based: Phonewise is a full-screen interrupt running on
+ * Neutrals are true-black-based: Kitnap is a full-screen interrupt running on
  * OLED Android hardware, and #000 is the only value that actually goes dark.
  * Elevation is expressed by lifting the surface a few points, never by a
  * drop shadow on a dark background (shadows are invisible there).
@@ -135,7 +135,7 @@ const SCHEME = SCHEMES.paper;
  * contrast, never garish, and it keeps periwinkle meaningful as a *state* colour.
  *
  * Azure was chosen deliberately over both the cool mint/green that most
- * focus-and-blocking apps default to (that similarity is what got Phonewise's
+ * focus-and-blocking apps default to (that similarity is what got Kitnap's
  * last submission rejected under App Review 4.3(a)) and over warm
  * red/orange, so the brand doesn't drift into either a competitor's
  * territory or a "warning" register. ──────────────────────────────────── */
@@ -249,7 +249,7 @@ export const dataRamp = [
  *
  * Geometric sans carries every functional label — rows, buttons, data. A serif
  * carries the app's *own voice*: the Shield's one line, the reflection prompts,
- * the moments where Phonewise is talking to you rather than reporting to you. That
+ * the moments where Kitnap is talking to you rather than reporting to you. That
  * split is what stops a wall of sans from reading like a settings menu.
  *
  * Both faces ship with the OS, so there is no font download, no flash of
@@ -397,7 +397,7 @@ export const type = {
 
   /* ── Hero figures ──────────────────────────────────────────────
    * A large figure at *light* weight reads as calm and expensive; the same
-   * figure at 700 reads as an alarm clock. Phonewise counts down time you chose
+   * figure at 700 reads as an alarm clock. Kitnap counts down time you chose
    * to give up, so it should never shout. Always paired with `unit`, never
    * with the unit baked into the same string. */
   hero: {
@@ -629,7 +629,7 @@ export const elevation = {
 /* ─────────────────────────────────────────────────────────────
  * MOTION
  *
- * Five durations, three springs. Phonewise's motion job is to make an interruption
+ * Five durations, three springs. Kitnap's motion job is to make an interruption
  * feel deliberate rather than abrupt, so entrances are unhurried (320ms) while
  * feedback is near-instant (120ms). The behaviours built from these — entrances,
  * pops, ambient loops — live in `motion.ts`, so screens compose rather than

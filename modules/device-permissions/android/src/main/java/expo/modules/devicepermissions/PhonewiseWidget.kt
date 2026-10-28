@@ -16,7 +16,7 @@ import java.util.Calendar
  * reclaimed time.
  *
  * Screen time is read here, natively, every time the widget updates, so it is
- * true even if Phonewise has not been opened all day — a widget that only
+ * true even if Kitnap has not been opened all day — a widget that only
  * knows what the app last told it is a widget that is wrong by lunchtime.
  * Streak and reclaimed time live in the app's own state, so JS writes them
  * through WidgetStatsStore whenever they change and nudges the widget.

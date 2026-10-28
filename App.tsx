@@ -151,7 +151,7 @@ export default function App() {
   // Configured once here so entitlement state is the same everywhere.
   const purchases = usePurchases();
   const [pendingShieldPackage, setPendingShieldPackage] = useState<string | null>(null);
-  // Set when Apple's shield "Let me in" button reopens Phonewise via the
+  // Set when Apple's shield "Let me in" button reopens Kitnap via the
   // device-activity:// scheme — routes straight to the unlock challenge
   // instead of Home, which is what tapping that button is supposed to mean.
   const [pendingIOSUnlock, setPendingIOSUnlock] = useState(false);
@@ -237,7 +237,7 @@ export default function App() {
   // The base list is always enforced — schedules are lockdown windows that
   // close the escape hatches, not windows that decide *whether* to block — so
   // this only needs to re-run when the list itself changes, plus on foreground
-  // in case the service was restarted while Phonewise was away.
+  // in case the service was restarted while Kitnap was away.
   useEffect(() => {
     if (!loaded) return;
     const sync = () => {
@@ -267,7 +267,7 @@ export default function App() {
   }, [loaded, persisted.intensityKey]);
 
   // Catches the deep link the Accessibility Service fires when a blocked
-  // app opens, whether Phonewise was already running or cold-started by it.
+  // app opens, whether Kitnap was already running or cold-started by it.
   useEffect(() => {
     const handleUrl = (url: string | null) => {
       const pkg = parseShieldDeepLink(url);
@@ -281,10 +281,10 @@ export default function App() {
     Linking.getInitialURL().then(handleUrl);
     const sub = Linking.addEventListener('url', (e) => handleUrl(e.url));
 
-    // iOS only: Apple's shield button cannot open Phonewise — no extension can
+    // iOS only: Apple's shield button cannot open Kitnap — no extension can
     // launch its container — so the ShieldAction extension posts a banner
     // carrying `phonewise://unlock` instead, and this is what makes tapping it
-    // land on the Gate rather than on whatever screen Phonewise was last showing.
+    // land on the Gate rather than on whatever screen Kitnap was last showing.
     // Without this the notification opens the app and abandons the user.
     let disposeNotifications: (() => void) | undefined;
     if (Platform.OS === 'ios') {
@@ -294,7 +294,7 @@ export default function App() {
             const data = res.notification.request.content.data as { url?: string } | undefined;
             if (data?.url) handleUrl(data.url);
           };
-          // A tap that cold-started Phonewise has already been delivered by the
+          // A tap that cold-started Kitnap has already been delivered by the
           // time this listener attaches, so ask for it explicitly.
           Notifications.getLastNotificationResponseAsync().then((res) => {
             if (res) onResponse(res);
@@ -303,7 +303,7 @@ export default function App() {
           disposeNotifications = () => nSub.remove();
         })
         .catch(() => {
-          // Notifications unavailable — the shield banner simply opens Phonewise
+          // Notifications unavailable — the shield banner simply opens Kitnap
           // on its last screen, which is the old behaviour.
         });
     }
@@ -485,7 +485,7 @@ export default function App() {
 
           {stage === 'iosAppPicker' && (
             <IOSAppPickerScreen
-              hint="Block the apps that usually steal your hours. Phonewise never sees the names you pick."
+              hint="Block the apps that usually steal your hours. Kitnap never sees the names you pick."
               onContinue={() => setStage('paywall')}
             />
           )}
@@ -495,7 +495,7 @@ export default function App() {
               The exit-intent "Too Expensive? Here is 50% OFF" screen that used
               to sit behind "Not now" is gone: a last-chance discount fired at
               someone who just declined is the single most copied screen in
-              this category, and it was one of the things making Phonewise's funnel
+              this category, and it was one of the things making Kitnap's funnel
               read as a reskin under guideline 4.3(a). */}
           {stage === 'paywall' && (
             <PaywallScreen

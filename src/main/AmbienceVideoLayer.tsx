@@ -47,7 +47,7 @@ export default function AmbienceVideoLayer({
       contentFit={contentFit}
       nativeControls={false}
       // Picture-in-picture is what drags `audio` into UIBackgroundModes on
-      // iOS. Phonewise was rejected under 2.5.4 for exactly that key. Never enable.
+      // iOS. Kitnap was rejected under 2.5.4 for exactly that key. Never enable.
       allowsPictureInPicture={false}
       onFirstFrameRender={() => {
         // On web the play() in the setup callback can fire before the element

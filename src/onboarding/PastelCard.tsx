@@ -27,7 +27,7 @@ export function PastelCard({ tint, children, header }: { tint: string; children:
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.card}>
-        <Text style={styles.brand}>phonewise</Text>
+        <Text style={styles.brand}>kitnap</Text>
         {header}
         {children}
       </View>

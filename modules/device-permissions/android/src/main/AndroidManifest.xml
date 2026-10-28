@@ -27,7 +27,7 @@
     <!-- Home-screen widget: today's screen time, streak, reclaimed time. -->
     <receiver
       android:name="expo.modules.devicepermissions.PhonewiseWidget"
-      android:label="Phonewise"
+      android:label="Kitnap"
       android:exported="false">
       <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

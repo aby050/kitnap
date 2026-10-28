@@ -62,7 +62,7 @@ function addDays(days: number) {
  *
  * This replaces a four-step illustrated rail reading "Today / Day 5: we
  * remind you / Day 7: keep it going" — the same graphic, often the same
- * wording, ships across this category and was part of why Phonewise's funnel read
+ * wording, ships across this category and was part of why Kitnap's funnel read
  * as a reskin.
  *
  * Real dates are the smarter version of the same promise: "we'll remind you
@@ -358,12 +358,12 @@ export default function TrialTimelineScreen({
         {/* The four-step "Day 5: we remind you / Day 7: keep it going"
             timeline that used to open this screen is gone. It is the most
             recognisable beat in the category's paywall — the same graphic,
-            often the same wording, ships in most of the apps Phonewise was judged
+            often the same wording, ships in most of the apps Kitnap was judged
             against under 4.3(a). The renewal terms it was illustrating are
             stated in full beneath the CTA, where guideline 3.1.2 expects
             them anyway. */}
         <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
-          everything Phonewise does
+          everything Kitnap does
         </Animated.Text>
         <Animated.Text entering={FadeInDown.delay(60).duration(420)} style={styles.subheading}>
           Pick how to pay. What you get is listed underneath.
@@ -444,7 +444,7 @@ export default function TrialTimelineScreen({
             the decline screen. A paywall that admits what you keep for
             nothing is the one people trust. */}
         <Text style={styles.freeNote}>
-          Phonewise keeps working free forever — blocking, movement unlocks and emergency access are
+          Kitnap keeps working free forever — blocking, movement unlocks and emergency access are
           never behind a plan. A plan adds the rest, and tops up your bailouts.
         </Text>
       </ScrollView>

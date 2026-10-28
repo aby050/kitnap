@@ -11,7 +11,7 @@ export type Appearance = 'blue' | 'green' | 'forest';
 
 export const APPEARANCES: { key: Appearance; name: string; blurb: string; swatch: string }[] = [
   { key: 'forest', name: 'Forest', blurb: 'Deep canopy green, leaf accent', swatch: '#8FD694' },
-  { key: 'green', name: 'Phonewise', blurb: 'The mark’s own blue and mint', swatch: '#17D3D0' },
+  { key: 'green', name: 'Kitnap', blurb: 'The mark’s own blue and mint', swatch: '#17D3D0' },
   { key: 'blue', name: 'Midnight', blurb: 'Electric blue on black', swatch: '#3B4FF2' },
 ];
 

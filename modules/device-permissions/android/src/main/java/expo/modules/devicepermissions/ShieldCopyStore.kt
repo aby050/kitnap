@@ -7,7 +7,7 @@ import android.content.Context
  *
  * The cover has to appear before React Native is running, so it cannot ask the
  * app what to put on it — but hardcoding English in Kotlin would mean the
- * block screen, the one screen that has to sound like Byre, was the only one
+ * block screen, the one screen that has to sound like Kitnap, was the only one
  * that could not. So JS writes the current lines here whenever the shield is
  * configured (theme voice, the user's own reason, the rotating line) and the
  * service reads them off disk in the moment.
@@ -29,7 +29,7 @@ object ShieldCopyStore {
 
   private const val DEFAULT_TITLE = "You did not come here for anything."
   private const val DEFAULT_EMPHASIS = ""
-  private const val DEFAULT_BODY = "You asked Phonewise to keep this shut. Open Phonewise to earn your way in."
+  private const val DEFAULT_BODY = "You asked Kitnap to keep this shut. Open Kitnap to earn your way in."
   private const val DEFAULT_CTA = "Let me in"
 
   fun set(context: Context, title: String, emphasis: String, body: String, cta: String) {

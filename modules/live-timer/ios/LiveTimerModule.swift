@@ -27,7 +27,7 @@ public class LiveTimerModule: Module {
   public func definition() -> ModuleDefinition {
     Name("LiveTimer")
 
-    /// False when the user has switched Live Activities off for Byre, so the
+    /// False when the user has switched Live Activities off for Kitnap, so the
     /// JS side can stay quiet instead of pretending it started one.
     Function("isAvailable") { () -> Bool in
       guard #available(iOS 16.2, *) else { return false }

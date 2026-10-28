@@ -329,7 +329,7 @@ export function seedProgressFromLegacy(hoursReclaimed: number, firstOpenDate: st
  *
  * ⚠️ Read the name carefully before using this: it was called
  * `globalPercentile` and surfaced under the label "percentile", which told
- * the user they were ahead of N% of Phonewise's users. Phonewise has no user base to
+ * the user they were ahead of N% of Kitnap's users. Kitnap has no user base to
  * compare against — there is no server, no ranking, and this function never
  * saw another account. It is a weighted blend of the user's OWN totals mapped
  * into 12–95, and presenting that as a percentile is an invented statistic of
@@ -385,7 +385,7 @@ export function getAchievement(id: string): AchievementDef | undefined {
 
 export function shareMessage(def: AchievementDef, extra?: string): string {
   const line = extra ? `${def.shareLine} ${extra}` : def.shareLine;
-  return `${def.name}\n${line}\n\n— Phonewise`;
+  return `${def.name}\n${line}\n\n— Kitnap`;
 }
 
 /** @deprecated Misleading name — see `focusScore`. Kept as an alias only so a

@@ -29,8 +29,8 @@ export default function AppearanceScreen({ onBack }: { onBack: () => void }) {
     if (next === activeAppearance || pending) return;
     tapLight();
     Alert.alert(
-      'Restart Phonewise?',
-      'Phonewise needs to reopen to repaint every screen. Nothing you have set up is lost — blocks stay on the whole time.',
+      'Restart Kitnap?',
+      'Kitnap needs to reopen to repaint every screen. Nothing you have set up is lost — blocks stay on the whole time.',
       [
         { text: 'Not now', style: 'cancel' },
         {
@@ -43,11 +43,11 @@ export default function AppearanceScreen({ onBack }: { onBack: () => void }) {
               await reloadAppAsync('Appearance changed');
             } catch {
               // Reload is best-effort. If the platform refuses, the choice is
-              // already persisted and lands the next time Phonewise opens.
+              // already persisted and lands the next time Kitnap opens.
               setPending(null);
               Alert.alert(
                 'Saved',
-                'The new look will appear the next time you open Phonewise.',
+                'The new look will appear the next time you open Kitnap.',
               );
             }
           },
@@ -69,7 +69,7 @@ export default function AppearanceScreen({ onBack }: { onBack: () => void }) {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.intro}>
           Two colourways, same app. This changes accents and the background
-          glow — not what Phonewise blocks or how hard it is to get out.
+          glow — not what Kitnap blocks or how hard it is to get out.
         </Text>
 
         {APPEARANCES.map((a, i) => {
@@ -104,7 +104,7 @@ export default function AppearanceScreen({ onBack }: { onBack: () => void }) {
         })}
 
         <Text style={styles.note}>
-          Phonewise restarts when you switch, so the new colours reach every screen
+          Kitnap restarts when you switch, so the new colours reach every screen
           at once. Your blocks stay active the whole time.
         </Text>
       </ScrollView>

@@ -54,7 +54,7 @@ function Bar({ index, active }: { index: number; active: boolean }) {
  * Playback follows the screen. It does not continue once the phone sleeps,
  * and that is a decision rather than an oversight: background audio needs a
  * declared foreground-service type on Android and a UIBackgroundModes entry on
- * iOS, and Phonewise was rejected under guideline 2.5.4 on 2026-09-09 for carrying
+ * iOS, and Kitnap was rejected under guideline 2.5.4 on 2026-09-09 for carrying
  * that entry with no feature behind it (see plugins/withNoBackgroundAudio.js).
  * Adding it back is a release decision, not something to slip in with a card.
  */

@@ -209,7 +209,7 @@ export default function MyAppsScreen({
           <EmptyState
             icon="calendar"
             title="No auto-blocks yet"
-            body="Add a window like Work Time or Sleep and Phonewise locks your apps on its own."
+            body="Add a window like Work Time or Sleep and Kitnap locks your apps on its own."
             actionLabel="Add an auto-block"
             onAction={onOpenSchedules}
           />

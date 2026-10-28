@@ -106,7 +106,7 @@ export default function SubscriptionScreen({
               </Text>
             </View>
           </View>
-          <Text style={styles.heroLabel}>{isPro ? (isTrial ? 'Free trial' : 'Phonewise Pro') : 'Free plan'}</Text>
+          <Text style={styles.heroLabel}>{isPro ? (isTrial ? 'Free trial' : 'Kitnap Pro') : 'Free plan'}</Text>
           <Text style={styles.heroValue}>
             {isPro
               ? renews
@@ -189,7 +189,7 @@ export default function SubscriptionScreen({
         </View>
 
         <Text style={styles.note}>
-          Phonewise can't cancel a subscription for you — only the store can. "Manage or cancel" takes you
+          Kitnap can't cancel a subscription for you — only the store can. "Manage or cancel" takes you
           straight there, and anything you've already built stays put either way.
         </Text>
       </ScrollView>
@@ -235,7 +235,7 @@ function Row({
 /**
  * What a plan adds — and only what it actually adds.
  *
- * This list sold five things. "Autofocus — Phonewise starts a block when it sees
+ * This list sold five things. "Autofocus — Kitnap starts a block when it sees
  * you drifting" does not exist anywhere in this codebase and never has; it
  * was a feature invented on a paywall. "Strict mode" and "Screen time
  * insights" are both free and always have been. Selling a feature that does

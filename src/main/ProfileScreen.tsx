@@ -405,7 +405,7 @@ export default function ProfileScreen({
             {shareTarget && (
               <>
                 <LinearGradient colors={['#12241A', '#0B0B0D']} style={StyleSheet.absoluteFill} />
-                <Text style={styles.shareBrand}>Phonewise</Text>
+                <Text style={styles.shareBrand}>Kitnap</Text>
                 <Medal medal={shareTarget.medal} def={shareTarget} size={88} locked={!earnedIds.has(shareTarget.id)} id={`share-${shareTarget.id}`} />
                 <Text style={styles.shareName}>{shareTarget.name}</Text>
                 <Text style={styles.shareDesc}>{shareTarget.description}</Text>

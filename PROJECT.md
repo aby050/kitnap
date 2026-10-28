@@ -1,4 +1,4 @@
-# Byre — Project Concept & Status
+# Kitnap — Project Concept & Status
 
 Screen-time / focus app. Expo SDK 57, TypeScript, React Native. Android is the
 primary target (real Accessibility Service blocking, real usage-stats,
@@ -12,7 +12,7 @@ screen, plus what's agreed but not yet done.
 
 ## 1. The concept
 
-Byre blocks distracting apps and only lets you back in through one of two
+Kitnap blocks distracting apps and only lets you back in through one of two
 doors: **do something real** (a math/quiz challenge or physical activity,
 depending on the mode you chose) or **spend an emergency token** to skip it.
 Two free tokens come with the app, forever — spending more than that requires
@@ -52,7 +52,7 @@ physical activity — never negotiable, never overridden.
 
 ### First run (onboarding)
 
-1. **Splash** (`SplashFlow`) — two-slide brand moment ("Byre only reveals
+1. **Splash** (`SplashFlow`) — two-slide brand moment ("Kitnap only reveals
    its fire...", then "Dimmed by noise, apps..."), tap to advance.
 2. **Education** (`EducationScreen`) — 7-slide explainer carousel (why this
    app exists, no-icons philosophy, "it's not your lack of willpower",
@@ -207,7 +207,7 @@ product IDs.
 `WorldScreen`, `TimeLedgerScreen`, `LandmarksScreen`, `SeasonsScreen` — a
 gamified "world" concept — exist as code but are commented out of the
 import/render path in `MainApp.tsx` with an explicit note: *"World feature
-— deprioritized per product decision (Byre-style apps don't have a 'world'
+— deprioritized per product decision (Kitnap-style apps don't have a 'world'
 concept; focus is the core Shield/Gate/timer loop instead). Code kept,
 commented, in case we revisit it later."* This was an existing decision,
 not something changed this session.

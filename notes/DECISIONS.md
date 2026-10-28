@@ -1,6 +1,6 @@
 # Decisions
 
-Settled rulings for Phonewise (formerly Byre), with the alternatives that were
+Settled rulings for Kitnap (formerly Kitnap), with the alternatives that were
 rejected, so they are not proposed again. Newest first within each section.
 
 ---

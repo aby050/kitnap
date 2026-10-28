@@ -7,7 +7,7 @@ import { Platform } from 'react-native';
  * This is what makes the countdown survive leaving the app: iOS renders it on
  * the Lock Screen, in the Dynamic Island and on the always-on display, and
  * ticks it down itself from the end date. Every call is a no-op off iOS, or
- * when the user has turned Live Activities off for Phonewise.
+ * when the user has turned Live Activities off for Kitnap.
  */
 let native: any = null;
 if (Platform.OS === 'ios') {

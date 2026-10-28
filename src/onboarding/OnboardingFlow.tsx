@@ -137,7 +137,7 @@ export default function OnboardingFlow({
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.card}>
-      <Text style={styles.brand}>phonewise</Text>
+      <Text style={styles.brand}>kitnap</Text>
       <View style={styles.progressWrap}>
         <View style={styles.segments}>
           {Array.from({ length: progressDenom }).map((_, i) => (

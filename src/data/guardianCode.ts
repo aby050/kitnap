@@ -25,7 +25,7 @@ const CODE_LENGTH = 8;
  * without ambiguity.
  *
  * It never leaves the phone except in the message the user themselves sends
- * via the OS share sheet — Phonewise has no backend, so there is nothing to
+ * via the OS share sheet — Kitnap has no backend, so there is nothing to
  * deliver it and nothing that could leak it in transit.
  *
  * Rejection sampling on the random bytes, not `% length`: the modulo of a

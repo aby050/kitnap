@@ -6,12 +6,12 @@ const { withXcodeProject } = require('expo/config-plugins');
  * `ios.supportsTablet: false` in app.json sets TARGETED_DEVICE_FAMILY = 1 on
  * the app target and nothing else, so the five app extensions kept declaring
  * "1,2" — iPhone and iPad. The app itself governs where the listing appears,
- * so this was not putting Phonewise on iPad, but it is a real inconsistency: an
+ * so this was not putting Kitnap on iPad, but it is a real inconsistency: an
  * extension advertising a device family its host does not support, which
  * Apple's validator has been known to flag and which makes the project read
  * as if iPad were half-intended.
  *
- * Phonewise is iPhone-only on purpose. Every blocking surface it has — the shield,
+ * Kitnap is iPhone-only on purpose. Every blocking surface it has — the shield,
  * the gate, the Screen Time report — is designed for a phone held in one
  * hand, and an iPad build would need its own layouts, its own screenshots and
  * its own review.

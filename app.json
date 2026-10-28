@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Phonewise",
+    "name": "Kitnap",
     "slug": "byre",
     "scheme": [
       "phonewise",
@@ -29,8 +29,8 @@
           "whatsapp"
         ],
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Only if you choose to save a progress photo. Phonewise never reads your photo library.",
-        "NSLocalNetworkUsageDescription": "Used only when running Phonewise from a development machine. The App Store build never connects to your local network."
+        "NSPhotoLibraryUsageDescription": "Only if you choose to save a progress photo. Kitnap never reads your photo library.",
+        "NSLocalNetworkUsageDescription": "Used only when running Kitnap from a development machine. The App Store build never connects to your local network."
       }
     },
     "android": {

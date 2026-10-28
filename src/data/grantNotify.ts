@@ -26,7 +26,7 @@ async function loadNotifications(): Promise<NotificationsModule | null> {
   }
 }
 
-/** Fire when the timed unlock actually ends — in-app if Phonewise is open. */
+/** Fire when the timed unlock actually ends — in-app if Kitnap is open. */
 export function alertGrantEnded() {
   Alert.alert('Unlock ended', 'Your timed access is over. Distracting apps are blocked again.');
 }

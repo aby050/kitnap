@@ -3,7 +3,7 @@ const { withInfoPlist } = require('expo/config-plugins');
 /**
  * Strips "audio" from UIBackgroundModes.
  *
- * Phonewise has no persistent background audio. The sound picker in SoundScreen
+ * Kitnap has no persistent background audio. The sound picker in SoundScreen
  * plays only while the screen is open — nothing continues once the app is
  * backgrounded. But `expo-audio`'s config plugin adds the background-audio
  * mode by default, and version 1.0.0 (6) shipped with a bare "expo-audio"
@@ -14,7 +14,7 @@ const { withInfoPlist } = require('expo/config-plugins');
  * `enableBackgroundPlayback: false` in app.json is the first line of defence.
  * This plugin is the second, and it is the one that cannot silently regress:
  * it runs after expo-audio and removes the mode whatever the upstream plugin
- * decided. If Phonewise ever gains a real background-audio feature, delete this
+ * decided. If Kitnap ever gains a real background-audio feature, delete this
  * plugin — do not work around it — and film the screen recording Apple asks
  * for in that rejection.
  */

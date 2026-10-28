@@ -7,11 +7,11 @@ import { fonts, palette, radius, space } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 import { getSelectionCounts } from '../data/iosScreenTime';
 import Constants from 'expo-constants';
-import ByreMark from '../ui/ByreMark';
+import KitnapMark from '../ui/KitnapMark';
 import { APPEARANCES, appearance } from '../design/appearance';
 
 /** Shown as the row's current value, so the setting states itself. */
-const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'Phonewise';
+const appearanceName = APPEARANCES.find((a) => a.key === appearance)?.name ?? 'Kitnap';
 
 /** Derived rather than written out, so the copy can't drift from the seed the
  *  way it did when DEMO_DAYS went from 60 to 183. */
@@ -246,7 +246,7 @@ export default function SettingsScreen({
               {onOpenAbout && (
                 <SettingRow
                   icon={<RowIcon name="info" />}
-                  title="About Phonewise"
+                  title="About Kitnap"
                   subtitle="What it does, and how to reach us"
                   onPress={onOpenAbout}
                 />
@@ -274,8 +274,8 @@ export default function SettingsScreen({
           {/* Vector, and deliberately the dark tone: at this size the bright
               turquoise mark would out-shout the list above it, which is the
               screen's actual content. Dark, it reads as a maker's stamp. */}
-          <ByreMark size={72} tone="dark" />
-          <Text style={styles.footerName}>Phonewise</Text>
+          <KitnapMark size={72} tone="dark" />
+          <Text style={styles.footerName}>Kitnap</Text>
           <Text style={styles.footerVersion}>{versionLine}</Text>
         </View>
       </ScrollView>

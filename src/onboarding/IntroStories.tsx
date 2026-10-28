@@ -29,7 +29,7 @@ const SLIDES: Slide[] = [
   {
     video: require('../../assets/intro/meadow.mp4'),
     eyebrow: 'LIVE BEYOND\nTHE SCREEN',
-    title: 'Phonewise',
+    title: 'Kitnap',
     brand: true,
     body: 'You get one life, and it is happening right now, out past the glass.',
     tint: 'rgba(40,90,20,0.22)',
@@ -52,7 +52,7 @@ const SLIDES: Slide[] = [
     video: require('../../assets/intro/dusk.mp4'),
     eyebrow: '',
     title: 'PUT THE PHONE\nDOWN. GO LIVE.',
-    body: 'Phonewise locks the apps that pull you in, with no way around it, so you can walk out into the rest of your life.',
+    body: 'Kitnap locks the apps that pull you in, with no way around it, so you can walk out into the rest of your life.',
     tint: 'rgba(50,40,20,0.15)',
   },
 ];
@@ -120,7 +120,7 @@ export default function IntroStories({ onDone }: { onDone: () => void }) {
           </Animated.Text>
         ) : (
           <Animated.Text key={`l${index}`} entering={FadeIn.duration(500)} style={styles.smallLogo}>
-            Phonewise
+            Kitnap
           </Animated.Text>
         )}
 

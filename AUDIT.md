@@ -1,4 +1,4 @@
-# Byre — Full Product Audit
+# Kitnap — Full Product Audit
 
 Read-only audit. **No code has been changed.** Every claim below is cited to `file:line`.
 

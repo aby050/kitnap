@@ -32,7 +32,7 @@ import java.util.Calendar
  * ## Why an overlay and not an activity
  *
  * The service used to answer a blocked app by firing a `phonewise://shield` deep
- * link, which launches Byre as a task. Three things are wrong with that:
+ * link, which launches Kitnap as a task. Three things are wrong with that:
  *
  *   1. **It is slow.** A cold-ish RN activity start is hundreds of
  *      milliseconds of the blocked app being visible and usable — which is
@@ -59,7 +59,7 @@ import java.util.Calendar
  *
  * Nothing here can force-close another app — no third-party Android app can
  * without Device Owner enrolment. What it can do is make the blocked app
- * unusable until the user deals with Byre, which is the honest version of a
+ * unusable until the user deals with Kitnap, which is the honest version of a
  * block on this platform.
  */
 object ShieldOverlay {
@@ -402,7 +402,7 @@ object ShieldOverlay {
     try {
       context.startActivity(intent)
     } catch (e: Exception) {
-      Log.e("PhonewiseShieldOverlay", "Failed to open Phonewise", e)
+      Log.e("PhonewiseShieldOverlay", "Failed to open Kitnap", e)
     }
   }
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
-import ByreOrb from '../components/ByreOrb';
+import KitnapOrb from '../components/KitnapOrb';
 
 /** Header mark — small enough to sit above copy and the Screen Time card
  *  without covering them. Constant across every screen that shares a layout
@@ -41,7 +41,7 @@ export const markSlotHeight = (large?: boolean) =>
 export const ONBOARDING_MARK_SLOT = markSlotHeight(false);
 
 /**
- * The Phonewise mark, lifted out of individual screens so it can stay mounted
+ * The Kitnap mark, lifted out of individual screens so it can stay mounted
  * from the three education slides through the question flow. Screens render
  * {@link OnboardingMarkSlot} to reserve the same space; this overlay paints
  * the actual mark once. `hidden` only fades it — never unmounts — so a
@@ -68,7 +68,7 @@ export default function OnboardingMark({ hidden, large }: { hidden?: boolean; la
       style={[styles.overlay, { top: insets.top + MARK_OFFSET, opacity: hidden ? 0 : 1 }]}
     >
       <Animated.View style={[styles.orbBox, scaleStyle]}>
-        <ByreOrb size={ONBOARDING_MARK_SIZE_LARGE} awake />
+        <KitnapOrb size={ONBOARDING_MARK_SIZE_LARGE} awake />
       </Animated.View>
     </View>
   );

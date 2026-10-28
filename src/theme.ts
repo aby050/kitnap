@@ -1,6 +1,6 @@
 /* WealthAxis Pro — 100% mapped from C:\Users\abhay\Downloads\index (26).html
    dark (default) + light tokens; vector-icon only UI */
-export const byreColors = {
+export const kitnapColors = {
   bg: '#09090B',
   bg2: '#141418',
   bg3: '#1E1E24',
@@ -28,7 +28,7 @@ export const byreColors = {
   shadowFloat: '0 12px 48px rgba(0,0,0,.65),0 4px 12px rgba(0,0,0,.45),0 0 0 .5px rgba(255,255,255,.06)',
 } as const;
 
-export const byreLight = {
+export const kitnapLight = {
   bg: '#F4F4F5',
   bg2: '#FFFFFF',
   bg3: '#E4E4E7',
@@ -51,6 +51,6 @@ export const byreLight = {
   shadowFloat: '0 8px 40px rgba(0,0,0,.16),0 2px 8px rgba(0,0,0,.08),0 0 0 .5px rgba(0,0,0,.05)',
 } as const;
 
-export const colors = byreColors;
-export const byreGradient = ['#7dd8ff','#b9ffb0','#ffd8f0','#ffe9a8','#7dd8ff'] as const;
+export const colors = kitnapColors;
+export const kitnapGradient = ['#7dd8ff','#b9ffb0','#ffd8f0','#ffe9a8','#7dd8ff'] as const;
 export const rockGradient = ['#8a8a8a','#3a3a3a','#1a1a1a'] as const;
