@@ -26,7 +26,6 @@ import BlockScreensScreen from './BlockScreensScreen';
 import ScheduleEditorScreen from './ScheduleEditorScreen';
 import AccountScreen from './AccountScreen';
 import FutureSelfScreen from '../onboarding/FutureSelfScreen';
-import IntensityScreen from '../onboarding/IntensityScreen';
 import BlockedAppsScreen from './BlockedAppsScreen';
 import AppPickerScreen from '../onboarding/AppPickerScreen';
 import BlocksScreen from './BlocksScreen';
@@ -37,8 +36,6 @@ import { alertGrantEnded, cancelGrantEndedNotification, scheduleGrantEndedNotifi
 import LiveActivityBar from '../shield/LiveActivityBar';
 import TabBar from './TabBar';
 import { getIntensity, getTheme, IntensityKey, ThemeKey } from '../data/themes';
-import { computeRepTarget, parseAge, parseLifeChange } from '../data/activityDifficulty';
-import { ActivityKind, ActivitySessionResult } from '../shield/activity/types';
 import { EMPTY_GOAL, GoalData } from '../data/goal';
 import { Account, DEFAULT_STATE, PersistedState, AppLimit, FocusSession, startingEmergencyTokens } from '../data/store';
 import { activeLockdown } from '../data/scheduleEnforcer';
@@ -72,7 +69,7 @@ import ScreenTimeDiagnostics from './ScreenTimeDiagnostics';
 import { EssentialKey } from '../data/gateQuestions';
 import { buildDemoState, clearDemoState } from '../data/demoData';
 import StreakCelebration from '../components/StreakCelebration';
-import { recordGateReflection, recordActivitySession } from '../data/store';
+import { recordGateReflection } from '../data/store';
 import { limitExceededPackages, newlyExceededLimits } from '../data/appLimitEnforcer';
 import { DEFAULT_BEDTIME, isWithinBedtime } from '../data/bedtime';
 import { shouldShowCheckIn } from '../data/checkin';
@@ -235,10 +232,6 @@ export default function MainApp({
   // Settings and Home now, and hardcoding "back to Settings" sent people
   // who opened it from Home somewhere they never came from.
   const [difficultyOrigin, setDifficultyOrigin] = useState<Overlay>('settings');
-  const openDifficulty = (from: Overlay) => {
-    setDifficultyOrigin(from);
-    setOverlay('difficulty');
-  };
   const [block, setBlock] = useState<Block>(null);
   const [grantMinutes, setGrantMinutes] = useState(5);
   const [grantExpiresAt, setGrantExpiresAt] = useState<number | null>(null);
@@ -770,7 +763,6 @@ export default function MainApp({
     if (next.unlockNumber !== undefined) setUnlockNumber(next.unlockNumber);
     if (next.gateReflections) setGateReflections(next.gateReflections);
     if (next.checkIns) setCheckIns(next.checkIns);
-    if (next.activitySessions) setActivitySessions(next.activitySessions);
     setOverlay(null);
     setTab('home');
   };
@@ -880,7 +872,6 @@ export default function MainApp({
   const [schedules, setSchedules] = useState(persisted.schedules);
   const [gateReflections, setGateReflections] = useState(persisted.gateReflections);
   const [waitingRoomFamilies, setWaitingRoomFamilies] = useState(persisted.waitingRoomFamilies);
-  const [activitySessions, setActivitySessions] = useState(persisted.activitySessions ?? []);
   const [appLimits, setAppLimits] = useState<AppLimit[]>(persisted.appLimits ?? []);
   const [emergencyTokens, setEmergencyTokens] = useState(persisted.emergencyTokens ?? startingEmergencyTokens());
   // Cheapest pack, by the store's own numeric price — comparing priceString
@@ -942,33 +933,6 @@ export default function MainApp({
     setPendingReflection(null);
   }
 
-  function commitActivitySession(session: ActivitySessionResult) {
-    const next = recordActivitySession(activitySessions, session);
-    setActivitySessions(next);
-    onPatch({ activitySessions: next });
-  }
-
-  /** Maps the onboarding answer ("Push-ups") onto the engine's ActivityKind
-   *  ("push-ups"). Kept here rather than in questions.ts so the user-facing
-   *  wording can change without touching the rep engine's union. */
-  const matchesChosenMovement = (activity: ActivityKind, picked?: string) =>
-    !!picked && picked.toLowerCase() === activity.toLowerCase();
-
-  /** Adaptive rep target, resolved per movement when the gate picks one. */
-  const repsFor = (activity: ActivityKind) =>
-    computeRepTarget({
-      activity,
-      age: parseAge(persisted.onboardingAnswers?.age?.value),
-      history: activitySessions,
-      now: new Date(),
-      lifeChange: parseLifeChange(persisted.onboardingAnswers?.lifeChange?.value),
-      // Only counts for the movement they actually picked — a push-up
-      // baseline says nothing about their squats.
-      baseline:
-        matchesChosenMovement(activity, persisted.onboardingAnswers?.movement?.value)
-          ? Number(persisted.onboardingAnswers?.repBaseline?.value)
-          : undefined,
-    }).reps;
 
   useEffect(() => {
     setProgress((p) => ({ ...p, achievements: unlockAchievements(p, joinedDays) }));
@@ -1259,10 +1223,6 @@ export default function MainApp({
       <GateScreen
         intensity={intensity}
         futureSelfMessage={futureSelf}
-        healthLimitRaw={persisted.onboardingAnswers?.healthLimit?.value}
-        repsFor={repsFor}
-        activitySessions={activitySessions}
-        onActivityComplete={commitActivitySession}
         tokenBalance={emergencyTokens}
         lockdown={lockdown}
         emergencyRefusal={emergencyRefusal}
@@ -1458,24 +1418,6 @@ export default function MainApp({
           }}
         />
       );
-    if (ov === 'difficulty')
-      return (
-        <IntensityScreen
-          recommended={activeIntensityKey}
-          current={activeIntensityKey}
-          daysOnLevel={daysOnLevel(intensitySince)}
-          pending={pendingIntensity}
-          onContinue={(k) => {
-            if (guardian?.enabled && isLoosening(activeIntensityKey, k)) {
-              setPendingGuardianTarget(k);
-              setOverlay('guardianVerify');
-              return;
-            }
-            changeIntensity(k);
-            setOverlay(difficultyOrigin);
-          }}
-        />
-      );
     if (ov === 'guardian')
       return (
         <GuardianScreen
@@ -1539,7 +1481,7 @@ export default function MainApp({
               return;
             }
             setPendingGuardianTarget(null);
-            setOverlay('difficulty');
+            setOverlay('settings');
           }}
         />
       );

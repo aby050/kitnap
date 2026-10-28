@@ -1,11 +1,6 @@
 import { CheckIn } from './checkin';
 import { GateReflection, PersistedState } from './store';
 import {
-  ActivityKind,
-  ActivitySessionResult,
-  DetectorTier,
-} from '../shield/activity/types';
-import {
   addDays,
   dateKey,
   DailyLog,
@@ -183,63 +178,6 @@ function buildCheckIns(today: string): CheckIn[] {
  * should not be the reason it becomes public API. `computeRepTarget` clamps its
  * own output anyway, so a drift here can only ever soften the anchor.
  */
-const DEMO_ACTIVITIES: { kind: ActivityKind; min: number; max: number }[] = [
-  { kind: 'squats', min: 8, max: 18 },
-  { kind: 'jumping jacks', min: 10, max: 19 },
-  { kind: 'marching', min: 16, max: 34 },
-  { kind: 'arm raises', min: 42, max: 66 },
-];
-
-/** Capped under the store's 100-entry ceiling — about one unlock every three
- *  days, which is what the `hardUnlocks` counts above already imply. */
-const DEMO_SESSIONS = Math.min(96, Math.round(DEMO_DAYS / 3));
-
-function buildActivitySessions(today: string): ActivitySessionResult[] {
-  const out: ActivitySessionResult[] = [];
-
-  for (let i = 0; i < DEMO_SESSIONS; i++) {
-    const t = i / Math.max(1, DEMO_SESSIONS - 1);
-    const arc = improvement(t);
-    const spec = DEMO_ACTIVITIES[i % DEMO_ACTIVITIES.length];
-
-    const date = new Date(addDays(today, -Math.round((1 - t) * (DEMO_DAYS - 1))));
-    date.setHours(7 + Math.floor(rand(i + 1400) * 15), Math.floor(rand(i + 1600) * 60), 0, 0);
-
-    // The target climbs with the arc — the difficulty model raising its ask is
-    // the thing a long history is meant to demonstrate.
-    const target = Math.round(spec.min + (spec.max - spec.min) * (0.25 + arc * 0.7));
-
-    // Early attempts get walked away from; late ones rarely do.
-    const completed = rand(i + 1800) < 0.45 + arc * 0.5;
-    const repsCompleted = completed ? target : Math.floor(target * (0.2 + rand(i + 2000) * 0.5));
-
-    // Pose is the common tier, with motion and manual fallbacks mixed in so the
-    // list exercises all three. Form is only ever measured on pose.
-    const tierRoll = rand(i + 2200);
-    const tier: DetectorTier = tierRoll < 0.62 ? 'pose' : tierRoll < 0.85 ? 'motion' : 'manual';
-    const formQuality = tier === 'pose' ? Math.min(0.95, 0.52 + arc * 0.3 + rand(i + 2400) * 0.12) : 0;
-
-    out.push({
-      date: date.toISOString(),
-      activity: spec.kind,
-      target,
-      repsCompleted,
-      formQuality: Math.round(formQuality * 100) / 100,
-      tier,
-      durationMs: Math.round(repsCompleted * (2600 + rand(i + 2600) * 1800) + 4000),
-      completed,
-    });
-  }
-
-  return out.sort((a, b) => a.date.localeCompare(b.date));
-}
-
-/**
- * Returns the slice of persisted state that makes the app look lived-in.
- * Deliberately does not touch onboarding answers, goal, theme, account,
- * blocked packages or bailouts — those are the user's real setup, and a demo
- * toggle overwriting them would be worse than useless.
- */
 export function buildDemoState(): Partial<PersistedState> {
   const today = dateKey();
   const firstOpenDate = addDays(today, -(DEMO_DAYS - 1));
@@ -260,7 +198,7 @@ export function buildDemoState(): Partial<PersistedState> {
     gateReflections: buildReflections(today),
     checkIns,
     lastCheckInDate: checkIns[checkIns.length - 1]?.date.slice(0, 10) ?? null,
-    activitySessions: buildActivitySessions(today),
+    activitySessions: [],
   };
 }
 

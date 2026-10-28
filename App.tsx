@@ -31,7 +31,6 @@ import OnboardingMark from './src/onboarding/OnboardingMark';
 import TrialTimelineScreen from './src/onboarding/TrialTimelineScreen';
 import PlanCompareScreen from './src/onboarding/PlanCompareScreen';
 import PurchaseSuccessScreen, { PurchaseResult } from './src/onboarding/PurchaseSuccessScreen';
-import IntensityScreen from './src/onboarding/IntensityScreen';
 import FutureSelfScreen from './src/onboarding/FutureSelfScreen';
 import PaywallScreen from './src/onboarding/PaywallScreen';
 import AppPickerScreen from './src/onboarding/AppPickerScreen';

@@ -8,7 +8,6 @@ import { ProgressPhoto } from './progressPhotos';
 import { SoundKey } from './sounds';
 import { DEFAULT_BLOCKED_PACKAGES } from './blockedApps';
 import { EssentialKey } from './gateQuestions';
-import { ActivitySessionResult } from '../shield/activity/types';
 
 const KEY = 'screentime.v1';
 
@@ -98,7 +97,8 @@ export type PersistedState = {
   /** Finished physical-unlock attempts, newest last, capped at 100. Feeds the
    *  adaptive rep target so the difficulty tracks what this person can
    *  actually do rather than a fixed number. */
-  activitySessions: ActivitySessionResult[];
+  /** Legacy movement-unlock history; no longer written. */
+  activitySessions: unknown[];
   /** Bailouts — every user starts with 2 free. Spent one at a time to leave
    *  a locked focus timer early. Never taken away, never expire;
    *  more can only be bought, never earned or reset.
@@ -293,20 +293,6 @@ export function recordGateReflection(
   entry: GateReflection,
 ): GateReflection[] {
   return [...existing, entry].slice(-MAX_GATE_REFLECTIONS);
-}
-
-const MAX_ACTIVITY_SESSIONS = 100;
-
-/**
- * Appends a finished physical-unlock attempt. Abandoned and token-skipped
- * attempts are recorded too (with `completed: false`) — the difficulty model
- * needs to see what people are walking away from, not just what they finish.
- */
-export function recordActivitySession(
-  existing: ActivitySessionResult[],
-  entry: ActivitySessionResult,
-): ActivitySessionResult[] {
-  return [...existing, entry].slice(-MAX_ACTIVITY_SESSIONS);
 }
 
 export type Account = {

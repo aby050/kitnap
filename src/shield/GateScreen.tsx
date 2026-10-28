@@ -4,23 +4,11 @@ import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 import { Intensity } from '../data/themes';
 import { Button, Card, IconButton, Screen } from '../design/primitives';
 import { palette, radius, space, type } from '../design/tokens';
-import { ActivityKind, ActivitySessionResult } from './activity/types';
 import { success } from '../ui/haptics';
 
 type Props = {
   intensity: Intensity;
   futureSelfMessage: string;
-  /** Free-text onboarding health answer — used to skip unsafe movements. */
-  healthLimitRaw?: string | null;
-  /** Resolves the adaptive rep target for a given movement. Undefined leaves
-   *  Family G's built-in defaults alone. */
-  repsFor?: (activity: ActivityKind) => number;
-  /** Completed-session history, so a movement finished in the last 24 hours
-   *  is rested and the next unlock asks for a different one. */
-  activitySessions?: ActivitySessionResult[];
-  /** Reports a finished (or abandoned) physical attempt, for the difficulty
-   *  model. Never fires for a token skip — that isn't a workout. */
-  onActivityComplete?: (session: ActivitySessionResult) => void;
   onGranted: (minutes: number) => void;
   onAbandoned: () => void;
   onEmergency: () => void;

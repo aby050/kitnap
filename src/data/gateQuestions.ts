@@ -6,9 +6,8 @@ import { Platform } from 'react-native';
  * carry the weight and the rest are pacing.
  */
 import { IconName } from '../ui/Icon';
-import { ActivityKind, ACTIVITY_KINDS, ActivitySessionResult } from '../shield/activity/types';
 
-export type Family = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
+export type Family = 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
 
 export type GateQuestion =
   | { family: 'A'; kind: 'tap'; prompt: string; options: string[] }
@@ -18,8 +17,7 @@ export type GateQuestion =
   | { family: 'E'; kind: 'hold'; prompt: string; seconds: number }
   | { family: 'F'; kind: 'breathe'; prompt: string; cycles: number }
   | { family: 'F'; kind: 'math'; prompt: string; a: number; b: number; op: '+' | '−' | '×' }
-  | { family: 'F'; kind: 'quiz'; prompt: string; options: string[]; correctIndex: number; explain: string }
-  | { family: 'G'; kind: 'activity'; prompt: string; reps: number; activity: ActivityKind };
+  | { family: 'F'; kind: 'quiz'; prompt: string; options: string[]; correctIndex: number; explain: string };
 
 /** Family A — Intent. "I don't know" is always present, always largest, always a soft exit. */
 export const FAMILY_A: GateQuestion[] = [
@@ -163,140 +161,8 @@ export const FAMILY_F_QUIZ: Extract<GateQuestion, { kind: 'quiz' }>[] = [
   },
 ];
 
-/** Family G — Hard unlock. Real movement with the camera up, counted
- *  automatically where the device can manage it and pace-checked where it
- *  can't. Specific movements are skipped when the onboarding health answer
- *  names that body part — see challengeFilterFromHealth() and pickChallenge().
- *
- *  The `reps` here are only cold-start defaults; the live number comes from
- *  computeRepTarget() via pickChallenge's `repsFor`. */
-export const FAMILY_G: GateQuestion[] = [
-  { family: 'G', kind: 'activity', prompt: 'Do 10 squats to unlock.', reps: 10, activity: 'squats' },
-  { family: 'G', kind: 'activity', prompt: 'Do 10 jumping jacks to unlock.', reps: 10, activity: 'jumping jacks' },
-  { family: 'G', kind: 'activity', prompt: 'Do 8 push-ups to unlock.', reps: 8, activity: 'push-ups' },
-  // The approachable end: doable standing in a doorway or at a desk, and the
-  // arm raises work seated. Someone who won't drop and do push-ups in an
-  // office still has a real physical route through the gate.
-  { family: 'G', kind: 'activity', prompt: 'March in place, knees up, 20 times.', reps: 20, activity: 'marching' },
-  { family: 'G', kind: 'activity', prompt: 'Raise both arms overhead 50 times.', reps: 50, activity: 'arm raises' },
-  { family: 'G', kind: 'activity', prompt: 'Raise both arms out to your sides 40 times.', reps: 40, activity: 'side raises' },
-  { family: 'G', kind: 'activity', prompt: 'Bend and reach for your toes 15 times.', reps: 15, activity: 'toe touches' },
-];
 
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
-
-const NOT_LIMITED = new Set([
-  'no', 'none', 'nope', 'nil', 'nothing', 'n/a', 'na', '-', '--', 'no.', 'none.',
-  'not really', 'nothing really', 'no issues', 'no problems', 'all good', 'all fine',
-  'im fine', "i'm fine", 'fine', 'healthy', 'no limitations', 'no limits',
-]);
-
-function hasToken(text: string, token: string): boolean {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`, 'i').test(text);
-}
-
-function hasAny(text: string, tokens: string[]): boolean {
-  return tokens.some((t) => hasToken(text, t));
-}
-
-export type ChallengeFilter = {
-  /** True when every camera/movement challenge is unsafe. */
-  skipPhysical: boolean;
-  banned: Set<ActivityKind>;
-};
-
-/**
- * Maps the free-text onboarding health answer onto specific movements.
- * A bad knee skips squats and jumping jacks but can still get push-ups;
- * a wrist injury skips push-ups but can still squat. Unspecific illness or
- * injury skips all physical work and falls back to a quiz/math/breathing round.
- */
-export function challengeFilterFromHealth(raw: string | undefined | null): ChallengeFilter {
-  const empty = { skipPhysical: false, banned: new Set<ActivityKind>() };
-  if (!raw) return empty;
-  const v = raw.trim().toLowerCase();
-  if (v.length === 0 || NOT_LIMITED.has(v)) return empty;
-
-  /* "No illness", "no injuries", "nothing, all healthy" — a denial that
-   * happens to contain the very words this function scans for. The exact-match
-   * NOT_LIMITED set above cannot catch these, because they are phrased freely,
-   * and every one of them used to read as a declared condition and silently
-   * demote a Strict user to breathing exercises forever. A leading negation
-   * with no "but" after it means exactly what it says. */
-  if (/^(no|none|nope|nil|nothing|not)\b/.test(v) && !/\b(but|except|however|apart from|other than)\b/.test(v)) {
-    return empty;
-  }
-
-  const wholeBody = [
-    'wheelchair', 'paralysis', 'paralysed', 'paralyzed', 'paraplegic', 'quadriplegic',
-    'immobile', "can't walk", 'cannot walk', 'crutches', 'walker',
-    'fracture', 'broken bone', 'surgery', 'post-op', 'operation',
-    'heart', 'cardiac', 'asthma', 'copd', 'pregnant', 'pregnancy',
-    'concussion', 'vertigo', 'seizure', 'epilepsy', 'fever', 'flu', 'covid',
-    'pneumonia', 'chemo', 'cancer', 'fibromyalgia', 'multiple sclerosis',
-    'stroke', 'unwell', 'disabled', 'disability', 'chronic illness',
-  ];
-  if (hasAny(v, wholeBody) || hasToken(v, 'illness') || hasToken(v, 'sick')) {
-    return { skipPhysical: true, banned: new Set(ACTIVITY_KINDS) };
-  }
-
-  const banned = new Set<ActivityKind>();
-  const lowerBody = [
-    'knee', 'knees', 'acl', 'mcl', 'meniscus', 'patella',
-    'ankle', 'ankles', 'foot', 'feet', 'shin', 'calf', 'hip', 'hips',
-    'hamstring', 'quad', 'thigh', 'leg', 'legs', 'plantar',
-  ];
-  const upperBody = [
-    'wrist', 'wrists', 'carpal', 'hand', 'hands', 'elbow', 'elbows',
-    'shoulder', 'shoulders', 'rotator', 'chest', 'rib', 'ribs',
-  ];
-  const back = ['back', 'spine', 'disc', 'hernia', 'sciatica', 'lumbar'];
-
-  if (hasAny(v, lowerBody) || hasToken(v, 'squat') || hasToken(v, 'squats')) {
-    banned.add('squats');
-  }
-  if (
-    hasAny(v, lowerBody) ||
-    hasAny(v, ['jump', 'jumps', 'jumping']) ||
-    hasToken(v, 'jacks')
-  ) {
-    banned.add('jumping jacks');
-  }
-  if (
-    hasAny(v, upperBody) ||
-    hasToken(v, 'push-up') ||
-    hasToken(v, 'pushup') ||
-    hasToken(v, 'push-ups') ||
-    hasToken(v, 'pushups')
-  ) {
-    banned.add('push-ups');
-  }
-  if (hasAny(v, back)) {
-    banned.add('squats');
-    banned.add('jumping jacks');
-    banned.add('push-ups');
-  }
-
-  if (banned.size >= ACTIVITY_KINDS.length) {
-    return { skipPhysical: true, banned };
-  }
-  if (banned.size > 0) {
-    return { skipPhysical: false, banned };
-  }
-
-  // Injury/pain mentioned without a body part we recognise — skip all physical.
-  return { skipPhysical: true, banned: new Set(ACTIVITY_KINDS) };
-}
-
-/**
- * True when the onboarding health answer rules out at least one (or every)
- * physical challenge.
- */
-export function isHealthLimited(raw: string | undefined | null): boolean {
-  const f = challengeFilterFromHealth(raw);
-  return f.skipPhysical || f.banned.size > 0;
-}
 
 /**
  * The non-physical gate.
@@ -334,97 +200,10 @@ function pickQuizChallenge(enabled?: Record<string, boolean>): GateQuestion {
   return pools[Math.floor(Math.random() * pools.length)].get();
 }
 
-/**
- * Every unlock requires exactly one challenge, always — no free early
- * unlocks and no ladder buildup. Steady always gets the quiz/math/breathing
- * rotation. Strict picks a physical movement that is still safe given the
- * onboarding health answer; banned movements are replaced by another Family G
- * activity, or by the quiz rotation if none remain safe.
- *
- * `repsFor` is the adaptive rep-target resolver. It is applied here rather than
- * in the challenge component so the prompt and the count can never disagree —
- * the number in the sentence is the number being counted. It takes the chosen
- * activity because a squat history says nothing about push-ups.
- */
-/** How long a finished movement stays out of the rotation. */
-export const ACTIVITY_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-/**
- * When each movement was last *completed*, within the cooldown window.
- *
- * Only completed sessions count. Abandoning a set, falling back to breathing
- * or spending a Bailout all record `completed: false`, and none of them should
- * buy a movement's retirement for a day — that would make quitting the
- * cheapest way to get an easier challenge tomorrow.
- */
-export function activityCooldowns(
-  sessions: ActivitySessionResult[] | undefined,
-  now: number = Date.now(),
-): Map<ActivityKind, number> {
-  const out = new Map<ActivityKind, number>();
-  for (const s of sessions ?? []) {
-    if (!s.completed) continue;
-    const at = Date.parse(s.date);
-    if (!Number.isFinite(at) || now - at >= ACTIVITY_COOLDOWN_MS) continue;
-    const prev = out.get(s.activity);
-    if (prev === undefined || at > prev) out.set(s.activity, at);
-  }
-  return out;
-}
-
-export function pickChallenge(
-  intensityKey: 'steady' | 'strict',
-  healthLimitRaw?: string | null,
-  repsFor?: (activity: ActivityKind) => number,
-  /** Completed-session history, used to rest a movement for 24h after it is
-   *  finished so the next unlock asks for something else. */
-  activitySessions?: ActivitySessionResult[],
-  /** Waiting Room families the user has left switched on. */
-  enabled?: Record<string, boolean>,
-): GateQuestion {
-  const filter = challengeFilterFromHealth(healthLimitRaw);
-  if (intensityKey === 'steady' || filter.skipPhysical) return pickQuizChallenge(enabled);
-  const pool = FAMILY_G.filter(
-    (q): q is Extract<GateQuestion, { kind: 'activity' }> =>
-      q.kind === 'activity' && !filter.banned.has(q.activity),
-  );
-  if (pool.length === 0) return pickQuizChallenge(enabled);
-
-  /* Finish a movement and it rests for 24 hours.
-   *
-   * This replaces an earlier rule that pinned one movement per whole day. That
-   * rule existed to stop the gate rolling squats, then push-ups, then jacks
-   * within an hour, which read as the app making it up. Resting on completion
-   * keeps that steadiness — an unfinished set still offers the same movement
-   * next time, so nothing churns mid-effort — while making a finished set
-   * mean something: the next unlock costs a different kind of effort rather
-   * than a repeat of the one just paid.
-   */
-  const now = Date.now();
-  const cooldowns = activityCooldowns(activitySessions, now);
-  const fresh = pool.filter((q) => !cooldowns.has(q.activity));
-
-  let chosen: Extract<GateQuestion, { kind: 'activity' }>;
-  if (fresh.length > 0) {
-    // Stable within a day so an unfinished set isn't swapped underneath the
-    // user between attempts.
-    const day = Math.floor(now / 86_400_000);
-    chosen = fresh[day % fresh.length];
-  } else {
-    // Everything is resting: offer whichever was completed longest ago rather
-    // than dropping to a quiz. The cooldown is a rotation, not an escape —
-    // someone who has genuinely done every movement today has earned variety,
-    // not an easier gate.
-    chosen = pool.reduce((oldest, q) =>
-      (cooldowns.get(q.activity) ?? 0) < (cooldowns.get(oldest.activity) ?? 0) ? q : oldest,
-    );
-  }
-  if (!repsFor) return chosen;
-  const resolved = repsFor(chosen.activity);
-  if (!Number.isFinite(resolved)) return chosen;
-  const reps = Math.max(1, Math.round(resolved));
-  if (reps === chosen.reps) return chosen;
-  return { ...chosen, reps, prompt: `Do ${reps} ${chosen.activity} to unlock.` };
+/** The gate's challenge: a quiz, breathing or maths round from the families
+ *  the Waiting Room leaves switched on. Movement unlocks were removed. */
+export function pickChallenge(enabled?: Record<string, boolean>): GateQuestion {
+  return pickQuizChallenge(enabled);
 }
 
 /** Four categories, not nine. An essentials list long enough to browse is a
