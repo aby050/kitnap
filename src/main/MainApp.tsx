@@ -169,9 +169,9 @@ type TimerPreset = { minutes: number; label: string; autoStart: boolean; hardMod
  * Keys are untouched — they persist in saved state and in every `setTab` call.
  */
 const TABS: { key: Tab; label: string; mark: IconName }[] = [
-  { key: 'home', label: 'Home', mark: 'home' },
-  { key: 'apps', label: 'Blocked', mark: 'shield' },
-  { key: 'timer', label: 'Rooms', mark: 'leaf' },
+  { key: 'home', label: 'Den', mark: 'home' },
+  { key: 'apps', label: 'Lockbox', mark: 'shield' },
+  { key: 'timer', label: 'Naps', mark: 'leaf' },
 ];
 
 export default function MainApp({

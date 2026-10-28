@@ -20,7 +20,7 @@ import {
 } from '../design/primitives';
 import AppGlyph from '../ui/AppGlyph';
 import Icon, { IconName } from '../ui/Icon';
-import { palette, radius, space, type } from '../design/tokens';
+import { palette, radius, space, type, fonts } from '../design/tokens';
 
 /** Package name → friendly label, falling back to the last path segment so a
  *  custom-added package still reads as something rather than raw reverse-DNS. */
@@ -138,35 +138,39 @@ export default function MyAppsScreen({
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow} />
         <LineArt name="apps" height={150} />
-        <Editorial lead="Decide once," emphasis="stay out of reach." style={styles.voice} />
-
-        {/* Blocked apps */}
-        <SectionHeader
-          title="Blocked apps"
-          actionLabel={Platform.OS !== 'ios' && blockedApps.length > 0 ? 'Edit' : undefined}
-          onAction={Platform.OS !== 'ios' && blockedApps.length > 0 ? onOpenBlockedApps : undefined}
-          style={styles.section}
-        />
+        <Text style={styles.title}>
+          {Platform.OS === 'ios' || blockedApps.length === 0 ? (
+            <>Your <Text style={styles.titleAccent}>lockbox</Text></>
+          ) : (
+            <>
+              <Text style={styles.titleAccent}>{blockedApps.length}</Text> {blockedApps.length === 1 ? 'app' : 'apps'} tucked away
+            </>
+          )}
+        </Text>
+        <Text style={styles.subtitle}>They stay shut until you need them. Tap × to let one out.</Text>
         {/* iOS never tells the app which apps were picked, so the row list is
             Android-only: there the package names are real. */}
         {Platform.OS === 'ios' ? (
           <BlockedSelection />
         ) : blockedApps.length > 0 ? (
-          <Card padded={false} style={styles.list}>
+          <View style={styles.grid}>
             {blockedApps.map((app, i) => (
-              <Animated.View key={app.packageName} entering={FadeInDown.delay(i * 30).duration(240)}>
-                {i > 0 && <Divider inset={56} />}
-                <View style={styles.blockedRow}>
-                  <AppGlyph name={app.name} packageName={app.packageName} source={app.icon} size={44} />
-                  <View style={styles.shrink}>
-                    <Text style={type.body} numberOfLines={1}>{app.name}</Text>
-                    <Text style={[type.sub, styles.rowSub]}>Locked</Text>
-                  </View>
-                  <Pill label="Unblock" onPress={() => onUnblockPackage?.(app.packageName)} />
+              <Animated.View key={app.packageName} entering={FadeInDown.delay(i * 30).duration(240)} style={styles.tile}>
+                <View>
+                  <AppGlyph name={app.name} packageName={app.packageName} source={app.icon} size={56} />
+                  <Pressable
+                    onPress={() => onUnblockPackage?.(app.packageName)}
+                    style={styles.unblock}
+                    hitSlop={10}
+                    accessibilityLabel={`Unblock ${app.name}`}
+                  >
+                    <Icon name="close" size={11} color="#FFFFFF" strokeWidth={2.6} />
+                  </Pressable>
                 </View>
+                <Text style={styles.tileName} numberOfLines={1}>{app.name}</Text>
               </Animated.View>
             ))}
-          </Card>
+          </View>
         ) : (
           <EmptyState
             icon="shield"
@@ -177,9 +181,16 @@ export default function MyAppsScreen({
           />
         )}
 
+        {Platform.OS !== 'ios' && (
+          <Pressable onPress={onOpenBlockedApps} style={styles.addBtn} accessibilityRole="button">
+            <Icon name="plus" size={18} color={palette.text} />
+            <Text style={styles.addText}>{blockedApps.length > 0 ? 'Add or remove apps' : 'Choose apps to lock'}</Text>
+          </Pressable>
+        )}
+
         {/* Scheduled blocks */}
         <SectionHeader
-          title="Auto-blocks"
+          title="Locks on a timer"
           actionLabel={schedules.length > 0 ? 'Edit' : undefined}
           onAction={schedules.length > 0 ? onOpenSchedules : undefined}
           style={styles.section}
@@ -288,6 +299,24 @@ const styles = StyleSheet.create({
   hardTitle: { color: palette.text, fontSize: 15, fontWeight: '700' },
   hardWhy: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19, marginTop: 6 },
   voice: { marginTop: space.base },
+  title: { color: palette.text, fontFamily: fonts.bold, fontSize: 32, lineHeight: 38, marginTop: space.sm },
+  titleAccent: { color: palette.accent },
+  subtitle: { color: palette.textSecondary, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, marginTop: 6, marginBottom: space.lg },
+  grid: {
+    flexDirection: 'row', flexWrap: 'wrap', rowGap: 18,
+    backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: palette.text, borderRadius: 24, paddingVertical: 20, paddingHorizontal: 8,
+  },
+  tile: { width: '25%', alignItems: 'center' },
+  tileName: { color: palette.text, fontFamily: fonts.medium, fontSize: 12.5, marginTop: 6, maxWidth: 72 },
+  unblock: {
+    position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11,
+    backgroundColor: palette.text, borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+  },
+  addBtn: {
+    marginTop: 14, height: 52, borderRadius: 26, borderWidth: 1.5, borderColor: palette.text, backgroundColor: '#FFFFFF',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  addText: { color: palette.text, fontFamily: fonts.semibold, fontSize: 16 },
 
   blockCard: { marginTop: space.xl },
   levelRow: {
