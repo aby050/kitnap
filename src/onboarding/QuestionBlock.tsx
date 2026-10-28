@@ -8,8 +8,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  withSpring,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import { Question } from './questions';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';

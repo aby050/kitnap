@@ -10,10 +10,10 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import { AppTheme } from '../data/themes';
 import { pickShieldMessage, shieldMessageSeed } from '../data/shieldMessages';
 import { daysUntil, GoalData } from '../data/goal';

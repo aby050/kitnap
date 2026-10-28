@@ -2,16 +2,7 @@ import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { fonts } from '../design/tokens';
 import { HIGHLIGHT, INK, INK_DIM, InkButton, PAPER } from './PastelCard';
 
@@ -23,37 +14,42 @@ export const CAT_NAME = 'Biscuit';
  * Shown once after the first-launch splash, and again from Settings → Why Kitnap.
  */
 export default function WelcomeTribute({ onContinue, cta = "Let's begin" }: { onContinue: () => void; cta?: string }) {
-  const pop = useSharedValue(0);
-  const nap = useSharedValue(0);
+  // Three calm beats: the logo and name fade in alone in the middle of the
+  // screen; after a moment they glide up and the story fades in slowly;
+  // then the button. No bounce anywhere.
+  const logoIn = useSharedValue(0);
+  const rise = useSharedValue(0);
+  const story = useSharedValue(0);
+  const button = useSharedValue(0);
   useEffect(() => {
-    pop.value = withSpring(1, { damping: 9, stiffness: 120 });
-    // A slow, sleepy sway, like a cat settling in for a nap.
-    nap.value = withDelay(
-      900,
-      withRepeat(withSequence(withTiming(1, { duration: 1800 }), withTiming(0, { duration: 1800 })), -1),
-    );
+    const ease = Easing.out(Easing.cubic);
+    logoIn.value = withTiming(1, { duration: 900, easing: ease });
+    rise.value = withDelay(2000, withTiming(1, { duration: 900, easing: Easing.inOut(Easing.cubic) }));
+    story.value = withDelay(2500, withTiming(1, { duration: 1400, easing: ease }));
+    button.value = withDelay(4200, withTiming(1, { duration: 700, easing: ease }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: pop.value,
-    transform: [{ scale: 0.6 + pop.value * 0.4 }, { translateY: nap.value * -4 }, { rotate: `${(nap.value - 0.5) * 2}deg` }],
+  const headStyle = useAnimatedStyle(() => ({
+    opacity: logoIn.value,
+    transform: [{ translateY: (1 - rise.value) * 170 }],
   }));
+  const storyStyle = useAnimatedStyle(() => ({ opacity: story.value, transform: [{ translateY: (1 - story.value) * 10 }] }));
+  const buttonStyle = useAnimatedStyle(() => ({ opacity: button.value }));
 
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View style={[styles.logoWrap, logoStyle]}>
-          <KitnapLogo width={230} />
+        <Animated.View style={headStyle}>
+          <View style={styles.logoWrap}>
+            <KitnapLogo width={230} />
+          </View>
+          <Text style={styles.name}>kitnap</Text>
+          <Text style={styles.tag}>
+            Less scrolling. <Text style={{ color: HIGHLIGHT }}>More living.</Text>
+          </Text>
         </Animated.View>
 
-        <Animated.Text entering={FadeInDown.delay(350).duration(500)} style={styles.name}>
-          kitnap
-        </Animated.Text>
-        <Animated.Text entering={FadeInDown.delay(500).duration(500)} style={styles.tag}>
-          Less scrolling. <Text style={{ color: HIGHLIGHT }}>More living.</Text>
-        </Animated.Text>
-
-        <Animated.View entering={FadeInDown.delay(800).duration(600)} style={styles.card}>
+        <Animated.View style={[styles.card, storyStyle]}>
           <Text style={styles.over}>IN LOVING MEMORY OF {CAT_NAME.toUpperCase()}</Text>
           <Text style={styles.body}>
             {CAT_NAME} never once asked for a screen. He asked for a warm spot in the sun, a slow stretch, a long nap
@@ -74,7 +70,7 @@ export default function WelcomeTribute({ onContinue, cta = "Let's begin" }: { on
         </Animated.View>
       </ScrollView>
 
-      <Animated.View entering={FadeInDown.delay(1200).duration(500)} style={styles.cta}>
+      <Animated.View style={[styles.cta, buttonStyle]} pointerEvents="box-none">
         <InkButton label={cta} onPress={onContinue} />
       </Animated.View>
     </SafeAreaView>

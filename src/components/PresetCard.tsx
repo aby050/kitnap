@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import SessionStartSheet from './SessionStartSheet';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import Icon, { IconName } from '../ui/Icon';
 import { tapLight } from '../ui/haptics';
 import { LinearGradient } from 'expo-linear-gradient';

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import { Ambience, BANDS, inBand, mediaFor } from '../data/ambiences';
 import { motion, radius, space, type } from '../design/tokens';
 import { tapLight } from '../ui/haptics';

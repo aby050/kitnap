@@ -5,9 +5,9 @@ import Animated, {
   useSharedValue,
   withDelay,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import Icon, { IconName } from './Icon';
 import { curves } from '../design/motion';
 import { motion } from '../design/tokens';

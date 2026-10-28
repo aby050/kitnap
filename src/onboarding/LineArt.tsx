@@ -10,9 +10,9 @@ import Animated, {
   withDelay,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AG = Animated.createAnimatedComponent(G);

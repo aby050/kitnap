@@ -4,9 +4,9 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import AnimatedIcon from '../ui/AnimatedIcon';
 import { IconName } from '../ui/Icon';

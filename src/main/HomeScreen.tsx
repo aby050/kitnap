@@ -5,8 +5,8 @@ import Animated, {
   FadeIn,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import BlockedAppsPill from '../components/BlockedAppsPill';
 import ScreenTimeCard from '../components/ScreenTimeCard';
 import { getIntensity, IntensityKey } from '../data/themes';

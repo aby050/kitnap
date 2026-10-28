@@ -8,10 +8,10 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import { Button, Ring, Screen } from '../design/primitives';
 import Icon from '../ui/Icon';
 import { palette, radius, space, type } from '../design/tokens';

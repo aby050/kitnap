@@ -19,9 +19,9 @@ import Animated, {
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { withSpring } from './noBounce';
 import Icon, { IconName } from '../ui/Icon';
 import AnimatedIcon from '../ui/AnimatedIcon';
 import { tapLight } from '../ui/haptics';

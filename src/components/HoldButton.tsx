@@ -8,10 +8,10 @@ import Animated, {
   useSharedValue,
   withDelay,
   withRepeat,
-  withSpring,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { withSpring } from '../design/noBounce';
 import * as Haptics from 'expo-haptics';
 import { control, gradients, palette, radius, type } from '../design/tokens';
 

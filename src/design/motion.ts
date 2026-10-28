@@ -5,9 +5,9 @@ import {
   withDelay,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { withSpring } from './noBounce';
 import React from 'react';
 import { motion } from './tokens';
 
