@@ -7,6 +7,8 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { getInstalledApps } from 'device-permissions';
 import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';
+import LineArt from './LineArt';
+import { CardPanel, INK, INK_DIM, InkButton, PastelCard, PILL, TINTS } from './PastelCard';
 import { palette, radius, fonts } from '../design/tokens';
 import Icon from '../ui/Icon';
 import CategoryGlyph from './CategoryGlyph';
@@ -91,7 +93,10 @@ export default function AppPickerScreen({
   onBack,
   title = 'What should we block?',
   confirmLabel,
+  pastel,
 }: {
+  /** Onboarding look: pastel card with a white panel. The in-app editor keeps the dark one. */
+  pastel?: boolean;
   onContinue: (selected: string[]) => void;
   suggestedPackages?: string[];
   /** Editing an existing list: start from it instead of guessing from usage. */
@@ -317,68 +322,86 @@ export default function AppPickerScreen({
   const searchHits = q ? entries.filter((e) => !e.expandable && e.id !== 'all' && e.name.toLowerCase().includes(q)) : [];
   const hasApps = entries.some((e) => !!e.group);
 
+  const P = pastel ? pastelStyles : ({} as Partial<typeof pastelStyles>);
+  const fg = pastel ? INK : '#FFFFFF';
+  const dim = pastel ? INK_DIM : 'rgba(255,255,255,0.5)';
   const AppTile = ({ e }: { e: Entry }) => {
     const on = selected.includes(e.id);
     return (
       <Pressable onPress={() => toggle(e.id)} style={styles.tile} accessibilityRole="button" accessibilityState={{ selected: on }}>
-        <View style={[styles.tileIcon, on && styles.tileIconOn]}>
-          <View style={[styles.tileImg, !e.icon && { backgroundColor: 'rgba(255,255,255,0.09)' }]}>
+        <View style={[styles.tileIcon, on && styles.tileIconOn, on && P.tileIconOn]}>
+          <View style={[styles.tileImg, !e.icon && { backgroundColor: pastel ? '#2A2A30' : 'rgba(255,255,255,0.09)' }]}>
             <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
           </View>
           {on && (
-            <View style={styles.tileCheck}>
-              <Ionicons name="checkmark" size={13} color="#06232B" />
+            <View style={[styles.tileCheck, P.tileCheck]}>
+              <Ionicons name="checkmark" size={13} color={pastel ? '#FFFFFF' : '#06232B'} />
             </View>
           )}
         </View>
-        <Text style={[styles.tileName, on && { color: '#FFFFFF' }]} numberOfLines={2}>
+        <Text style={[styles.tileName, P.tileName, on && { color: fg }]} numberOfLines={2}>
           {e.name}
         </Text>
       </Pressable>
     );
   };
 
+  function wrapScreen(body: React.ReactNode) {
+    return pastel ? (
+      <PastelCard tint={TINTS.lavender}>{body}</PastelCard>
+    ) : (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>{body}</SafeAreaView>
+    );
+  }
+  function wrapPanel(body: React.ReactNode) {
+    return pastel ? <CardPanel style={pastelStyles.panel}>{body}</CardPanel> : body;
+  }
+
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    wrapScreen(
       <KeyboardAvoider>
-        <View style={styles.centerStack}>
+        <View style={[styles.centerStack, P.centerStack]}>
           {onBack && (
             <Pressable onPress={onBack} style={styles.backBtn} hitSlop={10} accessibilityLabel="Back">
               <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
             </Pressable>
           )}
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.recommendHint}>
+          <View style={P.head}>
+          {pastel && <LineArt name="apps" height={120} />}
+          <Text style={[styles.title, P.title]}>{title}</Text>
+          <Text style={[styles.recommendHint, P.recommendHint]}>
             {initialSelected
               ? 'Tap to add or remove apps.'
               : selectedAppCount > 0
                 ? 'Pre-selected from what you use. Tap to change.'
                 : 'Pick the apps that steal your day.'}
           </Text>
+          </View>
 
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={16} color="rgba(255,255,255,0.5)" />
+          {wrapPanel(<>
+          <View style={[styles.searchBar, P.searchBar]}>
+            <Ionicons name="search" size={16} color={dim} />
             <TextInput
               value={query}
               onChangeText={setQuery}
               placeholder="Search your apps"
-              placeholderTextColor="rgba(255,255,255,0.4)"
-              style={styles.searchInput}
+              placeholderTextColor={dim}
+              style={[styles.searchInput, P.searchInput]}
             />
             {query ? (
               <Pressable onPress={() => setQuery('')} hitSlop={10}>
-                <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.5)" />
+                <Ionicons name="close-circle" size={18} color={dim} />
               </Pressable>
             ) : null}
           </View>
 
           {hasApps && !q && (
             <View style={styles.bulkRow}>
-              <Text style={styles.bulkCount}>
+              <Text style={[styles.bulkCount, P.bulkCount]}>
                 {selectedAppCount} of {entries.filter((e) => !!e.group).length} selected
               </Text>
               <Pressable onPress={() => toggle('all')} hitSlop={8} accessibilityRole="button">
-                <Text style={styles.bulkBtn}>
+                <Text style={[styles.bulkBtn, P.bulkBtn]}>
                   {selected.includes('all') || selectedAppCount === entries.filter((e) => !!e.group).length
                     ? 'Clear all'
                     : 'Select all'}
@@ -393,7 +416,7 @@ export default function AppPickerScreen({
                 {searchHits.map((e) => (
                   <AppTile key={e.id} e={e} />
                 ))}
-                {searchHits.length === 0 && <Text style={styles.empty}>No app matches “{query}”.</Text>}
+                {searchHits.length === 0 && <Text style={[styles.empty, P.empty]}>No app matches “{query}”.</Text>}
               </View>
             ) : (
               categories.map((cat) => {
@@ -403,7 +426,7 @@ export default function AppPickerScreen({
                 const chosen = apps.filter((a) => selected.includes(a.id)).length;
                 const all = apps.length > 0 && chosen === apps.length;
                 return (
-                  <View key={cat.id} style={styles.section}>
+                  <View key={cat.id} style={[styles.section, P.section]}>
                     {/* Siblings, not nested: a pill inside the header's Pressable
                         also fired the header's open/close. */}
                     <View style={styles.sectionHead}>
@@ -413,24 +436,24 @@ export default function AppPickerScreen({
                         accessibilityRole="button"
                         accessibilityLabel={`${cat.name}, ${open ? 'collapse' : 'expand'}`}
                       >
-                        <View style={styles.catIcon}>
-                          <CategoryGlyph name={cat.id} size={24} color={palette.accent} />
+                        <View style={[styles.catIcon, P.catIcon]}>
+                          <CategoryGlyph name={cat.id} size={24} color={pastel ? INK : palette.accent} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.catName}>{cat.name}</Text>
-                          <Text style={styles.catCount}>
+                          <Text style={[styles.catName, P.catName]}>{cat.name}</Text>
+                          <Text style={[styles.catCount, P.catCount]}>
                             {apps.length ? `${chosen} of ${apps.length} selected` : selected.includes(cat.id) ? 'Selected' : 'Tap to block all'}
                           </Text>
                         </View>
                       </Pressable>
                       {apps.length > 0 && (
-                        <Pressable onPress={() => toggle(cat.id)} style={[styles.allPill, all && styles.allPillOn]} hitSlop={6}>
-                          <Text style={[styles.allPillText, all && { color: '#06232B' }]}>{all ? 'All' : 'Select all'}</Text>
+                        <Pressable onPress={() => toggle(cat.id)} style={[styles.allPill, P.allPill, all && styles.allPillOn, all && P.allPillOn]} hitSlop={6}>
+                          <Text style={[styles.allPillText, P.allPillText, all && { color: pastel ? '#FFFFFF' : '#06232B' }]}>{all ? 'All' : 'Select all'}</Text>
                         </Pressable>
                       )}
                       {apps.length > 0 && (
                         <Pressable onPress={() => handleRowPress(cat)} hitSlop={10} accessibilityLabel={open ? 'Collapse' : 'Expand'}>
-                          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.5)" />
+                          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={dim} />
                         </Pressable>
                       )}
                     </View>
@@ -446,19 +469,24 @@ export default function AppPickerScreen({
               })
             )}
             {!hasApps && !q && (
-              <Text style={styles.empty}>We couldn’t read your installed apps, so you can block whole categories for now.</Text>
+              <Text style={[styles.empty, P.empty]}>We couldn’t read your installed apps, so you can block whole categories for now.</Text>
             )}
           </ScrollView>
 
-          <View style={styles.ctaWrap}>
-            <GradientButton
-              label={confirmLabel ?? (selectedAppCount > 0 ? `Block ${selectedAppCount} ${selectedAppCount === 1 ? 'app' : 'apps'}` : 'Continue')}
-              onPress={() => onContinue(selected)}
-            />
+          <View style={[styles.ctaWrap, P.ctaWrap]}>
+            {(() => {
+              const label = confirmLabel ?? (selectedAppCount > 0 ? `Block ${selectedAppCount} ${selectedAppCount === 1 ? 'app' : 'apps'}` : 'Continue');
+              return pastel ? (
+                <InkButton label={label} onPress={() => onContinue(selected)} />
+              ) : (
+                <GradientButton label={label} onPress={() => onContinue(selected)} />
+              );
+            })()}
           </View>
+          </>)}
         </View>
       </KeyboardAvoider>
-    </SafeAreaView>
+    )
   );
 }
 
@@ -517,4 +545,29 @@ const styles = StyleSheet.create({
   tileName: { color: 'rgba(255,255,255,0.75)', fontSize: 11.5, textAlign: 'center', marginTop: 6, lineHeight: 14 },
   empty: { color: 'rgba(255,255,255,0.65)', fontSize: 13.5, textAlign: 'center', padding: 16 },
   ctaWrap: { paddingTop: 8, paddingBottom: 12 },
+});
+
+/** Overrides for the onboarding (pastel) look. */
+const pastelStyles = StyleSheet.create({
+  centerStack: { paddingTop: 0 },
+  head: { alignItems: 'stretch', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 14 },
+  title: { color: INK, textAlign: 'left', marginTop: 8 },
+  recommendHint: { color: INK_DIM, textAlign: 'left', marginBottom: 0, marginTop: 6 },
+  panel: { flex: 1, gap: 0, paddingTop: 0, paddingBottom: 12 },
+  searchBar: { backgroundColor: PILL, borderWidth: 1.5, borderColor: INK, borderRadius: 24 },
+  searchInput: { color: INK },
+  bulkCount: { color: INK_DIM },
+  bulkBtn: { color: INK, textDecorationLine: 'underline' },
+  section: { backgroundColor: '#FFFFFF', borderColor: INK, borderWidth: 1.5 },
+  catIcon: { backgroundColor: '#F1EFEB', borderColor: 'rgba(27,27,31,0.08)' },
+  catName: { color: INK },
+  catCount: { color: INK_DIM },
+  allPill: { backgroundColor: '#F1EFEB' },
+  allPillOn: { backgroundColor: INK },
+  allPillText: { color: INK },
+  tileIconOn: { borderColor: INK },
+  tileCheck: { backgroundColor: INK },
+  tileName: { color: INK_DIM },
+  empty: { color: INK_DIM },
+  ctaWrap: { paddingBottom: 0 },
 });

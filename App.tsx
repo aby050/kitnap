@@ -455,6 +455,7 @@ export default function App() {
 
           {stage === 'appPicker' && (
             <AppPickerScreen
+              pastel
               suggestedPackages={suggestedPackages.length > 0 ? suggestedPackages : setup.suggestedPackages}
               onContinue={(selected) => {
                 if (Platform.OS === 'android') {

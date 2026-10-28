@@ -21,6 +21,12 @@ import { Button } from '../design/primitives';
 import { palette } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
 import { OnboardingMarkSlot } from './OnboardingMark';
+import LineArt, { ArtName } from './LineArt';
+const PERMISSION_ART: Record<string, ArtName> = {
+  overlay: 'phoneLock', usage: 'chart', accessibility: 'shield', notification: 'clock',
+  battery: 'sun', screenTime: 'chart', camera: 'camera',
+};
+import { CardPanel, INK, INK_DIM, InkButton, PastelCard, TextLink, TINTS } from './PastelCard';
 import AccessibilityDisclosure from './AccessibilityDisclosure';
 import PermissionArt from './PermissionArt';
 
@@ -202,11 +208,10 @@ export default function PermissionBoardingPassScreen({
   }, [card.key, card.granted]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <OnboardingMarkSlot />
+    <PastelCard tint={TINTS.blue}>
       <View style={styles.body}>
         <Animated.View key={card.key} entering={FadeIn.duration(350)} style={styles.art}>
-          <PermissionArt permission={card.key} size={224} />
+          <LineArt name={PERMISSION_ART[card.key] ?? 'phoneLock'} height={230} />
         </Animated.View>
 
         <View style={styles.dotsRow}>
@@ -222,10 +227,10 @@ export default function PermissionBoardingPassScreen({
         <Text style={styles.desc}>{card.desc}</Text>
       </View>
 
-      <View style={styles.ctaWrap}>
+      <CardPanel style={styles.ctaWrap}>
         {card.granted ? (
           <View style={styles.grantedRow}>
-            <Icon name="check" size={16} color={palette.accent} strokeWidth={2.6} />
+            <Icon name="check" size={16} color={INK} strokeWidth={2.6} />
             <Text style={styles.grantedText}>Granted</Text>
           </View>
         ) : (
@@ -234,9 +239,8 @@ export default function PermissionBoardingPassScreen({
               // Apple 5.1.1(iv): the button ahead of a system permission prompt
               // must read Continue/Next and always lead to the prompt, with no
               // way to skip past it. Whatever the answer, move on afterwards.
-              <Button
+              <InkButton
                 label="Continue"
-                variant="primary"
                 onPress={async () => {
                   await card.onRequest();
                   next();
@@ -244,15 +248,13 @@ export default function PermissionBoardingPassScreen({
               />
             ) : (
               <>
-                <Button label="Grant" variant="primary" onPress={card.onRequest} />
-                <Pressable onPress={next} hitSlop={10}>
-                  <Text style={styles.skipLink}>Skip for now</Text>
-                </Pressable>
+                <InkButton label="Grant" onPress={card.onRequest} />
+                <TextLink label="Skip for now" onPress={next} />
               </>
             )}
           </>
         )}
-      </View>
+      </CardPanel>
       <AccessibilityDisclosure
         visible={showAccessibilityDisclosure}
         onAccept={() => {
@@ -261,34 +263,33 @@ export default function PermissionBoardingPassScreen({
         }}
         onCancel={() => setShowAccessibilityDisclosure(false)}
       />
-    </SafeAreaView>
+    </PastelCard>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  body: { flex: 1, alignItems: 'center', paddingHorizontal: 26, paddingTop: 8 },
-  art: { alignItems: 'center', justifyContent: 'center', marginTop: 12 },
-  dotsRow: { flexDirection: 'row', gap: 5, marginTop: 22 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.18)' },
-  dotActive: { backgroundColor: palette.accent, width: 16 },
+  body: { flex: 1, alignItems: 'stretch', justifyContent: 'flex-end', paddingHorizontal: 24, paddingVertical: 16 },
+  art: { alignSelf: 'stretch', marginBottom: 10 },
+  dotsRow: { flexDirection: 'row', gap: 5, marginTop: 12 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(27,27,31,0.18)' },
+  dotActive: { backgroundColor: INK, width: 16 },
   reqLabel: {
-    color: palette.accent,
+    color: INK_DIM,
     fontSize: 11.5,
     fontWeight: '800',
     letterSpacing: 1.4,
     marginTop: 18,
   },
-  title: { color: palette.text, fontSize: 24, fontWeight: '800', marginTop: 10, textAlign: 'center' },
+  title: { color: INK, fontSize: 34, lineHeight: 40, fontWeight: '700', marginTop: 10, textAlign: 'left', letterSpacing: -0.6 },
   desc: {
-    color: palette.textSecondary,
-    fontSize: 14.5,
-    lineHeight: 21,
-    textAlign: 'center',
+    color: INK_DIM,
+    lineHeight: 22,
+    fontSize: 16,
+    textAlign: 'left',
     marginTop: 10,
-    maxWidth: 320,
   },
-  ctaWrap: { paddingHorizontal: 26, paddingBottom: 18, gap: 14, alignItems: 'stretch' },
+  ctaWrap: { alignItems: 'stretch' },
   grantedRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -296,6 +297,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  grantedText: { color: palette.accent, fontSize: 15.5, fontWeight: '800' },
+  grantedText: { color: INK, fontSize: 15.5, fontWeight: '800' },
   skipLink: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600', textAlign: 'center' },
 });

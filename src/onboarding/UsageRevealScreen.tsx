@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { installedLabel, useInstalledApps } from '../data/installedApps';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
-import { Button } from '../design/primitives';
+import { CardPanel, INK, INK_DIM, InkButton, PastelCard, PILL, TINTS } from './PastelCard';
 import { fonts, palette } from '../design/tokens';
 import AppGlyph from '../ui/AppGlyph';
 
@@ -81,7 +81,7 @@ export default function UsageRevealScreen({ onContinue }: { onContinue: () => vo
   const peak = Math.max(1, ...rows.map((r) => r.minutes));
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <PastelCard tint={TINTS.pink}>
       <Animated.View entering={FadeIn.duration(500)} style={styles.head}>
         <Text style={styles.eyebrow}>YOUR LAST 7 DAYS</Text>
         <Text style={styles.title}>Where your time goes</Text>
@@ -90,10 +90,11 @@ export default function UsageRevealScreen({ onContinue }: { onContinue: () => vo
         </Text>
       </Animated.View>
 
-      <View style={styles.list}>
+      <CardPanel style={styles.panel}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         {rows.map((r, i) => (
           <Animated.View key={r.packageName} entering={FadeInDown.delay(120 + i * 80).duration(380)} style={styles.row}>
-            <AppGlyph name={r.label} packageName={r.packageName} size={46} />
+            <AppGlyph name={r.label} packageName={r.packageName} size={40} />
             <View style={styles.mid}>
               <View style={styles.line}>
                 <Text style={styles.name} numberOfLines={1}>{r.label}</Text>
@@ -105,38 +106,27 @@ export default function UsageRevealScreen({ onContinue }: { onContinue: () => vo
             </View>
           </Animated.View>
         ))}
-      </View>
+      </ScrollView>
 
-      <View style={styles.cta}>
-        <Button label="Choose what to block" variant="primary" onPress={onContinue} />
-      </View>
-    </SafeAreaView>
+      <InkButton label="Choose what to block" onPress={onContinue} />
+      </CardPanel>
+    </PastelCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20 },
-  head: { marginTop: 28 },
-  eyebrow: { color: palette.accent, fontFamily: fonts.bold, fontSize: 12, letterSpacing: 1.4 },
-  title: { color: '#fff', fontFamily: fonts.bold, fontSize: 30, lineHeight: 36, letterSpacing: -0.6, marginTop: 8 },
-  sub: { color: 'rgba(255,255,255,0.7)', fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, marginTop: 8 },
-  strong: { color: '#fff', fontFamily: fonts.semibold },
-  list: { flex: 1, marginTop: 24, gap: 12 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
+  head: { alignItems: 'flex-start', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16 },
+  eyebrow: { color: INK_DIM, fontFamily: fonts.bold, fontSize: 11, letterSpacing: 1.4, backgroundColor: 'rgba(27,27,31,0.07)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, overflow: 'hidden' },
+  title: { color: INK, fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, marginTop: 14, textAlign: 'left' },
+  sub: { color: INK_DIM, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, marginTop: 8, textAlign: 'left' },
+  strong: { color: INK, fontFamily: fonts.semibold },
+  panel: { flex: 1 },
+  list: { gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 18, backgroundColor: PILL, borderWidth: 1.5, borderColor: INK },
   mid: { flex: 1, gap: 8 },
   line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  name: { color: '#fff', fontFamily: fonts.semibold, fontSize: 16, flex: 1 },
-  time: { color: 'rgba(255,255,255,0.65)', fontFamily: fonts.medium, fontSize: 13 },
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 3, backgroundColor: palette.accent },
-  cta: { paddingBottom: 16 },
+  name: { color: INK, fontFamily: fonts.semibold, fontSize: 16, flex: 1 },
+  time: { color: INK_DIM, fontFamily: fonts.medium, fontSize: 13 },
+  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(27,27,31,0.1)', overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 3, backgroundColor: '#E8821A' },
 });

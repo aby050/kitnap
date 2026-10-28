@@ -136,8 +136,8 @@ export default function OnboardingFlow({
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={[styles.card, { backgroundColor: CARD_TINTS[stepIndex % CARD_TINTS.length] }]}>
-      <Text style={styles.brand}>Phonewise</Text>
+      <View style={styles.card}>
+      <Text style={styles.brand}>phonewise</Text>
       <View style={styles.progressWrap}>
         <View style={styles.segments}>
           {Array.from({ length: progressDenom }).map((_, i) => (
@@ -192,15 +192,15 @@ const CARD_TINTS = ['#DDF5FA', '#E4E2FA', '#D8F5DA', '#FAF5D8', '#FCE1E1', '#DCE
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F1EFEB',
   },
-  card: { flex: 1, margin: 10, borderRadius: 34, overflow: 'hidden' },
-  brand: { textAlign: 'center', color: '#1B1B1F', fontFamily: fonts.bold, fontSize: 14, fontWeight: '700', marginTop: 18 },
+  card: { flex: 1, backgroundColor: '#F1EFEB' },
+  brand: { textAlign: 'center', color: '#2E3136', fontFamily: fonts.medium, fontSize: 18, fontWeight: '500', marginTop: 12 },
   progressWrap: { paddingHorizontal: 24, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
   segments: { flex: 1, flexDirection: 'row', gap: 6 },
-  segment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(27,27,31,0.15)' },
-  segmentDone: { backgroundColor: '#1B1B1F' },
-  segmentNow: { backgroundColor: '#1B1B1F' },
+  segment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(46,49,54,0.14)' },
+  segmentDone: { backgroundColor: '#2E3136' },
+  segmentNow: { backgroundColor: '#E8821A' },
   stepLabel: {
     color: 'rgba(27,27,31,0.6)',
     fontSize: 11,

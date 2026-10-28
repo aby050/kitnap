@@ -15,6 +15,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { GradientButton } from '../components/ui';
 import { Field } from '../design/primitives';
 import { fonts, palette, space } from '../design/tokens';
+import { HIGHLIGHT, INK, INK_DIM } from './PastelCard';
+import LineArt, { ArtName } from './LineArt';
+
+/** One original line drawing per question. */
+const QUESTION_ART: Record<string, ArtName> = {
+  matters: 'shield', interests: 'sun', slipWindow: 'clock', hardBlock: 'phoneLock', name: 'wave',
+  healthLimit: 'dumbbell', movement: 'dumbbell', repBaseline: 'dumbbell', whereBlocked: 'pin', controlScale: 'gauge',
+};
 
 type Props = {
   question: Question;
@@ -76,7 +84,6 @@ const HINTS: Record<string, string> = {
   controlScale: 'No wrong answer. This is your starting line.',
 };
 
-const INK = '#1B1B1F';
 
 /** Answer pill: soft grey, centred label; fills with ink once chosen. */
 function OptionButton({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void; tile?: boolean; index?: number }) {
@@ -267,6 +274,11 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       style={styles.block}
     >
       <View style={styles.promptArea}>
+      {question.kind !== 'static' && question.kind !== 'review' && (
+        <Animated.View entering={FadeIn.duration(500)} style={styles.art}>
+          <LineArt name={QUESTION_ART[question.id] ?? 'phoneLock'} height={170} />
+        </Animated.View>
+      )}
       {EYEBROWS[question.id] ? (
         <View style={styles.eyebrow}>
           <Text style={styles.eyebrowText}>{EYEBROWS[question.id]}</Text>
@@ -419,7 +431,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             step={1}
             value={sliderVal}
             onValueChange={setSliderVal}
-            minimumTrackTintColor={INK}
+            minimumTrackTintColor={HIGHLIGHT}
             maximumTrackTintColor="rgba(27,27,31,0.15)"
             thumbTintColor={INK}
           />
@@ -455,18 +467,19 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 }
 
 const styles = StyleSheet.create({
-  promptArea: { flexGrow: 1, minHeight: 280, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 28, paddingVertical: 28 },
-  answerPanel: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 18, paddingBottom: 22 },
+  promptArea: { flexGrow: 1, justifyContent: 'flex-end', alignItems: 'stretch', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
+  art: { alignSelf: 'stretch', marginBottom: 18 },
+  answerPanel: { paddingHorizontal: 19, paddingTop: 4, paddingBottom: 18 },
   answerPanelIdle: { backgroundColor: 'transparent' },
   pillCell: { width: '50%', padding: 5 },
   pill: {
-    minHeight: 56, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 12,
-    backgroundColor: '#EDEDEF', alignItems: 'center', justifyContent: 'center',
+    minHeight: 54, borderRadius: 27, paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: INK, alignItems: 'center', justifyContent: 'center',
   },
-  pillSelected: { backgroundColor: INK },
+  pillSelected: { backgroundColor: '#3A3D42', borderColor: '#3A3D42' },
   pillText: { color: INK, fontFamily: fonts.medium, fontSize: 15, fontWeight: '500', textAlign: 'center' },
-  inkBtn: { height: 54, borderRadius: 16, backgroundColor: INK, alignItems: 'center', justifyContent: 'center' },
-  inkBtnText: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 16, fontWeight: '600' },
+  inkBtn: { height: 56, borderRadius: 28, backgroundColor: '#3A3D42', alignItems: 'center', justifyContent: 'center' },
+  inkBtnText: { color: '#FFFFFF', fontFamily: fonts.medium, fontSize: 17, fontWeight: '500' },
   block: {
     flexGrow: 1,
     width: '100%',
@@ -488,21 +501,21 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: 26,
     fontWeight: '700',
-    textAlign: 'center',
+    textAlign: 'left',
     alignSelf: 'stretch',
     lineHeight: 33,
     letterSpacing: -0.5,
   },
   eyebrow: {
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(27,27,31,0.07)',
+    backgroundColor: 'rgba(46,49,54,0.07)',
     marginBottom: 14,
   },
   eyebrowText: { color: 'rgba(27,27,31,0.6)', fontSize: 11, fontWeight: '800', letterSpacing: 1.4 },
-  promptEmphasis: { color: INK, textDecorationLine: 'underline' },
+  promptEmphasis: { color: HIGHLIGHT },
   fullWidth: {
     width: '100%',
     alignSelf: 'stretch',
@@ -541,7 +554,8 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     paddingTop: 18, paddingBottom: 22, paddingHorizontal: 20,
     borderRadius: 24,
-    backgroundColor: '#F4F4F6',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5, borderColor: INK,
     marginBottom: 10,
   },
   sliderTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
@@ -554,10 +568,10 @@ const styles = StyleSheet.create({
   meter: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, marginTop: 20, height: 48 },
   meterBar: { flex: 1, borderRadius: 4, backgroundColor: 'rgba(27,27,31,0.08)' },
   meterOn: { backgroundColor: 'rgba(27,27,31,0.35)' },
-  meterCurrent: { backgroundColor: INK },
+  meterCurrent: { backgroundColor: HIGHLIGHT },
   sliderEnds: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -4 },
   sliderEndText: { color: 'rgba(27,27,31,0.45)', fontSize: 12, fontWeight: '600' },
-  hint: { color: 'rgba(27,27,31,0.6)', fontSize: 14, marginTop: 14, textAlign: 'center' },
+  hint: { color: INK_DIM, fontSize: 15.5, lineHeight: 22, marginTop: 12, textAlign: 'left' },
   rowEmoji: { marginRight: 12 },
   tileEmoji: { marginBottom: 10 },
   tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0, marginHorizontal: -4 },

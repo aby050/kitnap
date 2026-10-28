@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ImageManipulator, FlipType, SaveFormat } from 'expo-image-manipulator';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { GradientButton } from '../components/ui';
+import { CardPanel, INK, INK_DIM, INK_FAINT, InkButton, PastelCard, PILL, TINTS } from './PastelCard';
 import { GoalData } from '../data/goal';
 import { palette } from '../design/tokens';
 import Icon from '../ui/Icon';
@@ -107,7 +107,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <PastelCard tint={TINTS.mint}>
       <KeyboardAware contentContainerStyle={styles.scrollBody}>
         <View style={styles.body}>
           <Animated.Text entering={FadeInDown.duration(420)} style={styles.heading}>
@@ -124,7 +124,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
                 <Image source={{ uri: photoUri }} style={styles.shotImg} />
               ) : (
                 <View style={styles.shotEmpty}>
-                  <Icon name="camera" size={34} color={palette.textSecondary} strokeWidth={1.6} />
+                  <Icon name="camera" size={34} color={INK_DIM} strokeWidth={1.6} />
                   <Text style={styles.shotHint}>Tap to take it</Text>
                 </View>
               )}
@@ -132,7 +132,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
 
             {photoUri ? (
               <Pressable onPress={takePhoto} style={styles.retake} hitSlop={8}>
-                <Icon name="refresh" size={14} color={palette.accent} strokeWidth={2} />
+                <Icon name="refresh" size={14} color={INK} strokeWidth={2} />
                 <Text style={styles.retakeText}>Retake</Text>
               </Pressable>
             ) : null}
@@ -157,7 +157,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
             <Icon
               name={showDetails ? 'chevronUp' : 'chevronDown'}
               size={15}
-              color={palette.textTertiary}
+              color={INK_DIM}
               strokeWidth={2}
             />
           </Pressable>
@@ -168,7 +168,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
                 value={line}
                 onChangeText={setLine}
                 placeholder="e.g. my evenings back"
-                placeholderTextColor={palette.textTertiary}
+                placeholderTextColor={INK_DIM}
                 style={styles.input}
                 maxLength={80}
               />
@@ -177,7 +177,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
                   value={deadlineName}
                   onChangeText={setDeadlineName}
                   placeholder="Exam, launch, trip…"
-                  placeholderTextColor={palette.textTertiary}
+                  placeholderTextColor={INK_DIM}
                   style={[styles.input, styles.deadlineInput]}
                 />
                 <Pressable
@@ -203,7 +203,7 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                     minimumDate={new Date()}
                     onChange={onPickDate}
-                    themeVariant="dark"
+                    themeVariant="light"
                   />
                   {Platform.OS === 'ios' && (
                     <Pressable onPress={() => setDatePickerOpen(false)} style={styles.pickerDone}>
@@ -221,8 +221,8 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
           ) : null}
         </View>
 
-        <View style={styles.ctaWrap}>
-          <GradientButton
+        <CardPanel>
+          <InkButton
             label={photoUri ? 'Continue' : 'Skip for now'}
             onPress={() =>
               onContinue({
@@ -233,9 +233,9 @@ export default function GoalScreen({ onContinue }: { onContinue: (goal: GoalData
               })
             }
           />
-        </View>
+        </CardPanel>
       </KeyboardAware>
-    </SafeAreaView>
+    </PastelCard>
   );
 }
 
@@ -243,17 +243,17 @@ const SHOT = 214;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, gap: 16 },
-  heading: { color: palette.text, fontSize: 25, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
-  sub: { color: palette.textSecondary, fontSize: 15, textAlign: 'center', lineHeight: 22, maxWidth: 300 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 24, gap: 16 },
+  heading: { color: INK, fontSize: 32, fontWeight: '800', textAlign: 'center', lineHeight: 33 },
+  sub: { color: INK_DIM, fontSize: 15, textAlign: 'center', lineHeight: 22, maxWidth: 300 },
   shotWrap: { alignItems: 'center', gap: 12, marginTop: 6 },
   shot: {
     width: SHOT,
     height: SHOT,
     borderRadius: SHOT / 2,
-    backgroundColor: palette.glass,
+    backgroundColor: 'rgba(255,255,255,0.55)',
     borderWidth: 1.5,
-    borderColor: palette.borderStrong,
+    borderColor: 'rgba(27,27,31,0.25)',
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
@@ -261,37 +261,37 @@ const styles = StyleSheet.create({
   },
   shotImg: { width: '100%', height: '100%' },
   shotEmpty: { alignItems: 'center', gap: 10 },
-  shotHint: { color: palette.textTertiary, fontSize: 13.5, fontWeight: '600' },
+  shotHint: { color: INK_DIM, fontSize: 13.5, fontWeight: '600' },
   retake: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  retakeText: { color: palette.accent, fontSize: 13.5, fontWeight: '700' },
+  retakeText: { color: INK, fontSize: 13.5, fontWeight: '700' },
   denied: {
-    color: palette.textTertiary,
+    color: INK_DIM,
     fontSize: 12.5,
     lineHeight: 18,
     textAlign: 'center',
     maxWidth: 300,
   },
-  libraryLink: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
+  libraryLink: { color: INK_DIM, fontSize: 13.5, fontWeight: '600' },
   detailsToggle: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  detailsToggleText: { color: palette.textTertiary, fontSize: 13, fontWeight: '600' },
+  detailsToggleText: { color: INK_DIM, fontSize: 13, fontWeight: '600' },
   details: { width: '100%', maxWidth: 320, gap: 10 },
   input: {
     width: '100%',
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius: 24,
-    backgroundColor: palette.glass,
-    color: palette.text,
+    backgroundColor: '#FFFFFF',
+    color: INK,
     fontSize: 16,
   },
   scrollBody: { flexGrow: 1, justifyContent: 'center' },
   dateField: { justifyContent: 'center' },
-  dateValue: { color: palette.text, fontSize: 14.5 },
-  datePlaceholder: { color: palette.textTertiary, fontSize: 14.5 },
+  dateValue: { color: INK, fontSize: 14.5 },
+  datePlaceholder: { color: INK_DIM, fontSize: 14.5 },
   pickerDone: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 6 },
-  pickerDoneText: { color: palette.accent, fontSize: 15, fontWeight: '700' },
+  pickerDoneText: { color: INK, fontSize: 15, fontWeight: '700' },
   deadlineRow: { flexDirection: 'row', gap: 8 },
   deadlineInput: { flex: 1, fontSize: 14.5, paddingVertical: 13 },
-  deadlinePreview: { color: palette.accent, fontSize: 13, lineHeight: 19 },
+  deadlinePreview: { color: INK, fontSize: 13, lineHeight: 19 },
   ctaWrap: { paddingHorizontal: 22, paddingBottom: 14 },
 });
