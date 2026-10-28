@@ -21,6 +21,7 @@ import {
   Nunito_900Black,
 } from '@expo-google-fonts/nunito';
 import SplashFlow from './src/onboarding/SplashFlow';
+import MascotSplash from './src/onboarding/MascotSplash';
 import IntroStories from './src/onboarding/IntroStories';
 import UsageRevealScreen from './src/onboarding/UsageRevealScreen';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
@@ -133,6 +134,8 @@ export default function App() {
   });
 
   const [stage, setStage] = useState<Stage>('loading');
+  // The mascot intro plays once per launch, over whatever loads underneath.
+  const [showMascot, setShowMascot] = useState(true);
   const [purchaseResult, setPurchaseResult] = useState<PurchaseResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [themeKey, setThemeKey] = useState<ThemeKey>('quiet');
@@ -393,7 +396,7 @@ export default function App() {
       <SafeAreaProvider>
         <View style={styles.root}>
           <PersistentBackground />
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
 
           {stage === 'splash' && <IntroStories onDone={() => setStage('onboarding')} />}
 
@@ -568,6 +571,7 @@ export default function App() {
             />
           )}
 
+          {showMascot && <MascotSplash onDone={() => setShowMascot(false)} />}
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
