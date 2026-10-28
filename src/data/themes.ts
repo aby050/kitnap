@@ -125,7 +125,7 @@ export const INTENSITIES: Intensity[] = [
     settingsDelay: 'Takes a day',
     dailyCap: '3 a day, plus one emergency',
     challengeKind: 'activity',
-    challengeTypes: 'Real movement — camera counts reps when it can, counted by you otherwise',
+    challengeTypes: 'A short question, a quick sum or a slow breath',
   },
 ];
 

@@ -3,7 +3,6 @@ import { StyleSheet, Text, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { fonts } from '../design/tokens';
-import { InkButton } from './PastelCard';
 
 /** The launch intro is the designer's own animation, played once as-is. */
 const SPLASH = require('../../assets/splash.gif');
@@ -16,27 +15,25 @@ const READ_MS = 900;
 
 export default function MascotSplash({
   onDone,
-  waitForStart = false,
 }: {
   onDone: () => void;
-  /** First launch: the animation keeps looping and the screen stays until
-   *  Get Started is tapped. Returning users get the short automatic version. */
-  waitForStart?: boolean;
 }) {
   const { width } = useWindowDimensions();
-  const wait = useRef(waitForStart);
-  wait.current = waitForStart;
-
+  // Always call the latest onDone: the app's stage is still loading when
+  // the splash mounts, and the hand-off depends on what it resolved to.
+  const done = useRef(onDone);
+  done.current = onDone;
   useEffect(() => {
-    const t = setTimeout(() => {
-      if (!wait.current) onDone();
-    }, LOOP_MS + READ_MS);
+    const t = setTimeout(() => done.current(), LOOP_MS + READ_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <Animated.View exiting={FadeOut.duration(350)} style={styles.root} pointerEvents={waitForStart ? 'auto' : 'none'}>
+    <Animated.View exiting={FadeOut.duration(350)} style={styles.root} pointerEvents="none">
+      <Animated.Text entering={FadeInDown.duration(600)} style={styles.brand}>
+        Kitnap
+      </Animated.Text>
       <Image source={SPLASH} style={{ width, height: width * 0.75 }} contentFit="contain" autoplay />
       {/* Lands once the cat has spotted the mouse: the scroll is the cat,
           your time is the mouse. */}
@@ -46,11 +43,6 @@ export default function MascotSplash({
           <Text style={styles.accent}>Don't let your time get caught.</Text>
         </Text>
       </Animated.View>
-      {waitForStart && (
-        <Animated.View entering={FadeInDown.delay(2400).duration(500)} style={styles.cta}>
-          <InkButton label="Get Started" onPress={onDone} />
-        </Animated.View>
-      )}
     </Animated.View>
   );
 }
@@ -70,5 +62,5 @@ const styles = StyleSheet.create({
   copy: { position: 'absolute', bottom: '20%', left: 16, right: 16 },
   line: { color: '#2E3136', fontFamily: fonts.bold, fontSize: 18, lineHeight: 27, textAlign: 'center' },
   accent: { color: '#E8821A' },
-  cta: { position: 'absolute', bottom: 40, left: 24, right: 24 },
+  brand: { position: 'absolute', top: '22%', color: '#2E3136', fontFamily: fonts.extrabold, fontSize: 44, letterSpacing: -1 },
 });

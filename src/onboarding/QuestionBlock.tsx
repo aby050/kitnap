@@ -97,7 +97,7 @@ function OptionButton({ label, selected, onPress }: { label: string; selected: b
         onPress={onPress}
         style={[styles.pill, selected && styles.pillSelected]}
       >
-        <Text style={[styles.pillText, selected && { color: '#FFFFFF' }]}>{label}</Text>
+        <Text numberOfLines={2} style={[styles.pillText, selected && { color: '#FFFFFF' }]}>{label}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -276,7 +276,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       <View style={styles.promptArea}>
       {question.kind !== 'static' && question.kind !== 'review' && (
         <Animated.View entering={FadeIn.duration(500)} style={styles.art}>
-          <LineArt name={QUESTION_ART[question.id] ?? 'phoneLock'} height={170} />
+          <LineArt name={QUESTION_ART[question.id] ?? 'phoneLock'} height={200} />
         </Animated.View>
       )}
       {EYEBROWS[question.id] ? (
@@ -467,17 +467,18 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 }
 
 const styles = StyleSheet.create({
-  promptArea: { flexGrow: 1, justifyContent: 'flex-end', alignItems: 'stretch', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 },
+  promptArea: { flexGrow: 1, justifyContent: 'center', alignItems: 'stretch', paddingHorizontal: 24, paddingTop: 16, paddingBottom: 20 },
   art: { alignSelf: 'stretch', marginBottom: 18 },
   answerPanel: { paddingHorizontal: 19, paddingTop: 4, paddingBottom: 18 },
   answerPanelIdle: { backgroundColor: 'transparent' },
   pillCell: { width: '50%', padding: 5 },
   pill: {
-    minHeight: 54, borderRadius: 27, paddingHorizontal: 14, paddingVertical: 12,
+    // Fixed height, so every answer box is the same size whatever its label.
+    height: 64, borderRadius: 22, paddingHorizontal: 12,
     backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: INK, alignItems: 'center', justifyContent: 'center',
   },
   pillSelected: { backgroundColor: '#3A3D42', borderColor: '#3A3D42' },
-  pillText: { color: INK, fontFamily: fonts.medium, fontSize: 15, fontWeight: '500', textAlign: 'center' },
+  pillText: { color: INK, fontFamily: fonts.semibold, fontSize: 15, lineHeight: 19, textAlign: 'center' },
   inkBtn: { height: 56, borderRadius: 28, backgroundColor: '#3A3D42', alignItems: 'center', justifyContent: 'center' },
   inkBtnText: { color: '#FFFFFF', fontFamily: fonts.medium, fontSize: 17, fontWeight: '500' },
   block: {

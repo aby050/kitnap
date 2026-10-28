@@ -147,7 +147,7 @@ export const QUESTIONS: Question[] = [
     id: 'matters',
     kind: 'choice',
     prompt: 'What are you **protecting**?',
-    options: ['Focus better', 'Sleep better', 'Be more present', 'Improve mental health', 'Other'],
+    options: ['Focus better', 'Sleep better', 'Be more present', 'Improve mental health'],
   },
   {
     id: 'slipWindow',

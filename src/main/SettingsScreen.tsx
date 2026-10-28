@@ -165,23 +165,10 @@ export default function SettingsScreen({
             onPress={onOpenBlockScreens}
           />
           <SettingRow
-            icon={<RowIcon name="clock" />}
-            title="Waiting Room"
-            subtitle="What you see while the gate counts down"
-            onPress={onOpenWaitingRoom}
-          />
-          <SettingRow
             icon={<RowIcon name="calendar" />}
             title="Schedules"
             subtitle="Windows that block on their own"
             onPress={onOpenSchedules}
-          />
-          <SettingRow
-            icon={<RowIcon name="image" />}
-            title="Appearance"
-            value={appearanceName}
-            subtitle="How the app looks"
-            onPress={onOpenAppearance}
             last
           />
         </Group>

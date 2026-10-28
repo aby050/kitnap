@@ -871,6 +871,151 @@ ART.shield = Watch;
 ART.bellPhone = BellPhone;
 ART.sun = Sun;
 
+/** Progress: the sprout slowly grows, opens a new leaf, then a flower blooms.
+ *  Then it rests, and grows again. */
+function Sprout() {
+  const g = useLoop(9000, Easing.inOut(Easing.quad));
+  const phase = (v: number, a: number, b: number) => {
+    'worklet';
+    return Math.min(1, Math.max(0, (v - a) / (b - a)));
+  };
+  const fade = (v: number) => {
+    'worklet';
+    return v > 0.9 ? 1 - (v - 0.9) / 0.1 : 1;
+  };
+  const stem = useAnimatedProps(() => {
+    const k = phase(g.value, 0, 0.3) * fade(g.value);
+    return { transform: `translate(0 ${150 * (1 - k)}) scale(1 ${Math.max(0.001, k)})` };
+  });
+  const leaf1 = useAnimatedProps(() => {
+    const k = phase(g.value, 0.2, 0.38) * fade(g.value);
+    return { opacity: k, transform: `translate(150 112) scale(${Math.max(0.001, k)}) translate(-150 -112)` };
+  });
+  const leaf2 = useAnimatedProps(() => {
+    const k = phase(g.value, 0.36, 0.54) * fade(g.value);
+    return { opacity: k, transform: `translate(150 96) scale(${Math.max(0.001, k)}) translate(-150 -96)` };
+  });
+  const leaf3 = useAnimatedProps(() => {
+    const k = phase(g.value, 0.5, 0.64) * fade(g.value);
+    return { opacity: k, transform: `translate(150 84) scale(${Math.max(0.001, k)}) translate(-150 -84)` };
+  });
+  const flower = useAnimatedProps(() => {
+    const k = phase(g.value, 0.62, 0.8) * fade(g.value);
+    return { opacity: k, transform: `translate(150 58) rotate(${(1 - k) * -40}) scale(${Math.max(0.001, k)}) translate(-150 -58)` };
+  });
+  return (
+    <G>
+      <Bricks x={22} y={60} />
+      <Path d="M30 170 C 80 160, 110 120, 150 120 S 230 70, 272 30" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" />
+      <Path d="M262 28 l12 0 -2 12" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+      <AG animatedProps={stem}>
+        <Path d="M150 150 C 150 120, 150 90, 150 66" stroke={S} strokeWidth={sw} strokeLinecap="round" fill="none" />
+      </AG>
+      <AG animatedProps={leaf1}>
+        <Path d="M150 112 C 130 112, 112 98, 108 78 C 130 78, 148 92, 150 112 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      </AG>
+      <AG animatedProps={leaf2}>
+        <Path d="M150 96 C 170 96, 190 82, 194 60 C 170 60, 152 76, 150 96 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      </AG>
+      <AG animatedProps={leaf3}>
+        <Path d="M150 84 C 138 84, 126 76, 122 62 C 136 62, 148 72, 150 84 Z" fill="#CFE8C4" stroke={S} strokeWidth={2.4} strokeLinejoin="round" />
+      </AG>
+      <AG animatedProps={flower}>
+        {[0, 72, 144, 216, 288].map((r) => (
+          <Circle key={r} cx={150 + Math.cos((r * Math.PI) / 180) * 11} cy={58 + Math.sin((r * Math.PI) / 180) * 11} r={9} fill="#F4A9A0" stroke={S} strokeWidth={2} />
+        ))}
+        <Circle cx={150} cy={58} r={7} fill={A} stroke={S} strokeWidth={2} />
+      </AG>
+      <Path d="M112 150 h76 l-8 60 h-60z" fill={P} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M106 150 h88" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Label x={60} y={196}>Day 1</Label>
+      <Label x={250} y={70}>Day 30</Label>
+    </G>
+  );
+}
+
+/** Settings: the cat sleeps on the face-down phone, breathing slowly; the
+ *  z's drift up and fade. */
+function SleepyCat() {
+  const breath = usePingPong(1900);
+  const z = useLoop(3200);
+  const body = useAnimatedProps(() => ({ transform: `translate(0 176) scale(1 ${1 + breath.value * 0.05}) translate(0 -176)` }));
+  const head = useAnimatedProps(() => ({ transform: `translate(0 ${-breath.value * 2.5})` }));
+  const z1 = useAnimatedProps(() => ({ opacity: 1 - z.value, transform: `translate(${z.value * 8} ${-z.value * 22})` }));
+  const z2 = useAnimatedProps(() => {
+    const v = (z.value + 0.5) % 1;
+    return { opacity: 1 - v, transform: `translate(${v * 8} ${-v * 22})` };
+  });
+  return (
+    <G>
+      <Path d="M40 12 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill={W} stroke={S} strokeWidth={1.6} />
+      <AG animatedProps={z1}><SvgText x={226} y={70} fill={S} fontFamily={fonts.bold} fontSize={18}>z</SvgText></AG>
+      <AG animatedProps={z2}><SvgText x={246} y={58} fill={S} fontFamily={fonts.bold} fontSize={24}>z</SvgText></AG>
+      <Rect x={50} y={176} width={200} height={26} rx={10} fill={S} />
+      <Rect x={58} y={180} width={184} height={8} rx={4} fill="#4A4E55" />
+      <AG animatedProps={body}>
+        <Path d="M70 176 C 60 120, 110 96, 160 98 C 210 100, 240 130, 230 176 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+        <Path d="M220 172 C 250 170, 262 150, 246 140" fill="none" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+        <Path d="M160 120 C 176 112, 196 116, 206 130" fill="none" stroke={A} strokeWidth={6} strokeLinecap="round" opacity={0.7} />
+      </AG>
+      <AG animatedProps={head}>
+        <Circle cx={106} cy={132} r={34} fill={W} stroke={S} strokeWidth={sw} />
+        <Path d="M80 112 L 76 82 L 100 100 Z M118 100 L 138 82 L 136 112 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+        <Path d="M82 92 L 84 102 M130 92 L 128 102" stroke="#F4A9A0" strokeWidth={4} strokeLinecap="round" />
+        <Path d="M90 132 q6 5 12 0 M110 132 q6 5 12 0" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+        <Circle cx={88} cy={144} r={4} fill="#F4A9A0" opacity={0.8} />
+        <Circle cx={126} cy={144} r={4} fill="#F4A9A0" opacity={0.8} />
+        <Path d="M104 142 l2 3 2 -3" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" />
+      </AG>
+    </G>
+  );
+}
+
+/** Bailouts: a cat sits holding the key and laughs — a little shake of the
+ *  shoulders, the key jiggling, "ha" popping out. The way out, kept friendly. */
+function KeyCat() {
+  const laugh = useLoop(520);
+  const ha = useLoop(2400);
+  const shake = useAnimatedProps(() => ({ transform: `rotate(${Math.sin(laugh.value * Math.PI * 2) * 2.5} 150 196)` }));
+  const key = useAnimatedProps(() => ({ transform: `rotate(${Math.sin(laugh.value * Math.PI * 2) * 8 - 18} 214 118)` }));
+  const ha1 = useAnimatedProps(() => ({ opacity: ha.value < 0.5 ? 1 - ha.value * 2 : 0, transform: `translate(0 ${-ha.value * 30})` }));
+  const ha2 = useAnimatedProps(() => {
+    const v = (ha.value + 0.5) % 1;
+    return { opacity: v < 0.5 ? 1 - v * 2 : 0, transform: `translate(0 ${-v * 30})` };
+  });
+  return (
+    <G>
+      <Bricks x={20} y={170} />
+      <Bricks x={254} y={168} />
+      <AG animatedProps={ha1}><SvgText x={64} y={70} fill={A} fontFamily={fonts.extrabold} fontSize={18}>ha</SvgText></AG>
+      <AG animatedProps={ha2}><SvgText x={86} y={50} fill={A} fontFamily={fonts.extrabold} fontSize={14}>ha</SvgText></AG>
+      <AG animatedProps={shake}>
+        <Path d="M150 196 C 108 196, 100 170, 106 140 C 112 112, 130 104, 150 104 C 170 104, 188 112, 194 140 C 200 170, 192 196, 150 196 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+        <Path d="M190 186 C 222 190, 232 168, 220 156" fill="none" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+        <Circle cx={150} cy={78} r={38} fill={W} stroke={S} strokeWidth={sw} />
+        <Path d="M120 60 L 116 26 L 142 46 Z M158 46 L 184 26 L 180 60 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+        <Path d="M122 38 L 126 50 M178 38 L 174 50" stroke="#F4A9A0" strokeWidth={4} strokeLinecap="round" />
+        <Path d="M130 74 q6 -7 12 0 M158 74 q6 -7 12 0" fill="none" stroke={S} strokeWidth={2.6} strokeLinecap="round" />
+        <Path d="M140 88 q10 14 20 0 z" fill="#E05A4F" stroke={S} strokeWidth={2.2} strokeLinejoin="round" />
+        <Circle cx={128} cy={90} r={4.5} fill="#F4A9A0" opacity={0.85} />
+        <Circle cx={172} cy={90} r={4.5} fill="#F4A9A0" opacity={0.85} />
+        <Path d="M132 150 C 140 140, 160 140, 168 150" fill="none" stroke={A} strokeWidth={5} strokeLinecap="round" opacity={0.6} />
+        <Path d="M184 128 C 196 124, 206 120, 212 116" fill="none" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+        <Circle cx={212} cy={116} r={8} fill={W} stroke={S} strokeWidth={2.4} />
+      </AG>
+      <AG animatedProps={key}>
+        <Circle cx={226} cy={104} r={14} fill={A} stroke={S} strokeWidth={sw} />
+        <Circle cx={226} cy={104} r={5} fill={W} stroke={S} strokeWidth={2} />
+        <Path d="M238 112 L 270 136 M258 128 l6 -8 M266 134 l6 -8" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      </AG>
+    </G>
+  );
+}
+
+ART.sprout = Sprout;
+ART.cat = SleepyCat;
+ART.door = KeyCat;
+
 /**
  * Every drawing pops in with a soft spring; after that only the part that
  * tells its story moves (see the scenes above), and dotted arrows flow.
@@ -894,7 +1039,7 @@ export default function LineArt({ name, height = 200 }: { name: ArtName; height?
   return (
     <FlowClock.Provider value={flow}>
       <Animated.View style={style}>
-        <Svg width="100%" height={height} viewBox="0 0 300 220">
+        <Svg width="100%" height={height} viewBox="-10 -32 320 262" preserveAspectRatio="xMidYMid meet">
           <Draw />
         </Svg>
       </Animated.View>

@@ -106,8 +106,8 @@ const INCLUDED: { icon: IconName; title: string; desc: string; plan?: boolean }[
   },
   {
     icon: 'activity',
-    title: 'Unlock by moving',
-    desc: 'The camera counts real reps. A quiz or a breathing pause if you would rather.',
+    title: 'A calm way back in',
+    desc: 'A short question, a quick sum or a slow breath before a blocked app opens.',
   },
   {
     icon: 'calendar',

@@ -12,7 +12,6 @@ import SettingsScreen from './SettingsScreen';
 import TimerScreen from './TimerScreen';
 import EmergencyTokensScreen from './EmergencyTokensScreen';
 import DeleteAccountScreen from './DeleteAccountScreen';
-import AppearanceScreen from './AppearanceScreen';
 import EssentialsScreen from './EssentialsScreen';
 // World feature — deprioritized per product decision (Kitnap-style apps don't
 // have a "world" concept; focus is the core Shield/Gate/timer loop instead).
@@ -22,7 +21,6 @@ import EssentialsScreen from './EssentialsScreen';
 // import LandmarksScreen from './LandmarksScreen';
 // import SeasonsScreen from './SeasonsScreen';
 import GuardianScreen from './GuardianScreen';
-import WaitingRoomScreen from './WaitingRoomScreen';
 import BlockScreensScreen from './BlockScreensScreen';
 import ScheduleEditorScreen from './ScheduleEditorScreen';
 import AccountScreen from './AccountScreen';
@@ -873,7 +871,8 @@ export default function MainApp({
   );
   const [schedules, setSchedules] = useState(persisted.schedules);
   const [gateReflections, setGateReflections] = useState(persisted.gateReflections);
-  const [waitingRoomFamilies, setWaitingRoomFamilies] = useState(persisted.waitingRoomFamilies);
+  // Waiting Room settings were removed; every gate family is always on.
+  const waitingRoomFamilies = undefined;
   const [appLimits, setAppLimits] = useState<AppLimit[]>(persisted.appLimits ?? []);
   const [emergencyTokens, setEmergencyTokens] = useState(persisted.emergencyTokens ?? startingEmergencyTokens());
   // Cheapest pack, by the store's own numeric price — comparing priceString
@@ -1314,9 +1313,7 @@ export default function MainApp({
              of their own — no memorising required. Guarding the door is the
              only thing that makes what is behind it mean anything. */
           onOpenGuardian={openGuardian}
-          onOpenWaitingRoom={() => setOverlay('waitingRoom')}
           onOpenBlockScreens={() => setOverlay('blockScreens')}
-          onOpenAppearance={() => setOverlay('appearance')}
           onOpenSchedules={() => setOverlay('schedules')}
           onOpenAccount={() => setOverlay('account')}
           accountLabel={account ? account.identifier : undefined}
@@ -1350,8 +1347,6 @@ export default function MainApp({
           }}
         />
       );
-    if (ov === 'appearance')
-      return <AppearanceScreen onBack={() => setOverlay('settings')} />;
     if (ov === 'deleteAccount')
       return (
         <DeleteAccountScreen
@@ -1485,17 +1480,6 @@ export default function MainApp({
             }
             setPendingGuardianTarget(null);
             setOverlay('settings');
-          }}
-        />
-      );
-    if (ov === 'waitingRoom')
-      return (
-        <WaitingRoomScreen
-          onBack={() => setOverlay('settings')}
-          initial={waitingRoomFamilies}
-          onSave={(families) => {
-            setWaitingRoomFamilies(families);
-            onPatch({ waitingRoomFamilies: families });
           }}
         />
       );

@@ -591,7 +591,6 @@ export default function App() {
 
           {showMascot && (
             <MascotSplash
-              waitForStart={stage === 'splash'}
               onDone={() => {
                 setShowMascot(false);
                 // First run: the splash hands over to the welcome and its

@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import LineArt, { ArtName } from './LineArt';
 
-const NAMES: ArtName[] = ['nightBed', 'gauge', 'chart', 'handPhone', 'shield', 'bellPhone', 'sun'];
+const NAMES: ArtName[] = ['sprout', 'cat', 'door', 'nightBed', 'gauge', 'chart', 'handPhone', 'shield', 'bellPhone', 'sun'];
 
 /** Dev-only (web `?art=1`): every animated scene on one page for review. */
 export default function ArtGallery() {

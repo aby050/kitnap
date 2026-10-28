@@ -32,7 +32,7 @@ function annualOf(offering?: PurchasesOffering | null): PurchasesPackage | null 
 const ROWS: { label: string; free: string; pro: string }[] = [
   { label: 'Blocking', free: 'Everything', pro: 'Everything' },
   { label: 'Emergency access', free: 'Free, always', pro: 'Free, always' },
-  { label: 'Unlock by moving', free: 'Yes', pro: 'Yes' },
+  { label: 'Calm unlock (quiz or breath)', free: 'Yes', pro: 'Yes' },
   { label: 'Bailouts', free: `${FREE_EMERGENCY_TOKENS}, forever`, pro: planBailoutLabel('$rc_annual') },
   { label: 'Guardian code', free: '—', pro: 'Yes' },
   { label: 'Schedules', free: '1', pro: 'Unlimited' },
