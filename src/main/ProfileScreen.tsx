@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.bold, fontSize: 34, lineHeight: 40, color: palette.text, marginTop: 8 },
   titleSub: { color: palette.textTertiary, fontFamily: fonts.medium, fontSize: 14, marginTop: 2, marginBottom: 4 },
   row: { flexDirection: 'row', gap: GAP },
-  half: { width: HALF_W, height: 188 },
+  half: { width: HALF_W, minHeight: 196 },
   tile: {
     backgroundColor: TILE_BG,
     borderWidth: 1.5,
