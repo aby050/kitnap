@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
 
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: space.lg, paddingTop: space.sm },
   segments: { flex: 1, flexDirection: 'row', gap: 5 },
-  segment: { flex: 1, height: 3, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.16)', overflow: 'hidden' },
+  segment: { flex: 1, height: 3, borderRadius: 999, backgroundColor: 'rgba(46,49,54,0.16)', overflow: 'hidden' },
   segmentFill: { height: '100%', width: '100%', backgroundColor: 'transparent' },
   segmentOn: { backgroundColor: palette.text },
   close: {
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(46,49,54,0.07)',
     borderWidth: 1,
     borderColor: palette.hairline,
   },

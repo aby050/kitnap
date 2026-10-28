@@ -86,7 +86,7 @@ export default function EmergencyDialer({
             </Text>
             {number.length > 0 && (
               <Pressable onPress={back} hitSlop={12} style={styles.backBtn} accessibilityLabel="Delete">
-                <Icon name="close" size={14} color={palette.textSecondary} />
+                <Icon name="close" size={14} color={'rgba(255,255,255,0.64)'} />
               </Pressable>
             )}
           </View>
@@ -143,11 +143,11 @@ const styles = StyleSheet.create({
     width: 38,
     height: 4,
     borderRadius: 2,
-    backgroundColor: palette.borderStrong,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     marginBottom: 14,
   },
-  title: { color: palette.text, fontSize: 20, fontWeight: '800' },
-  sub: { color: palette.textTertiary, fontSize: 13, marginTop: 4 },
+  title: { color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
+  sub: { color: 'rgba(255,255,255,0.44)', fontSize: 13, marginTop: 4 },
   readoutRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   readout: {
-    color: palette.text,
+    color: '#FFFFFF',
     fontSize: 32,
     fontWeight: '600',
     letterSpacing: 1.5,
@@ -176,13 +176,13 @@ const styles = StyleSheet.create({
     width: 76,
     height: 62,
     borderRadius: radius.base,
-    backgroundColor: palette.glass,
+    backgroundColor: 'rgba(255,255,255,0.09)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   keyPressed: { backgroundColor: palette.glassPressed },
-  keyDigit: { color: palette.text, fontSize: 24, fontWeight: '600' },
-  keyLetters: { color: palette.textTertiary, fontSize: 10, letterSpacing: 1.5, marginTop: 1 },
+  keyDigit: { color: '#FFFFFF', fontSize: 24, fontWeight: '600' },
+  keyLetters: { color: 'rgba(255,255,255,0.44)', fontSize: 10, letterSpacing: 1.5, marginTop: 1 },
   callBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -197,5 +197,5 @@ const styles = StyleSheet.create({
   callBtnOff: { opacity: 0.35 },
   callLabel: { color: '#04120C', fontSize: 16, fontWeight: '800' },
   cancel: { marginTop: 12, padding: 6 },
-  cancelText: { color: palette.textTertiary, fontSize: 14, fontWeight: '600' },
+  cancelText: { color: 'rgba(255,255,255,0.44)', fontSize: 14, fontWeight: '600' },
 });

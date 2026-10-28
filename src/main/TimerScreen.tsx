@@ -85,7 +85,7 @@ const SLIDE_PAD = 4;
 function FeatureTile({ name }: { name: IconName }) {
   return (
     <View style={styles.featureTile}>
-      <Icon name={name} size={16} color={palette.textSecondary} strokeWidth={1.6} />
+      <Icon name={name} size={16} color={'rgba(255,255,255,0.64)'} strokeWidth={1.6} />
     </View>
   );
 }
@@ -614,12 +614,9 @@ export default function TimerScreen({
               as one control group and put a calm informational button
               immediately next to the red one. */}
           <View style={[styles.cornerLeft, !chromeVisible && styles.chromeHidden]} pointerEvents={chromeVisible ? 'auto' : 'none'}>
-            <IconButton
-              name="shield"
-              onPress={() => setShowLockedApps(true)}
-              bordered
-              accessibilityLabel="What's locked"
-            />
+            <Pressable onPress={() => setShowLockedApps(true)} style={styles.videoIconBtn} accessibilityLabel="What's locked" hitSlop={6}>
+              <Icon name="shield" size={20} color="#FFFFFF" />
+            </Pressable>
           </View>
 
           <View style={[styles.cornerRight, !chromeVisible && styles.chromeHidden]} pointerEvents={chromeVisible ? 'auto' : 'none'}>
@@ -643,17 +640,18 @@ export default function TimerScreen({
                 Bailout or touch the daily emergency allowance — placing a call
                 is not an emergency, and charging for one would push people
                 toward the red button for something routine. */}
-            <Pill
-              label="Call"
-              icon="phone"
-              onPress={() => setCallPadOpen(true)}
-            />
-            <Pill
-              label="Emergency"
-              icon="phone"
-              tone="danger"
+            <Pressable onPress={() => setCallPadOpen(true)} style={styles.videoPill} accessibilityLabel="Call">
+              <Icon name="phone" size={14} color="#FFFFFF" />
+              <Text style={styles.videoPillText}>Call</Text>
+            </Pressable>
+            <Pressable
               onPress={() => (onEmergency ? onEmergency() : setShowEssentials(true))}
-            />
+              style={[styles.videoPill, { backgroundColor: '#E23A4E', borderColor: '#E23A4E' }]}
+              accessibilityLabel="Emergency"
+            >
+              <Icon name="phone" size={14} color="#FFFFFF" />
+              <Text style={styles.videoPillText}>Emergency</Text>
+            </Pressable>
           </View>
 
           <View style={styles.lockedBody}>
@@ -850,7 +848,7 @@ export default function TimerScreen({
                 <Text style={type.bodyStrong}>Essentials & emergency access</Text>
                 <Text style={[type.sub, styles.accessSub]}>Never blocked. Never charged.</Text>
               </View>
-              <Icon name="chevronRight" size={18} color={palette.textQuaternary} />
+              <Icon name="chevronRight" size={18} color={'rgba(255,255,255,0.28)'} />
             </View>
           </Card>
         )}
@@ -898,15 +896,15 @@ export default function TimerScreen({
                       <Text style={type.title2}>Block during this session</Text>
                       <Text style={[type.sub, styles.modalHeaderSub]}>What stays out of reach until the timer ends.</Text>
                     </View>
-                    <IconButton name="close" onPress={handleCancelStart} color={palette.textSecondary} bordered accessibilityLabel="Close" />
+                    <IconButton name="close" onPress={handleCancelStart} color={'rgba(255,255,255,0.64)'} bordered accessibilityLabel="Close" />
                   </View>
 
                   <View style={styles.searchBar}>
-                    <Icon name="search" size={16} color={palette.textTertiary} />
+                    <Icon name="search" size={16} color={'rgba(255,255,255,0.44)'} />
                     <TextInput
                       style={styles.searchInput}
                       placeholder="Search apps"
-                      placeholderTextColor={palette.textTertiary}
+                      placeholderTextColor={'rgba(255,255,255,0.44)'}
                       value={searchQuery}
                       onChangeText={setSearchQuery}
                       clearButtonMode="while-editing"
@@ -952,7 +950,7 @@ export default function TimerScreen({
                       <View style={styles.groupCard}>
                         <View style={styles.groupHeadRow}>
                           <View style={styles.browserTile}>
-                            <Icon name="globe" size={22} color={palette.textSecondary} strokeWidth={1.6} />
+                            <Icon name="globe" size={22} color={'rgba(255,255,255,0.64)'} strokeWidth={1.6} />
                           </View>
                           <View style={styles.groupHeadText}>
                             <Text style={type.bodyStrong}>Browser apps</Text>
@@ -985,7 +983,7 @@ export default function TimerScreen({
                             style={styles.collapseToggle}
                             hitSlop={6}
                           >
-                            <Icon name={distractingCollapsed ? 'chevronRight' : 'chevronDown'} size={18} color={palette.textTertiary} />
+                            <Icon name={distractingCollapsed ? 'chevronRight' : 'chevronDown'} size={18} color={'rgba(255,255,255,0.44)'} />
                             <Text style={type.bodyStrong}>Distracting apps</Text>
                           </Pressable>
                           <Toggle
@@ -1227,6 +1225,16 @@ function UnlockAppConfirm({
 }
 
 const styles = StyleSheet.create({
+  /* Controls over the video stay white glass in the paper theme. */
+  videoIconBtn: {
+    width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.28)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+  },
+  videoPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 14, borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.28)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+  },
+  videoPillText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
   shrink: { flex: 1, minWidth: 0 },
   content: { flexGrow: 1, paddingHorizontal: space.gutter, paddingBottom: space.tabClearance },
 
@@ -1235,9 +1243,9 @@ const styles = StyleSheet.create({
   voice: { marginTop: space.base },
 
   hero: { alignItems: 'center', marginTop: space.xl },
-  heroCap: { marginBottom: space.sm, color: palette.textTertiary },
-  bigTime: { ...type.hero, fontSize: 60, letterSpacing: -2, color: palette.text },
-  colon: { color: palette.textTertiary },
+  heroCap: { marginBottom: space.sm, color: 'rgba(255,255,255,0.44)' },
+  bigTime: { ...type.hero, fontSize: 60, letterSpacing: -2, color: '#FFFFFF' },
+  colon: { color: 'rgba(255,255,255,0.44)' },
   unitLine: { marginTop: space.xs },
 
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.lg, marginTop: space.xl },
@@ -1246,12 +1254,12 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.glass,
+    borderColor: 'rgba(255,255,255,0.11)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepHint: { minWidth: 76, textAlign: 'center', color: palette.textTertiary },
+  stepHint: { minWidth: 76, textAlign: 'center', color: 'rgba(255,255,255,0.44)' },
 
   spacer: { flex: 1, minHeight: space.xl },
 
@@ -1285,9 +1293,9 @@ const styles = StyleSheet.create({
     width: '100%',
     height: SLIDE_TRACK_H,
     borderRadius: SLIDE_TRACK_H / 2,
-    backgroundColor: palette.glass,
+    backgroundColor: 'rgba(255,255,255,0.09)',
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(255,255,255,0.11)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SLIDE_PAD,
@@ -1315,7 +1323,7 @@ const styles = StyleSheet.create({
     right: 0,
     textAlign: 'center',
     ...type.overline,
-    color: palette.textTertiary,
+    color: 'rgba(255,255,255,0.44)',
   },
 
   accessCard: { marginTop: space.base },
@@ -1413,7 +1421,7 @@ const styles = StyleSheet.create({
   },
   lockedName: { color: '#FFFFFF', fontFamily: fonts.semibold, fontSize: 18 },
   lockedUnit: { color: 'rgba(255,255,255,0.72)', fontFamily: fonts.regular, fontSize: 13.5, marginBottom: space.base },
-  lockedLabel: { color: palette.textTertiary },
+  lockedLabel: { color: 'rgba(255,255,255,0.44)' },
   lockedMotivation: { color: 'rgba(255,255,255,0.9)', textAlign: 'center', maxWidth: 280, textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 8 },
 
   // ── Cancel confirm ──
@@ -1441,18 +1449,18 @@ const styles = StyleSheet.create({
   lockedSheetSub: { ...type.sub, marginBottom: space.lg },
   lockedGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
   lockedGridItem: { width: '25%', alignItems: 'center', gap: space.xs },
-  lockedGridLabel: { ...type.caption, color: palette.textTertiary, maxWidth: '92%', textAlign: 'center' },
+  lockedGridLabel: { ...type.caption, color: 'rgba(255,255,255,0.44)', maxWidth: '92%', textAlign: 'center' },
   unlockGlyphWrap: { alignItems: 'center', marginBottom: space.md },
   confirmWaitWrap: { alignItems: 'center', marginTop: space.sm, marginBottom: space.xs },
-  confirmWaitValue: { ...type.title1, color: palette.text },
-  confirmWaitUnits: { ...type.caption, color: palette.textTertiary },
+  confirmWaitValue: { ...type.title1, color: '#FFFFFF' },
+  confirmWaitUnits: { ...type.caption, color: 'rgba(255,255,255,0.44)' },
   confirmOverlay: { flex: 1, backgroundColor: palette.scrim, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xxl },
   confirmBox: {
     width: '100%',
     maxWidth: 344,
     backgroundColor: palette.surfaceRaised,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(255,255,255,0.11)',
     borderRadius: radius.xxl,
     padding: space.xl,
     gap: space.md,
@@ -1471,14 +1479,14 @@ const styles = StyleSheet.create({
     height: '92%',
     paddingTop: space.sm,
   },
-  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: palette.borderStrong, marginBottom: space.sm },
+  grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)', marginBottom: space.sm },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: space.gutter, paddingVertical: space.md, gap: space.md },
   modalHeaderSub: { marginTop: space.xxs, maxWidth: 240 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    backgroundColor: palette.glass,
+    backgroundColor: 'rgba(255,255,255,0.09)',
     borderRadius: radius.md,
     marginHorizontal: space.gutter,
     marginBottom: space.base,
@@ -1494,7 +1502,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surfaceRaised,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: palette.hairline,
+    borderColor: 'rgba(255,255,255,0.07)',
     padding: space.base,
     gap: space.md,
   },
@@ -1505,8 +1513,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.glass,
+    borderColor: 'rgba(255,255,255,0.11)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1517,12 +1525,12 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: palette.hairline,
-    backgroundColor: palette.glass,
+    borderColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subLabel: { flex: 1, ...type.callout, color: palette.textSecondary },
+  subLabel: { flex: 1, ...type.callout, color: 'rgba(255,255,255,0.64)' },
   categoryHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   collapseToggle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flex: 1, paddingVertical: space.xxs },
   appRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.xxs },
@@ -1534,7 +1542,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: palette.surface,
     borderTopWidth: 1,
-    borderTopColor: palette.hairline,
+    borderTopColor: 'rgba(255,255,255,0.07)',
     paddingHorizontal: space.gutter,
     paddingTop: space.md,
     paddingBottom: Platform.OS === 'ios' ? space.xxl : space.lg,

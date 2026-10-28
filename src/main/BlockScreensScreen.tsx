@@ -39,7 +39,7 @@ export default function BlockScreensScreen({
                 <Pressable onPress={() => onSelectTheme(t.key)} style={[styles.themeCard, active && styles.themeCardActive]}>
                   <LinearGradient colors={t.palette} style={StyleSheet.absoluteFill} />
                   <View style={styles.themeGlyph}>
-                    <Icon name={t.mark} size={22} color="#FFFFFF" strokeWidth={1.5} />
+                    <Icon name={t.mark} size={22} color="#2E3136" strokeWidth={1.5} />
                   </View>
                   <Text style={styles.themeName}>{t.name}</Text>
                 </Pressable>
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(46,49,54,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -97,12 +97,12 @@ const styles = StyleSheet.create({
   },
   themeCardActive: { borderColor: palette.accent },
   themeGlyph: { position: 'absolute', top: 12, left: 14 },
-  themeName: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  card: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 22, overflow: 'hidden' },
+  themeName: { color: '#2E3136', fontSize: 15, fontWeight: '800' },
+  card: { backgroundColor: 'rgba(46,49,54,0.045)', borderRadius: 22, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
-  toggleRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.07)' },
+  toggleRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(46,49,54,0.07)' },
   toggleTitle: { color: palette.text, fontSize: 15.5, fontWeight: '600' },
   toggleDesc: { color: palette.textSecondary, fontSize: 12.5, marginTop: 4, lineHeight: 17 },
-  note: { marginTop: 20, padding: 16, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)' },
+  note: { marginTop: 20, padding: 16, borderRadius: 18, backgroundColor: 'rgba(46,49,54,0.04)' },
   noteText: { color: palette.textTertiary, fontSize: 13, lineHeight: 19 },
 });

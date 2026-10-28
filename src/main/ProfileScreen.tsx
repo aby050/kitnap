@@ -36,8 +36,8 @@ const GAP = 12;
 const CONTENT_W = width - GUTTER * 2;
 const HALF_W = (CONTENT_W - GAP) / 2;
 const HEATMAP_WEEKS = 12;
-const TILE_BG = 'rgba(255,255,255,0.055)';
-const TILE_BORDER = 'rgba(255,255,255,0.09)';
+const TILE_BG = 'rgba(46,49,54,0.055)';
+const TILE_BORDER = 'rgba(46,49,54,0.09)';
 
 function compactDuration(minutes: number): string {
   if (minutes >= 6000) return `${Math.round(minutes / 60)}h`;
@@ -91,7 +91,7 @@ function StreakRing({ value, next, size = 96 }: { value: number; next: number; s
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
         <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
-          <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.12)" strokeWidth={stroke} fill="none" />
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(46,49,54,0.12)" strokeWidth={stroke} fill="none" />
           <Circle
             cx={size / 2}
             cy={size / 2}
@@ -132,7 +132,7 @@ function DotHeat({ data, cols }: { data: { value: number; today?: boolean }[]; c
                   width: dot,
                   height: dot,
                   borderRadius: dot / 2,
-                  backgroundColor: !cell ? 'transparent' : on ? `rgba(143,214,148,${a})` : 'rgba(255,255,255,0.13)',
+                  backgroundColor: !cell ? 'transparent' : on ? `rgba(143,214,148,${a})` : 'rgba(46,49,54,0.13)',
                   borderWidth: cell?.today ? 1.5 : 0,
                   borderColor: palette.text,
                 }}
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   dotCol: { gap: 6 },
   weekBars: { flexDirection: 'row', gap: 6, height: 74 },
   weekCol: { flex: 1, alignItems: 'center', gap: 4 },
-  weekTrack: { flex: 1, width: '100%', borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'flex-end', overflow: 'hidden' },
+  weekTrack: { flex: 1, width: '100%', borderRadius: 5, backgroundColor: 'rgba(46,49,54,0.08)', justifyContent: 'flex-end', overflow: 'hidden' },
   weekFill: { width: '100%', borderRadius: 5, backgroundColor: palette.accent },
   weekLbl: { color: palette.textQuaternary, fontSize: 10, fontFamily: fonts.medium },
   medalRow: { flexDirection: 'row', gap: 6 },

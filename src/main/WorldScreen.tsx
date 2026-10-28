@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10, marginTop: 26 },
   tile: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.045)',
+    backgroundColor: 'rgba(46,49,54,0.045)',
     borderRadius: 20,
     paddingVertical: 18,
     alignItems: 'center',
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: 'rgba(255,255,255,0.045)',
+    backgroundColor: 'rgba(46,49,54,0.045)',
     borderRadius: 22,
     padding: 18,
     marginTop: 12,

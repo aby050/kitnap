@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: 'hidden',
   },
-  cardTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', lineHeight: 21 },
-  cardSubtitle: { color: 'rgba(255,255,255,0.72)', fontSize: 12.5, marginTop: 3 },
+  cardTitle: { color: '#2E3136', fontSize: 16, fontWeight: '800', lineHeight: 21 },
+  cardSubtitle: { color: 'rgba(46,49,54,0.72)', fontSize: 12.5, marginTop: 3 },
   // The light button from the reference: full-width, near-white, dark label —
   // the one bright element, so it reads as the action without a border.
   startPill: {
@@ -194,8 +194,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(46,49,54,0.22)',
+    backgroundColor: 'rgba(46,49,54,0.10)',
     alignItems: 'center',
     justifyContent: 'center',
   },

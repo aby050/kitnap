@@ -246,7 +246,7 @@ export default function WeeklyInsight({
               >
                 {/* Ambient glow leak overlay */}
                 <LinearGradient
-                  colors={[`${slide.accentColor}33`, 'rgba(0,0,0,0)']}
+                  colors={[`${slide.accentColor}33`, 'rgba(255,255,255,0)']}
                   start={{ x: 0, y: 0.3 }}
                   end={{ x: 0.8, y: 0.7 }}
                   style={styles.lightLeak}
@@ -263,7 +263,7 @@ export default function WeeklyInsight({
                   <View style={styles.headerRight}>
                     <View style={styles.dropdownBtn}>
                       <Text style={styles.dropdownBtnText}>This Week</Text>
-                      <Icon name="chevronDown" size={12} color="#FFFFFF" strokeWidth={2.5} />
+                      <Icon name="chevronDown" size={12} color="#2E3136" strokeWidth={2.5} />
                     </View>
                   </View>
                 </View>
@@ -273,7 +273,7 @@ export default function WeeklyInsight({
                   <Text style={styles.metricValue}>{slide.value}</Text>
                   {slide.arrow ? (
                     <View style={styles.metricArrow}>
-                      <Icon name={slide.arrow === '↗' ? 'trendUp' : 'trendDown'} size={26} color="#FFFFFF" strokeWidth={2.2} />
+                      <Icon name={slide.arrow === '↗' ? 'trendUp' : 'trendDown'} size={26} color="#2E3136" strokeWidth={2.2} />
                     </View>
                   ) : null}
                 </View>
@@ -344,7 +344,7 @@ export default function WeeklyInsight({
           </View>
           <View>
             <Text style={styles.miniCardValue}>{d.distractionsBlocked}</Text>
-            <Text style={[styles.miniCardHint, { color: 'rgba(255, 255, 255, 0.4)' }]}>
+            <Text style={[styles.miniCardHint, { color: 'rgba(46,49,54, 0.4)' }]}>
               {d.hardUnlocks > 0 ? `${d.hardUnlocks} unlocks` : '0 unlocks'}
             </Text>
           </View>
@@ -357,7 +357,7 @@ export default function WeeklyInsight({
           </View>
           <View>
             <Text style={styles.miniCardValue}>{d.streak} days</Text>
-            <Text style={[styles.miniCardHint, { color: 'rgba(255, 255, 255, 0.4)' }]}>
+            <Text style={[styles.miniCardHint, { color: 'rgba(46,49,54, 0.4)' }]}>
               {d.bestDayLabel ? `Best: ${d.bestDayLabel}` : 'Active'}
             </Text>
           </View>
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(46,49,54, 0.12)',
     justifyContent: 'space-between',
     overflow: 'hidden', // Contain the light leak overlay
   },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   cardTitle: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15,
     fontWeight: '700',
     marginLeft: 8,
@@ -478,13 +478,13 @@ const styles = StyleSheet.create({
     gap: 4,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: 'rgba(46,49,54, 0.25)',
     paddingVertical: 4,
     paddingHorizontal: 12,
     marginRight: 8,
   },
   dropdownBtnText: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 12.5,
     fontWeight: '600',
   },
@@ -494,31 +494,31 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   metricValue: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 76,
     fontWeight: '800',
     letterSpacing: -2,
     lineHeight: 80,
   },
   metricArrow: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 28,
     lineHeight: 36,
     marginLeft: 4,
     marginTop: 8,
   },
   descText: {
-    color: 'rgba(255, 255, 255, 0.65)',
+    color: 'rgba(46,49,54, 0.65)',
     fontSize: 18,
     lineHeight: 25,
     marginTop: 10,
   },
   descHighlight: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontWeight: '700',
   },
   tipText: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: 'rgba(46,49,54, 0.45)',
     fontSize: 13,
     lineHeight: 18,
     marginTop: 15,
@@ -533,7 +533,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(46,49,54, 0.2)',
     marginHorizontal: 4,
   },
   indicatorDotActive: {
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   sectionTitle: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 20,
     fontWeight: '800',
     marginTop: 10,
@@ -556,10 +556,10 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   miniCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(46,49,54, 0.04)',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(46,49,54, 0.06)',
     padding: 16,
     width: '48.5%',
     height: 120,
@@ -574,12 +574,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   miniCardLabel: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'rgba(46,49,54, 0.5)',
     fontSize: 12,
     fontWeight: '600',
   },
   miniCardValue: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 19,
     fontWeight: '800',
     marginTop: 4,

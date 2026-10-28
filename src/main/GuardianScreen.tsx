@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   handoverNote: { color: palette.textSecondary, fontSize: 13.5, lineHeight: 19.5 },
   mismatch: { color: palette.danger, fontSize: 12.5, marginTop: 8, fontWeight: '600' },
   previewCard: {
-    backgroundColor: 'rgba(255,255,255,0.045)',
+    backgroundColor: 'rgba(46,49,54,0.045)',
     borderRadius: 20,
     padding: 18,
     marginTop: 20,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(46,49,54,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(46,49,54,0.05)',
     borderRadius: 20,
     padding: 18,
     marginBottom: 20,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   codeHint: { color: palette.textSecondary, fontSize: 12.5, lineHeight: 18, marginTop: 10, textAlign: 'center' },
   confirmCard: { marginTop: 16, padding: 16, borderRadius: 18, backgroundColor: 'rgba(71,107,235,0.09)' },
   confirmTitle: { color: palette.accent, fontSize: 15, fontWeight: '700' },
-  confirmBody: { color: 'rgba(255,255,255,0.78)', fontSize: 13.5, lineHeight: 20, marginTop: 7 },
-  note: { marginTop: 26, padding: 16, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)' },
+  confirmBody: { color: 'rgba(46,49,54,0.78)', fontSize: 13.5, lineHeight: 20, marginTop: 7 },
+  note: { marginTop: 26, padding: 16, borderRadius: 18, backgroundColor: 'rgba(46,49,54,0.04)' },
   noteText: { color: palette.textTertiary, fontSize: 13, lineHeight: 19 },
 });

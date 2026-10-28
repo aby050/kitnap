@@ -183,7 +183,7 @@ export function Card({
 }) {
   const tones: Record<string, ViewStyle> = {
     neutral: {
-      backgroundColor: raised ? palette.surfaceHigh : palette.surface,
+      backgroundColor: raised ? palette.surfaceHigh : palette.surfaceRaised,
       borderColor: palette.border,
     },
     accent: { backgroundColor: palette.accentSoft, borderColor: palette.accentBorder },
@@ -335,7 +335,7 @@ export function Button({
             styles.btnOverlay,
             {
               backgroundColor:
-                filled || variant === 'secondary' ? 'rgba(0,0,0,0.16)' : palette.glass,
+                filled || variant === 'secondary' ? 'rgba(255,255,255,0.16)' : palette.glass,
             },
             press.overlay,
           ]}
@@ -1069,7 +1069,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rowSub: { marginTop: space.xxs },
-  rowOverlay: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.base },
+  rowOverlay: { backgroundColor: 'rgba(46,49,54,0.05)', borderRadius: radius.base },
   rowValue: { maxWidth: 130, textAlign: 'right' },
 
   statLabel: { marginBottom: space.sm },

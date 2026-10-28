@@ -183,7 +183,7 @@ export function IntensityBars({
           y1={height - 1}
           x2={width}
           y2={height - 1}
-          stroke="rgba(255, 255, 255, 0.08)"
+          stroke="rgba(46,49,54, 0.08)"
           strokeWidth={1}
         />
 
@@ -246,7 +246,7 @@ export function IntensityBars({
                 width={bw}
                 height={barH}
                 rx={cornerR}
-                fill={d.value > 0 ? `url(#${g}-good)` : 'rgba(255,255,255,0.10)'}
+                fill={d.value > 0 ? `url(#${g}-good)` : 'rgba(46,49,54,0.10)'}
               />
 
               {/* Specular highlight cap on top of active bars */}
@@ -337,7 +337,7 @@ export function CalendarHeatmap({
             key={`m${i}`}
             x={m.x}
             y={HEAD - 6}
-            fill="rgba(255,255,255,0.45)"
+            fill="rgba(46,49,54,0.45)"
             fontSize={10}
             fontWeight="700"
             letterSpacing={0.5}
@@ -352,7 +352,7 @@ export function CalendarHeatmap({
               key={`d${row}`}
               x={2}
               y={HEAD + row * (cell + gap) + cell / 2 + 3.5}
-              fill="rgba(255,255,255,0.35)"
+              fill="rgba(46,49,54,0.35)"
               fontSize={9.5}
               fontWeight="700"
             >
@@ -369,7 +369,7 @@ export function CalendarHeatmap({
           const t = d.value / max;
 
           // 4-stop emerald intensity
-          let fillColor = 'rgba(255,255,255,0.05)';
+          let fillColor = 'rgba(46,49,54,0.05)';
           let opacity = 1;
           if (d.flag) {
             fillColor = '#F0604A';
@@ -468,7 +468,7 @@ export function Donut({
           cx={c}
           cy={c}
           r={r}
-          stroke="rgba(255, 255, 255, 0.07)"
+          stroke="rgba(46,49,54, 0.07)"
           strokeWidth={thickness}
           fill="none"
         />
@@ -716,7 +716,7 @@ export function ActivityRings({
           const circ = 2 * Math.PI * r;
           const p = Math.max(0, Math.min(1.5, ring.progress));
           const dash = Math.min(circ, circ * p);
-          const bgStroke = ring.bg || 'rgba(255, 255, 255, 0.08)';
+          const bgStroke = ring.bg || 'rgba(46,49,54, 0.08)';
 
           return (
             <G key={i}>
@@ -793,7 +793,7 @@ export function MiniBarTrend({
             width={bw}
             height={bh}
             rx={bw / 2}
-            fill={v > 0 ? `url(#${g}-c)` : 'rgba(255,255,255,0.1)'}
+            fill={v > 0 ? `url(#${g}-c)` : 'rgba(46,49,54,0.1)'}
           />
         );
       })}

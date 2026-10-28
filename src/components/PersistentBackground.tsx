@@ -30,6 +30,8 @@ const BACKDROP_ROOM = 'winddown';
  * wanders on a longer cycle so the two never sync up and the bg never looks
  * like it's looping.
  */
+const PAPER_THEME = true;
+
 export default function PersistentBackground() {
   const drift = useSharedValue(0);
   const drift2 = useSharedValue(0);
@@ -74,6 +76,10 @@ export default function PersistentBackground() {
 
   const VideoLayer = getVideoLayer();
   const backdrop = mediaFor(BACKDROP_ROOM);
+
+  // Paper theme: one flat warm off-white page under every screen. The video,
+  // glows and brand rise below belonged to the dark theme.
+  if (PAPER_THEME) return <View style={[StyleSheet.absoluteFill, { backgroundColor: '#F1EFEB' }]} pointerEvents="none" />;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

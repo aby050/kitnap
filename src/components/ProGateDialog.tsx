@@ -57,7 +57,7 @@ export default function ProGateDialog({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.66)',
+    backgroundColor: 'rgba(255,255,255,0.66)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: space.gutter,

@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: 'rgba(46,49,54,0.18)',
     borderRadius: 0,
   },
   fallback: {

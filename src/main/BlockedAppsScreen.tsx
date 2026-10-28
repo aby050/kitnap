@@ -140,7 +140,7 @@ export default function BlockedAppsScreen({
               <Switch
                 value={blockedPackages.includes(app.packageName)}
                 onValueChange={() => toggle(app.packageName)}
-                trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
+                trackColor={{ true: palette.accent, false: 'rgba(46,49,54,0.2)' }}
                 thumbColor="#fff"
               />
             </View>
@@ -177,7 +177,7 @@ export default function BlockedAppsScreen({
                   <Switch
                     value={pausedPackages.includes(app.packageName)}
                     onValueChange={() => togglePause(app.packageName)}
-                    trackColor={{ true: palette.accent, false: 'rgba(255,255,255,0.2)' }}
+                    trackColor={{ true: palette.accent, false: 'rgba(46,49,54,0.2)' }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -315,7 +315,7 @@ export default function BlockedAppsScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 8 },
-  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(46,49,54,0.08)', alignItems: 'center', justifyContent: 'center' },
   headerGlyph: { color: palette.text, fontSize: 19 },
   headerTitle: { color: palette.text, fontSize: 18, fontWeight: '700' },
   scroll: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: space.tabClearance },
@@ -335,17 +335,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(46,49,54,0.12)',
   },
   stepOn: { borderColor: palette.accentBorder, backgroundColor: palette.accentSoft },
   stepText: { color: palette.textSecondary, fontSize: 13.5, fontWeight: '600' },
   stepTextOn: { color: palette.accent, fontWeight: '700' },
-  group: { backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 20, overflow: 'hidden' },
+  group: { backgroundColor: 'rgba(46,49,54,0.045)', borderRadius: 20, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
-  rowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  rowBorder: { borderTopWidth: 1, borderTopColor: 'rgba(46,49,54,0.06)' },
   rowTitle: { color: palette.text, fontSize: 15, fontWeight: '600' },
   rowSub: { color: palette.textTertiary, fontSize: 11.5, marginTop: 2 },
-  removeBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+  removeBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(46,49,54,0.1)', alignItems: 'center', justifyContent: 'center' },
   removeIcon: { color: palette.textSecondary, fontSize: 12 },
   addRow: { flexDirection: 'row', gap: 10 },
   input: { flex: 1, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 16, backgroundColor: palette.glass, color: palette.text, fontSize: 14 },

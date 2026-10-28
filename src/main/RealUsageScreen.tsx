@@ -19,7 +19,7 @@ import { Donut, AppGlyphTile } from './profile/viz';
  *  legend and the breakdown rows all speak the same colour for a given app.
  *  Everything past the top five collapses into one neutral "Other" wedge. */
 const SEG = [palette.accent, '#7F92E0', '#E9AE62', '#C79BFF', '#5FE0D6'];
-const OTHER = 'rgba(255,255,255,0.22)';
+const OTHER = 'rgba(46,49,54,0.22)';
 
 /** Package names aren't display names — UsageStatsManager exposes only the
  *  package id + foreground time, no label or icon. We take the meaningful
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendName: { flex: 1, color: palette.text, fontSize: 14, fontWeight: '600' },
   legendPctBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(46,49,54, 0.05)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     left: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(46,49,54,0.08)',
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,

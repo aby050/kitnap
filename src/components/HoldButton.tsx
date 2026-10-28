@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   label: {
     ...type.bodyStrong,
-    color: palette.text,
+    color: '#FFFFFF',
     letterSpacing: -0.2,
     textAlign: 'center',
     width: '100%',

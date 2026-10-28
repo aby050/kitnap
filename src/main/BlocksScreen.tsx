@@ -295,7 +295,7 @@ export default function BlocksScreen({
                   value={query}
                   onChangeText={setQuery}
                   placeholder="Search apps"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor="rgba(46,49,54,0.35)"
                   style={styles.dropdownSearch}
                   autoCorrect={false}
                   autoCapitalize="none"
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(46,49,54,0.06)',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -562,22 +562,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(46,49,54,0.08)',
   },
   backGlyph: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 22,
     marginTop: -3,
   },
   headerTitle: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 20,
     fontWeight: '800',
   },
   helpBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(46,49,54,0.08)',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
   },
   helpText: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 12.5,
     fontWeight: '600',
   },
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 18,
     fontWeight: '800',
   },
@@ -623,13 +623,13 @@ const styles = StyleSheet.create({
   appRowMock: {
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(46,49,54,0.14)',
     backgroundColor: 'transparent',
   },
   appRowActive: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(46,49,54,0.06)',
+    backgroundColor: 'rgba(46,49,54,0.03)',
   },
   appRow: {
     flexDirection: 'row',
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appName: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15.5,
     fontWeight: '700',
   },
@@ -653,27 +653,27 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   appLimitTextMock: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(46,49,54,0.4)',
     fontSize: 13,
     fontWeight: '500',
     marginTop: 2,
   },
   actionBtnAdd: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(46,49,54,0.08)',
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: 16,
   },
   actionTextAdd: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 13,
     fontWeight: '700',
   },
   actionBtnDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(46,49,54,0.04)',
   },
   actionTextDisabled: {
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(46,49,54,0.35)',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -712,13 +712,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 14,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(46,49,54,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(46,49,54,0.06)',
     gap: 12,
   },
   solidCardName: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15.5,
     fontWeight: '700',
     flex: 1,
@@ -730,13 +730,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   brandText: {
-    color: '#ffffff',
+    color: '#2E3136',
   },
 
   // Select App Dropdown list
   dropdownOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    backgroundColor: 'rgba(255,255,255,0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -748,10 +748,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(46,49,54,0.1)',
   },
   dropdownTitle: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 18,
     fontWeight: '800',
     marginBottom: 16,
@@ -762,13 +762,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(46,49,54,0.06)',
     gap: 12,
   },
   sheetLabelWrap: { flex: 1, paddingRight: 12, gap: 2 },
-  sheetHint: { color: 'rgba(255,255,255,0.42)', fontSize: 12 },
+  sheetHint: { color: 'rgba(46,49,54,0.42)', fontSize: 12 },
   sectionBlurb: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(46,49,54,0.5)',
     fontSize: 13,
     lineHeight: 18.5,
     paddingHorizontal: 4,
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   dropdownSearch: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(46,49,54,0.06)',
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
   dropdownScroll: { maxHeight: 360 },
   dropdownEmpty: { paddingVertical: 28, alignItems: 'center', paddingHorizontal: 12 },
   dropdownEmptyText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(46,49,54,0.5)',
     fontSize: 13.5,
     textAlign: 'center',
     lineHeight: 19,
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   dropdownText: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
   // Modal / Bottom Sheet Styles
   modalBg: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(255,255,255, 0.6)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(46,49,54,0.18)',
     alignSelf: 'center',
     marginVertical: 8,
   },
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sheetTitle: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 18,
     fontWeight: '800',
   },
@@ -846,12 +846,12 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(46,49,54,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeGlyph: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(46,49,54,0.6)',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -866,15 +866,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(46,49,54,0.06)',
   },
   sheetLabel: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15.5,
     fontWeight: '600',
   },
   sheetValue: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(46,49,54,0.5)',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -884,10 +884,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(46,49,54,0.06)',
   },
   presetBtn: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(46,49,54,0.05)',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 12,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(111, 227, 169, 0.3)',
   },
   presetText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(46,49,54,0.6)',
     fontSize: 13.5,
     fontWeight: '600',
   },
@@ -909,7 +909,7 @@ const styles = StyleSheet.create({
   counterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(46,49,54,0.05)',
     borderRadius: 14,
     paddingHorizontal: 4,
     paddingVertical: 2,
@@ -921,12 +921,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   counterBtnText: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 18,
     fontWeight: '600',
   },
   counterVal: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15.5,
     fontWeight: '700',
     paddingHorizontal: 14,
@@ -937,15 +937,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: 'rgba(46,49,54,0.06)',
   },
   strictLabel: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15.5,
     fontWeight: '600',
   },
   strictSub: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(46,49,54,0.4)',
     fontSize: 12,
     lineHeight: 16,
     marginTop: 4,

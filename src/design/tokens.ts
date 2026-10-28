@@ -79,9 +79,33 @@ const SCHEMES = {
     accentFill: ['#B4E8A6', '#3C8A62'],
     chartGood: ['#E4F6C8', '#8FD694', '#3C8A62', '#0F3A29'],
   },
+  /** Paper — warm off-white page, ink outlines, one orange accent. Matches
+   *  the onboarding line-art look and is now the only scheme in use. */
+  paper: {
+    accent: '#E8821A',
+    accentPressed: '#CC6F10',
+    accentSoft: 'rgba(232,130,26,0.12)',
+    accentBorder: 'rgba(232,130,26,0.38)',
+    accentRamp: 'rgba(232,130,26,0.35)',
+    accentRampMid: '#F2A65A',
+    onLight: '#FFFFFF',
+    secondary: '#FFFFFF',
+    onSecondary: '#2E3136',
+    surface: '#F1EFEB',
+    surfaceRaised: '#FFFFFF',
+    surfaceHigh: '#E8E4DC',
+    ground: ['#F1EFEB', '#F1EFEB', '#F1EFEB', '#F1EFEB', '#F1EFEB', '#F1EFEB', '#F1EFEB', '#F1EFEB'],
+    rise: ['rgba(241,239,235,0)', 'rgba(241,239,235,0)', 'rgba(241,239,235,0)', 'rgba(241,239,235,0)', 'rgba(241,239,235,0)', 'rgba(241,239,235,0)', 'rgba(241,239,235,0)'],
+    bloom: ['rgba(0,0,0,0)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0)'],
+    accentFill: ['#F2A65A', '#E8821A'],
+    chartGood: ['#FBE3C8', '#F2A65A', '#E8821A', '#9A4F06'],
+  },
 } as const;
 
-const SCHEME = SCHEMES[appearance];
+// Every scheme now resolves to paper; the older dark schemes stay defined so a
+// stored appearance choice still type-checks.
+void appearance;
+const SCHEME = SCHEMES.paper;
 
 /**
  * Phonewise design tokens — the single source of truth for colour, type, spacing,
@@ -118,24 +142,24 @@ const SCHEME = SCHEMES[appearance];
 
 export const palette = {
   /* Surfaces, darkest → lightest */
-  base: '#000000',
+  base: '#F1EFEB',
   surface: SCHEME.surface,
   surfaceRaised: SCHEME.surfaceRaised,
   surfaceHigh: SCHEME.surfaceHigh,
-  surfaceInverse: '#FFFFFF',
+  surfaceInverse: '#2E3136',
 
   /* Text, most → least prominent. Alpha-based so it composes over any surface. */
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255,255,255,0.64)',
-  textTertiary: 'rgba(255,255,255,0.44)',
-  textQuaternary: 'rgba(255,255,255,0.28)',
-  textInverse: '#000000',
+  text: '#2E3136',
+  textSecondary: 'rgba(46,49,54,0.74)',
+  textTertiary: 'rgba(46,49,54,0.55)',
+  textQuaternary: 'rgba(46,49,54,0.34)',
+  textInverse: '#FFFFFF',
 
   /* Hairlines. `hairline` is for dividers inside a card, `border` for the
    * card edge itself, `borderStrong` only for a focused/selected edge. */
-  hairline: 'rgba(255,255,255,0.07)',
-  border: 'rgba(255,255,255,0.11)',
-  borderStrong: 'rgba(255,255,255,0.18)',
+  hairline: 'rgba(46,49,54,0.10)',
+  border: 'rgba(46,49,54,0.85)',
+  borderStrong: '#2E3136',
 
   /* Accent — periwinkle, sampled from the reference motion study (the
      highlighted headline line reads #476BEB there). Chosen over the mint of
@@ -158,11 +182,11 @@ export const palette = {
    * "translucent dark" chip on electric blue is just blue. Controls that
    * live down there use these instead: white at low alpha, which reads as
    * frosted on any hue and therefore works unchanged in both schemes. */
-  onColor: 'rgba(255,255,255,0.12)',
-  onColorPressed: 'rgba(255,255,255,0.20)',
-  onColorBorder: 'rgba(255,255,255,0.24)',
-  onColorText: 'rgba(255,255,255,0.92)',
-  onColorTextDim: 'rgba(255,255,255,0.66)',
+  onColor: '#FFFFFF',
+  onColorPressed: '#F7F5F1',
+  onColorBorder: '#2E3136',
+  onColorText: '#2E3136',
+  onColorTextDim: '#5E636B',
 
   /* Secondary control — the lavender pill in the reference ("Redeem").
      Sampled fill #ABBCF9 with a #4661CC label. It sits between the white
@@ -190,9 +214,9 @@ export const palette = {
 
   /* Translucent fills for controls sitting on unknown backgrounds (e.g. the
    * themed Shield gradient), where a fixed surface colour would clash. */
-  glass: 'rgba(255,255,255,0.09)',
-  glassPressed: 'rgba(255,255,255,0.15)',
-  scrim: 'rgba(0,0,0,0.78)',
+  glass: 'rgba(46,49,54,0.06)',
+  glassPressed: 'rgba(46,49,54,0.12)',
+  scrim: 'rgba(46,49,54,0.55)',
 } as const;
 
 /**
@@ -582,7 +606,7 @@ export const gradients = {
   /** Behind a hero figure or the Shield's line — a stronger centred bloom. */
   bloom: SCHEME.bloom as unknown as readonly [string, string, string],
   /** Fill for a primary white control, so it isn't a dead flat rectangle. */
-  light: ['#FFFFFF', '#F2F3FF'] as readonly [string, string],
+  light: ['#3A3D42', '#3A3D42'] as readonly [string, string],
   /** Fill for an accent-filled control. */
   accent: SCHEME.accentFill as unknown as readonly [string, string],
   /** Top-down scrim so content can scroll under the status bar legibly. */

@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: 'rgba(46,49,54,0.22)',
   },
   name: { ...type.bodyStrong, color: palette.text },
   blurb: { ...type.caption, color: palette.textSecondary, marginTop: 2 },

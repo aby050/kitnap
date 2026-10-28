@@ -46,7 +46,7 @@ export default function Toggle({
   }));
 
   const trackStyle = useAnimatedStyle(() => ({
-    backgroundColor: t.value > 0.5 ? palette.accent : 'rgba(255,255,255,0.16)',
+    backgroundColor: t.value > 0.5 ? palette.accent : 'rgba(46,49,54,0.16)',
   }));
 
   return (
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   labelOff: { right: 10 },
   label: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
   // Azure is a light surface, so ON reads in near-black; OFF sits on the dark track.
-  labelTextOn: { color: 'rgba(0,0,0,0.55)' },
-  labelTextOff: { color: 'rgba(255,255,255,0.6)' },
+  labelTextOn: { color: 'rgba(255,255,255,0.55)' },
+  labelTextOff: { color: 'rgba(46,49,54,0.6)' },
   disabled: { opacity: 0.4 },
 });
