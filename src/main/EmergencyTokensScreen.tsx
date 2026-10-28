@@ -1,3 +1,4 @@
+import LineArt from '../onboarding/LineArt';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -157,8 +158,8 @@ export default function EmergencyTokensScreen({
         <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
           {/* A lit disc behind the key so the balance reads as the subject of
               the screen rather than a stat above a list. */}
-          <View style={styles.heroGlow}>
-            <BailoutGlyph size={58} />
+          <View style={{ alignSelf: 'stretch' }}>
+            <LineArt name="door" height={170} />
           </View>
           <Text style={styles.balanceValue}>{tokenBalance}</Text>
           <Text style={styles.balanceLabel}>{tokenBalance === 1 ? 'Bailout' : 'Bailouts'} available</Text>

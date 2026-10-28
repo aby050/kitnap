@@ -1,3 +1,4 @@
+import LineArt from '../onboarding/LineArt';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -59,6 +60,7 @@ export default function WaitingRoomScreen({
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <LineArt name="cloud" height={150} />
         <Text style={styles.lede}>
           Choose what can appear at the Gate. Turning families off makes each unlock more predictable —
           predictable is easier to get used to, so we don't recommend turning off more than one or two.

@@ -1,3 +1,4 @@
+import LineArt from '../onboarding/LineArt';
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from '../ui/Icon';
@@ -40,7 +41,9 @@ export default function BailoutSheet({
           </Pressable>
 
           <View style={styles.hero}>
-            <BailoutGlyph size={52} />
+            <View style={{ alignSelf: 'stretch' }}>
+              <LineArt name="door" height={120} />
+            </View>
             <Text style={styles.balance}>{balance}</Text>
             <Text style={styles.balanceLabel}>
               {balance === 1 ? 'Bailout available' : 'Bailouts available'}

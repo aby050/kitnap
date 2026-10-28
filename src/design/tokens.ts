@@ -271,12 +271,13 @@ export const dataRamp = [
  * jitter as a timer counts down) and any text that must match OS chrome.
  */
 export const fonts = {
-  light: 'Poppins_300Light',
-  regular: 'Poppins_400Regular',
-  medium: 'Poppins_500Medium',
-  semibold: 'Poppins_600SemiBold',
-  bold: 'Poppins_700Bold',
-  extrabold: 'Poppins_800ExtraBold',
+  // Nunito: rounded terminals, the friendly face of the paper theme.
+  light: 'Nunito_400Regular',
+  regular: 'Nunito_500Medium',
+  medium: 'Nunito_600SemiBold',
+  semibold: 'Nunito_700Bold',
+  bold: 'Nunito_800ExtraBold',
+  extrabold: 'Nunito_900Black',
   /** OS font. Keep for tabular numerals — see above. */
   system: Platform.select({ ios: 'System', default: 'sans-serif' }) as string,
   /* The voice face. Not a bundled webfont: Georgia ships with iOS and has a

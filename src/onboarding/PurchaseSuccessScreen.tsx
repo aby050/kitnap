@@ -3,6 +3,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import LineArt from './LineArt';
+import { fonts } from '../design/tokens';
+import { CardPanel, HIGHLIGHT, INK, INK_DIM, InkButton, PastelCard, TINTS } from './PastelCard';
 import Icon from '../ui/Icon';
 import BailoutGlyph from '../components/BailoutGlyph';
 import { GradientButton } from '../components/ui';
@@ -70,53 +73,52 @@ export default function PurchaseSuccessScreen({
       : `${planName} active.`;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.center}>
-        <Animated.View entering={FadeIn.duration(420)} style={styles.cardShadow}>
-          <LinearGradient
-            colors={
-              free
-                ? ['#08120F', '#101A17', '#1B2F28', '#2E4A3F']
-                : ['#080D14', '#0F1A26', '#153458', '#1C3FA8']
-            }
-            locations={[0, 0.4, 0.76, 1]}
-            start={{ x: 0.05, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.card}
-          >
-            <View style={styles.badge}>
-              <Icon name="check" size={22} color="#08120F" strokeWidth={3} />
-            </View>
-
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.sub}>{sub}</Text>
-
-            {bailouts > 0 && !free && (
-              <View style={styles.bailoutPill}>
-                <BailoutGlyph size={15} />
-                <Text style={styles.bailoutText}>
-                  {bailouts} bailout{bailouts === 1 ? '' : 's'} added
-                </Text>
-              </View>
-            )}
-          </LinearGradient>
+    <PastelCard tint={TINTS.cream}>
+      <View style={paper.body}>
+        <Animated.View entering={FadeIn.duration(420)}>
+          <LineArt name={free ? 'kite' : 'gift'} height={230} />
         </Animated.View>
-
-        <Animated.Text entering={FadeInDown.delay(220).duration(420)} style={styles.footnote}>
+        <Animated.View entering={FadeInDown.delay(120).duration(420)}>
+          <Text style={paper.title}>
+            {title.split('\n')[0]}{' '}
+            <Text style={{ color: HIGHLIGHT }}>{title.split('\n')[1] ?? ''}</Text>
+          </Text>
+          <Text style={paper.sub}>{sub}</Text>
+          {bailouts > 0 && !free && (
+            <View style={paper.pill}>
+              <BailoutGlyph size={15} />
+              <Text style={paper.pillText}>
+                {bailouts} bailout{bailouts === 1 ? '' : 's'} added
+              </Text>
+            </View>
+          )}
+        </Animated.View>
+      </View>
+      <CardPanel>
+        <InkButton label="Start blocking" onPress={onContinue} />
+        <Text style={paper.footnote}>
           {free
             ? 'Nothing was charged.'
             : isTrial
               ? "We'll remind you two days before it ends."
               : 'Bailouts refill with each renewal.'}
-        </Animated.Text>
-      </View>
-
-      <View style={styles.ctaWrap}>
-        <GradientButton label="Start blocking" onPress={onContinue} />
-      </View>
-    </SafeAreaView>
+        </Text>
+      </CardPanel>
+    </PastelCard>
   );
 }
+
+const paper = StyleSheet.create({
+  body: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: 24, paddingBottom: 12 },
+  title: { color: INK, fontFamily: fonts.bold, fontSize: 34, lineHeight: 40, marginTop: 12 },
+  sub: { color: INK_DIM, fontFamily: fonts.regular, fontSize: 16.5, lineHeight: 24, marginTop: 10 },
+  pill: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 16,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: INK,
+  },
+  pillText: { color: INK, fontFamily: fonts.semibold, fontSize: 14 },
+  footnote: { color: INK_DIM, fontFamily: fonts.regular, fontSize: 14, textAlign: 'center' },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },

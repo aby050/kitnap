@@ -1,3 +1,4 @@
+import LineArt from '../onboarding/LineArt';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -138,7 +139,11 @@ export default function SettingsScreen({
             bar caption. Every other screen in the flow opens on heavy
             lowercase type; Settings was the one place still wearing a 19pt
             centred label between two chrome buttons. */}
-        <Text style={styles.pageTitle}>settings</Text>
+        <LineArt name="cat" height={150} />
+        <Text style={styles.pageTitle}>
+          Make it <Text style={{ color: palette.accent }}>yours</Text>
+        </Text>
+        <Text style={styles.pageSub}>How the block looks, sounds and behaves.</Text>
 
         <View style={styles.heroRow}>
           <HeroTile
@@ -291,21 +296,21 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: palette.glass,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: palette.text,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scroll: { paddingHorizontal: 18, paddingBottom: space.tabClearance },
   pageTitle: {
     color: palette.text,
-    fontFamily: fonts.extrabold,
-    fontSize: 44,
-    lineHeight: 46,
-    fontWeight: '800',
-    letterSpacing: -2,
+    fontFamily: fonts.bold,
+    fontSize: 34,
+    lineHeight: 40,
     marginTop: space.xs,
-    marginBottom: space.sm,
   },
+  pageSub: { color: palette.textSecondary, fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, marginTop: 6, marginBottom: space.sm },
   /* Section labels are eyebrows, not headings. At 19/800 they were the same
      weight as the page title and read as five competing titles down the
      page; small and dim, they let the cards below them be the content. */
@@ -335,9 +340,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 108,
     borderRadius: radius.xxl,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: palette.text,
     padding: 14,
     justifyContent: 'space-between',
   },
@@ -362,10 +367,12 @@ const styles = StyleSheet.create({
    * borrowed-looking thing on this screen; a hairline rule under the eyebrow
    * and dividers between rows carries the same grouping with none of it. */
   group: {
-    borderRadius: 0,
+    borderRadius: 22,
     overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: palette.hairline,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: palette.text,
+    paddingHorizontal: 4,
   },
 
 });

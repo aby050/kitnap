@@ -1,3 +1,4 @@
+import LineArt from '../onboarding/LineArt';
 import React, { useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -234,6 +235,7 @@ export default function ScheduleEditorScreen({
 
             The recommended flag is not a guess: onboarding asked when the
             phone usually wins, and this is the preset covering that answer. */}
+        <LineArt name="clock" height={140} />
         {available.length > 0 && (
           <>
             <Text style={styles.presetHead}>Suggested</Text>

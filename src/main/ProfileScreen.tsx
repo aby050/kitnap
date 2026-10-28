@@ -37,8 +37,8 @@ const GAP = 12;
 const CONTENT_W = width - GUTTER * 2;
 const HALF_W = (CONTENT_W - GAP) / 2;
 const HEATMAP_WEEKS = 12;
-const TILE_BG = 'rgba(46,49,54,0.055)';
-const TILE_BORDER = 'rgba(46,49,54,0.09)';
+const TILE_BG = '#FFFFFF';
+const TILE_BORDER = '#2E3136';
 
 function compactDuration(minutes: number): string {
   if (minutes >= 6000) return `${Math.round(minutes / 60)}h`;
@@ -444,17 +444,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: TILE_BG,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: TILE_BORDER,
   },
   scroll: { paddingHorizontal: GUTTER, paddingBottom: 140, gap: GAP },
-  title: { fontFamily: fonts.serif, fontSize: 36, lineHeight: 42, color: palette.text, marginTop: 8, letterSpacing: -0.5 },
+  title: { fontFamily: fonts.bold, fontSize: 34, lineHeight: 40, color: palette.text, marginTop: 8 },
   titleSub: { color: palette.textTertiary, fontFamily: fonts.medium, fontSize: 14, marginTop: 2, marginBottom: 4 },
   row: { flexDirection: 'row', gap: GAP },
   half: { width: HALF_W, height: 188 },
   tile: {
     backgroundColor: TILE_BG,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: TILE_BORDER,
     borderRadius: 28,
     padding: 18,

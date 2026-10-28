@@ -4,7 +4,7 @@ import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-
 
 /** Hand-drawn style spot illustrations for onboarding: dark outlines, white
  *  fills, a single warm accent and dotted "flow" arrows. All original. */
-export type ArtName = 'handPhone' | 'thinker' | 'nightBed' | 'pushup' | 'sprout' | 'bellPhone' | 'phoneLock' | 'shield' | 'clock' | 'gauge' | 'chart' | 'camera' | 'apps' | 'dumbbell' | 'sun' | 'pin' | 'wave';
+export type ArtName = 'kite' | 'gift' | 'door' | 'cat' | 'cloud' | 'handPhone' | 'thinker' | 'nightBed' | 'pushup' | 'sprout' | 'bellPhone' | 'phoneLock' | 'shield' | 'clock' | 'gauge' | 'chart' | 'camera' | 'apps' | 'dumbbell' | 'sun' | 'pin' | 'wave';
 
 const S = '#2E3136';
 const W = '#FFFFFF';
@@ -34,7 +34,97 @@ function Bricks({ x, y }: { x: number; y: number }) {
   );
 }
 
+function Face({ x, y, r = 1 }: { x: number; y: number; r?: number }) {
+  return (
+    <G>
+      <Circle cx={x - 7 * r} cy={y} r={2.6 * r} fill={S} />
+      <Circle cx={x + 7 * r} cy={y} r={2.6 * r} fill={S} />
+      <Path d={`M${x - 5 * r} ${y + 7 * r} q${5 * r} ${5 * r} ${10 * r} 0`} fill="none" stroke={S} strokeWidth={2.2} strokeLinecap="round" />
+      <Circle cx={x - 13 * r} cy={y + 6 * r} r={3 * r} fill="#F4A9A0" opacity={0.8} />
+      <Circle cx={x + 13 * r} cy={y + 6 * r} r={3 * r} fill="#F4A9A0" opacity={0.8} />
+    </G>
+  );
+}
+
 const ART: Record<ArtName, () => React.ReactElement> = {
+  /** A smiling kite on a long string over the hills. "Free, and free to go." */
+  kite: () => (
+    <G>
+      <Path d="M10 200 C 70 170, 120 186, 170 194 S 250 176, 292 196" fill="none" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Path d="M206 20 L 250 64 L 206 120 L 162 64 Z" fill={A} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M206 20 V 120 M162 64 H 250" stroke={S} strokeWidth={1.8} />
+      <Face x={206} y={62} />
+      <Path d="M206 120 C 196 140, 216 150, 204 168 C 194 182, 150 186, 120 192" fill="none" stroke={S} strokeWidth={1.8} strokeDasharray="3 5" strokeLinecap="round" />
+      <Path d="M210 134 l10 -4 -2 10z M198 154 l10 2 -6 8z" fill={P} stroke={S} strokeWidth={1.6} strokeLinejoin="round" />
+      <Bricks x={30} y={40} />
+      <Path d="M70 100 a14 14 0 0 1 26 -6 a12 12 0 0 1 18 12 h-48 a8 8 0 0 1 4 -6z" fill={W} stroke={S} strokeWidth={2.4} strokeLinejoin="round" />
+    </G>
+  ),
+  /** A happy gift box with its bow popping. "You're in." */
+  gift: () => (
+    <G>
+      <Bricks x={24} y={60} />
+      <Bricks x={248} y={150} />
+      <Rect x={94} y={96} width={112} height={100} rx={10} fill={W} stroke={S} strokeWidth={sw} />
+      <Rect x={84} y={78} width={132} height={30} rx={8} fill={A} stroke={S} strokeWidth={sw} />
+      <Rect x={140} y={78} width={20} height={118} fill={P} stroke={S} strokeWidth={2.4} />
+      <Path d="M150 78 C 126 50, 104 62, 118 78 Z M150 78 C 174 50, 196 62, 182 78 Z" fill={P} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Face x={150} y={146} r={1.1} />
+      <Path d="M60 110 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z M244 54 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill={B} stroke={S} strokeWidth={1.8} strokeLinejoin="round" />
+      <Path d="M86 40 l6 10 M214 30 l-4 12 M248 96 l12 -4" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+    </G>
+  ),
+  /** A door left ajar with a friendly key beside it. "Your way out, if you need it." */
+  door: () => (
+    <G>
+      <Bricks x={22} y={150} />
+      <Bricks x={250} y={40} />
+      <Rect x={96} y={20} width={110} height={186} rx={8} fill={M} stroke={S} strokeWidth={sw} />
+      <Path d="M96 20 L 146 34 L 146 196 L 96 206 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Circle cx={136} cy={118} r={4} fill={S} />
+      <Path d="M150 40 L 200 40 L 200 196 L 150 196" fill="none" stroke={A} strokeWidth={6} opacity={0.5} />
+      <G transform="rotate(-20 236 150)">
+        <Circle cx={236} cy={124} r={22} fill={A} stroke={S} strokeWidth={sw} />
+        <Face x={236} y={120} r={0.8} />
+        <Path d="M236 146 V 196 M236 176 h12 M236 188 h10" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      </G>
+      <Dots d="M214 110 C 196 100, 176 104, 160 114" />
+    </G>
+  ),
+  /** A cat curled asleep on a face-down phone. "Rest. The phone can wait." */
+  cat: () => (
+    <G>
+      <Path d="M40 12 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill={W} stroke={S} strokeWidth={1.6} />
+      <SvgText x={232} y={56} fill={S} fontFamily={fonts.bold} fontSize={18}>z</SvgText>
+      <SvgText x={250} y={36} fill={S} fontFamily={fonts.bold} fontSize={24}>z</SvgText>
+      <Rect x={50} y={176} width={200} height={26} rx={10} fill={S} />
+      <Rect x={58} y={180} width={184} height={8} rx={4} fill="#4A4E55" />
+      <Path d="M70 176 C 60 120, 110 96, 160 98 C 210 100, 240 130, 230 176 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M220 172 C 250 170, 262 150, 246 140" fill="none" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Circle cx={106} cy={132} r={34} fill={W} stroke={S} strokeWidth={sw} />
+      <Path d="M80 112 L 76 82 L 100 100 Z M118 100 L 138 82 L 136 112 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M82 92 L 84 102 M130 92 L 128 102" stroke="#F4A9A0" strokeWidth={4} strokeLinecap="round" />
+      <Path d="M90 132 q6 5 12 0 M110 132 q6 5 12 0" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+      <Circle cx={88} cy={144} r={4} fill="#F4A9A0" opacity={0.8} />
+      <Circle cx={126} cy={144} r={4} fill="#F4A9A0" opacity={0.8} />
+      <Path d="M104 142 l2 3 2 -3" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" />
+      <Path d="M160 120 C 176 112, 196 116, 206 130" fill="none" stroke={A} strokeWidth={6} strokeLinecap="round" opacity={0.7} />
+    </G>
+  ),
+  /** A smiling cloud with a little sun peeking. "Nothing here yet — and that's fine." */
+  cloud: () => (
+    <G>
+      <Circle cx={200} cy={70} r={30} fill={A} stroke={S} strokeWidth={sw} />
+      {Array.from({ length: 6 }).map((_, i) => {
+        const a = -Math.PI + (i / 5) * Math.PI;
+        return <Line key={i} x1={200 + Math.cos(a) * 40} y1={70 + Math.sin(a) * 40} x2={200 + Math.cos(a) * 52} y2={70 + Math.sin(a) * 52} stroke={S} strokeWidth={sw} strokeLinecap="round" />;
+      })}
+      <Path d="M70 170 a34 34 0 0 1 20 -60 a44 44 0 0 1 84 -4 a34 34 0 0 1 50 30 a32 32 0 0 1 -4 34 z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Face x={146} y={138} r={1.2} />
+      <Bricks x={30} y={50} />
+      <Path d="M90 196 l-6 12 M130 196 l-6 12 M170 196 l-6 12" stroke={B} strokeWidth={3} strokeLinecap="round" />
+    </G>
+  ),
   /** A hand holds the phone; the feeds bounce off its lock. "Block what pulls at you." */
   handPhone: () => (
     <G>
@@ -178,6 +268,7 @@ const ART: Record<ArtName, () => React.ReactElement> = {
         <Rect x={130} y={98} width={40} height={34} rx={7} fill={A} stroke={S} strokeWidth={sw} />
         <Path d="M138 98v-10a12 12 0 0 1 24 0v10" fill="none" stroke={S} strokeWidth={sw} />
         <Circle cx={150} cy={114} r={4} fill={S} />
+        <Face x={150} y={170} />
       </G>
       <Rect x={22} y={40} width={44} height={44} rx={12} fill={P} stroke={S} strokeWidth={sw} />
       <Path d="M36 56l16 6-16 6z" fill={W} stroke={S} strokeWidth={2} strokeLinejoin="round" />
@@ -305,6 +396,7 @@ const ART: Record<ArtName, () => React.ReactElement> = {
       <Bricks x={30} y={60} />
       <Bricks x={240} y={30} />
       <Circle cx={150} cy={96} r={40} fill={A} stroke={S} strokeWidth={sw} />
+      <Face x={150} y={92} r={1.2} />
       {Array.from({ length: 10 }).map((_, i) => {
         const a = (i / 10) * Math.PI * 2;
         return <Line key={i} x1={150 + Math.cos(a) * 52} y1={96 + Math.sin(a) * 52} x2={150 + Math.cos(a) * 66} y2={96 + Math.sin(a) * 66} stroke={S} strokeWidth={sw} strokeLinecap="round" />;

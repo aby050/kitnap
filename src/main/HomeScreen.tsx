@@ -303,10 +303,6 @@ export default function HomeScreen({
           </Pressable>
         </View>
 
-        <Animated.View entering={FadeIn.duration(500)}>
-          <LineArt name="handPhone" height={200} />
-        </Animated.View>
-
         <Animated.View entering={FadeInDown.duration(motion.transition)}>
           <Text style={P.headline}>
             A serious block. <Text style={{ color: HIGHLIGHT }}>No way around it.</Text>
@@ -427,7 +423,7 @@ const P = StyleSheet.create({
     backgroundColor: HIGHLIGHT, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
   },
   badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
-  headline: { color: INK, fontFamily: fonts.bold, fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -0.6, marginTop: 4 },
+  headline: { color: INK, fontFamily: fonts.bold, fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -0.4, marginTop: 18 },
   promise: { color: INK_DIM, fontSize: 15.5, lineHeight: 22, marginTop: 10 },
   runningBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 16,

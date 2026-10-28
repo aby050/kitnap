@@ -12,6 +12,14 @@ import {
   Poppins_700Bold,
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
+import {
+  Nunito_400Regular,
+  Nunito_500Medium,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+  Nunito_900Black,
+} from '@expo-google-fonts/nunito';
 import SplashFlow from './src/onboarding/SplashFlow';
 import IntroStories from './src/onboarding/IntroStories';
 import UsageRevealScreen from './src/onboarding/UsageRevealScreen';
@@ -117,6 +125,12 @@ export default function App() {
     Poppins_700Bold,
     Poppins_800ExtraBold,
     KaushanScript_400Regular,
+    Nunito_400Regular,
+    Nunito_500Medium,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    Nunito_900Black,
   });
 
   const [stage, setStage] = useState<Stage>('loading');
