@@ -39,7 +39,7 @@ export default function BlockScreensScreen({
                 <Pressable onPress={() => onSelectTheme(t.key)} style={[styles.themeCard, active && styles.themeCardActive]}>
                   <LinearGradient colors={t.palette} style={StyleSheet.absoluteFill} />
                   <View style={styles.themeGlyph}>
-                    <Icon name={t.mark} size={22} color="#2E3136" strokeWidth={1.5} />
+                    <Icon name={t.mark} size={22} color="#FFFFFF" strokeWidth={1.5} />
                   </View>
                   <Text style={styles.themeName}>{t.name}</Text>
                 </Pressable>
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
   },
   themeCardActive: { borderColor: palette.accent },
   themeGlyph: { position: 'absolute', top: 12, left: 14 },
-  themeName: { color: '#2E3136', fontSize: 15, fontWeight: '800' },
+  themeName: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   card: { backgroundColor: 'rgba(46,49,54,0.045)', borderRadius: 22, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   toggleRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(46,49,54,0.07)' },

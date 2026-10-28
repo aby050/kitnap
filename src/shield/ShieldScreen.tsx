@@ -138,7 +138,7 @@ export default function ShieldScreen({
              * window emergency access is genuinely gone, so the affordance is
              * replaced by the reason it's gone. */
             <View style={styles.emergency}>
-              <Icon name="moon" size={15} color={palette.textTertiary} />
+              <Icon name="moon" size={15} color={'rgba(255,255,255,0.44)'} />
               <Text style={styles.emergencyText}>
                 {lockdown.name} · until {lockdown.end}
               </Text>
@@ -154,7 +154,7 @@ export default function ShieldScreen({
               hitSlop={12}
               style={styles.emergency}
             >
-              <Icon name="key" size={15} color={palette.textTertiary} />
+              <Icon name="key" size={15} color={'rgba(255,255,255,0.44)'} />
               <Text style={styles.emergencyText}>Emergency</Text>
             </Pressable>
           )}
@@ -167,7 +167,7 @@ export default function ShieldScreen({
               <Image source={{ uri: goal.photoUri }} style={styles.photo} />
             ) : (
               <View style={styles.mark}>
-                <Icon name={theme.mark} size={26} color={palette.text} strokeWidth={1.5} />
+                <Icon name={theme.mark} size={26} color={'#FFFFFF'} strokeWidth={1.5} />
               </View>
             )}
           </Animated.View>
@@ -257,7 +257,7 @@ export default function ShieldScreen({
 
 const styles = StyleSheet.create({
   spent: {
-    color: palette.textTertiary,
+    color: 'rgba(255,255,255,0.44)',
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
@@ -277,9 +277,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: 'rgba(255,255,255,0.11)',
   },
-  emergencyText: { ...type.caption, color: palette.textTertiary },
+  emergencyText: { ...type.caption, color: 'rgba(255,255,255,0.44)' },
 
   body: {
     flex: 1,
@@ -293,8 +293,8 @@ const styles = StyleSheet.create({
     height: 62,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: palette.borderStrong,
-    backgroundColor: palette.glass,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -303,19 +303,19 @@ const styles = StyleSheet.create({
     height: 62,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: palette.borderStrong,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   /* Wider measure than the default so a long deadline name doesn't break into
    * four ragged lines. */
   line: { maxWidth: 330 },
   personal: {
     ...type.sub,
-    color: palette.textTertiary,
+    color: 'rgba(255,255,255,0.44)',
     textAlign: 'center',
     maxWidth: 300,
     paddingHorizontal: space.md,
   },
-  ladder: { ...type.sub, color: palette.textQuaternary },
+  ladder: { ...type.sub, color: 'rgba(255,255,255,0.28)' },
 
   actions: { paddingHorizontal: space.xl, paddingBottom: space.base, gap: space.sm },
 });

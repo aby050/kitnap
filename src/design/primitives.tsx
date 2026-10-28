@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   cardPadded: { padding: space.lg },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: palette.border },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(46,49,54,0.14)' },
 
   btn: {
     flexDirection: 'row',
