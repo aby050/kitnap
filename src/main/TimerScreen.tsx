@@ -640,7 +640,13 @@ export default function TimerScreen({
                 Bailout or touch the daily emergency allowance — placing a call
                 is not an emergency, and charging for one would push people
                 toward the red button for something routine. */}
-            <Pressable onPress={() => setCallPadOpen(true)} style={styles.videoPill} accessibilityLabel="Call">
+            {/* Opens the phone's own dialer. The dialer is never blocked, so a
+                call can always be placed during a session. */}
+            <Pressable
+              onPress={() => Linking.openURL('tel:').catch(() => setCallPadOpen(true))}
+              style={styles.videoPill}
+              accessibilityLabel="Call"
+            >
               <Icon name="phone" size={14} color="#FFFFFF" />
               <Text style={styles.videoPillText}>Call</Text>
             </Pressable>

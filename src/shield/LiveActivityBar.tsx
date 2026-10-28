@@ -72,7 +72,8 @@ export default function LiveActivityBar({
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', top: 8, left: 0, right: 0, alignItems: 'center', zIndex: 200 },
+  // Sits below the screen's corner buttons (shield, Call, Emergency), never on them.
+  wrap: { position: 'absolute', top: 72, left: 0, right: 0, alignItems: 'center', zIndex: 200 },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
