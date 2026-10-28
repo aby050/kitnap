@@ -23,7 +23,7 @@ import Icon, { IconName } from '../ui/Icon';
 import { OnboardingMarkSlot } from './OnboardingMark';
 import LineArt, { ArtName } from './LineArt';
 const PERMISSION_ART: Record<string, ArtName> = {
-  overlay: 'phoneLock', usage: 'chart', accessibility: 'shield', notification: 'clock',
+  overlay: 'handPhone', usage: 'chart', accessibility: 'shield', notification: 'bellPhone',
   battery: 'sun', screenTime: 'chart', camera: 'camera',
 };
 import { CardPanel, INK, INK_DIM, InkButton, PastelCard, TextLink, TINTS } from './PastelCard';

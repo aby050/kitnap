@@ -1,3 +1,4 @@
+import LineArt from '../onboarding/LineArt';
 import Svg, { Circle, G } from 'react-native-svg';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, Share, StyleSheet, Text, View, Dimensions, Modal } from 'react-native';
@@ -273,6 +274,7 @@ export default function ProfileScreen({
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(380)}>
+            <LineArt name="sprout" height={150} />
             <Text style={styles.title}>{headline}</Text>
             {!!username && <Text style={styles.titleSub}>{username}</Text>}
           </Animated.View>

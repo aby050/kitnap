@@ -1,3 +1,4 @@
+import LineArt from '../onboarding/LineArt';
 import React from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -136,6 +137,7 @@ export default function MyAppsScreen({
     <Screen edges={['top']} bloom>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow} />
+        <LineArt name="apps" height={150} />
         <Editorial lead="Decide once," emphasis="stay out of reach." style={styles.voice} />
 
         {/* Blocked apps */}

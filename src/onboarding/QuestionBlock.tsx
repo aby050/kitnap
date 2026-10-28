@@ -20,8 +20,8 @@ import LineArt, { ArtName } from './LineArt';
 
 /** One original line drawing per question. */
 const QUESTION_ART: Record<string, ArtName> = {
-  matters: 'shield', interests: 'sun', slipWindow: 'clock', hardBlock: 'phoneLock', name: 'wave',
-  healthLimit: 'dumbbell', movement: 'dumbbell', repBaseline: 'dumbbell', whereBlocked: 'pin', controlScale: 'gauge',
+  matters: 'thinker', interests: 'sun', slipWindow: 'nightBed', hardBlock: 'phoneLock', name: 'wave',
+  healthLimit: 'pushup', movement: 'pushup', repBaseline: 'pushup', whereBlocked: 'pin', controlScale: 'gauge',
 };
 
 type Props = {

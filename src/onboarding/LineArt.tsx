@@ -4,7 +4,7 @@ import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-
 
 /** Hand-drawn style spot illustrations for onboarding: dark outlines, white
  *  fills, a single warm accent and dotted "flow" arrows. All original. */
-export type ArtName = 'phoneLock' | 'shield' | 'clock' | 'gauge' | 'chart' | 'camera' | 'apps' | 'dumbbell' | 'sun' | 'pin' | 'wave';
+export type ArtName = 'handPhone' | 'thinker' | 'nightBed' | 'pushup' | 'sprout' | 'bellPhone' | 'phoneLock' | 'shield' | 'clock' | 'gauge' | 'chart' | 'camera' | 'apps' | 'dumbbell' | 'sun' | 'pin' | 'wave';
 
 const S = '#2E3136';
 const W = '#FFFFFF';
@@ -35,6 +35,139 @@ function Bricks({ x, y }: { x: number; y: number }) {
 }
 
 const ART: Record<ArtName, () => React.ReactElement> = {
+  /** A hand holds the phone; the feeds bounce off its lock. "Block what pulls at you." */
+  handPhone: () => (
+    <G>
+      <Bricks x={226} y={190} />
+      <G transform="rotate(-6 160 110)">
+        <Rect x={118} y={14} width={104} height={184} rx={22} fill={W} stroke={S} strokeWidth={sw} />
+        <Line x1={152} y1={28} x2={188} y2={28} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+        <Line x1={136} y1={60} x2={204} y2={60} stroke={M} strokeWidth={2} />
+        <Line x1={136} y1={76} x2={190} y2={76} stroke={M} strokeWidth={2} />
+        <Rect x={150} y={100} width={40} height={34} rx={7} fill={A} stroke={S} strokeWidth={sw} />
+        <Path d="M158 100v-10a12 12 0 0 1 24 0v10" fill="none" stroke={S} strokeWidth={sw} />
+        <Circle cx={170} cy={116} r={4} fill={S} />
+        <SvgText x={170} y={168} fill={S} fontFamily={fonts.semibold} fontSize={12} textAnchor="middle">Locked</SvgText>
+      </G>
+      {/* hand from the left edge, thumb over the phone */}
+      <Path d="M-6 230 L-6 150 C 20 140, 48 132, 74 128 C 96 124, 112 126, 124 134 C 136 142, 132 156, 118 158 L 92 160 C 104 168, 104 182, 92 186 L 60 196 C 40 214, 20 226, -6 230 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M92 160 C 80 160, 70 156, 64 150" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+      <Path d="M88 186 C 76 186, 66 182, 60 176" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+      <Rect x={20} y={20} width={40} height={40} rx={11} fill={P} stroke={S} strokeWidth={sw} />
+      <Path d="M34 32l14 8-14 8z" fill={W} stroke={S} strokeWidth={2} strokeLinejoin="round" />
+      <Label x={40} y={78}>Reels</Label>
+      <Dots d="M64 38 C 86 36, 100 48, 114 62" />
+      <Path d="M108 54 l8 8 -10 4" fill="none" stroke={S} strokeWidth={1.6} strokeLinecap="round" />
+      <Circle cx={266} cy={56} r={24} fill={B} stroke={S} strokeWidth={sw} />
+      <Path d="M254 50h24M254 58h24M254 66h14" stroke={W} strokeWidth={3} strokeLinecap="round" />
+      <Label x={266} y={98}>Feeds</Label>
+      <Dots d="M240 64 C 230 76, 228 86, 226 96" />
+      <Path d="M232 90 l-6 8 -4 -10" fill="none" stroke={S} strokeWidth={1.6} strokeLinecap="round" />
+    </G>
+  ),
+  /** A person with what they care about floating up from their head. "Your why." */
+  thinker: () => (
+    <G>
+      <Bricks x={20} y={150} />
+      <Bricks x={250} y={140} />
+      <Path d="M70 222 C 74 182, 104 164, 132 160 L 132 112 C 132 98, 140 90, 152 90 L 176 90 C 186 90, 192 98, 192 108 L 210 126 L 192 130 L 192 160 C 220 166, 240 186, 244 222 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M132 92 C 148 84, 176 84, 192 92" fill="none" stroke={S} strokeWidth={sw} />
+      <Path d="M134 92 C 150 98, 174 98, 190 92 C 174 86, 150 86, 134 92 Z" fill={A} stroke={S} strokeWidth={2} />
+      <Circle cx={170} cy={112} r={2.6} fill={S} />
+      <Circle cx={182} cy={112} r={2.6} fill={S} />
+      <Path d="M166 132 q10 8 20 0" fill="none" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+      <Path d="M150 160 l-4 18 M214 186 l-6 16" stroke={S} strokeWidth={2.4} strokeLinecap="round" />
+      <Dots d="M150 84 C 140 64, 110 60, 96 40" />
+      <Dots d="M162 82 C 164 62, 160 44, 162 28" />
+      <Dots d="M176 84 C 190 64, 214 58, 228 40" />
+      <G transform="rotate(-14 80 30)">
+        <Path d="M60 22 h40 v30 h-40z" fill={B} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+        <Path d="M80 22 v30" stroke={S} strokeWidth={2} />
+      </G>
+      <Path d="M148 6 a14 14 0 1 0 28 0 a14 14 0 1 0 -28 0" fill={A} stroke={S} strokeWidth={2.4} />
+      <G transform="rotate(12 240 26)">
+        <Path d="M228 26 a8 8 0 0 1 12 -6 a8 8 0 0 1 12 6 c0 10 -12 18 -12 18 s-12 -8 -12 -18z" fill={P} stroke={S} strokeWidth={2.4} />
+      </G>
+    </G>
+  ),
+  /** In bed, lit by the phone, the clock past midnight. "When the phone wins." */
+  nightBed: () => (
+    <G>
+      <Path d="M236 36 a22 22 0 1 0 22 30 a17 17 0 0 1 -22 -30z" fill={B} stroke={S} strokeWidth={2.4} />
+      <Path d="M40 28 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z M280 110 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z" fill={W} stroke={S} strokeWidth={1.6} />
+      <Path d="M20 190 h260 v20 h-260z" fill={W} stroke={S} strokeWidth={sw} />
+      <Path d="M30 190 C 40 150, 90 140, 150 146 L 270 150 L 270 190 Z" fill={P} stroke={S} strokeWidth={sw} strokeLinejoin="round" opacity={0.95} />
+      <Path d="M40 150 C 40 130, 70 124, 86 132 L 84 158 C 66 160, 46 160, 40 150 Z" fill={W} stroke={S} strokeWidth={sw} />
+      <Circle cx={100} cy={124} r={22} fill={W} stroke={S} strokeWidth={sw} />
+      <Path d="M92 122 q4 3 8 0 M106 122 q4 3 8 0" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" />
+      <G transform="rotate(-18 136 108)">
+        <Rect x={124} y={84} width={26} height={44} rx={6} fill={S} />
+        <Rect x={127} y={88} width={20} height={34} rx={3} fill={A} />
+      </G>
+      <Path d="M150 96 L 196 70 L 200 120 Z" fill={A} opacity={0.18} />
+      <Circle cx={60} cy={60} r={30} fill={W} stroke={S} strokeWidth={sw} />
+      <Line x1={60} y1={60} x2={60} y2={40} stroke={S} strokeWidth={3} strokeLinecap="round" />
+      <Line x1={60} y1={60} x2={72} y2={64} stroke={S} strokeWidth={3} strokeLinecap="round" />
+      <SvgText x={60} y={108} fill={S} fontFamily={fonts.semibold} fontSize={12} textAnchor="middle">1:30 am</SvgText>
+    </G>
+  ),
+  /** Push-ups beside the phone: the unlock is a few reps. "Move to unlock." */
+  pushup: () => (
+    <G>
+      <Bricks x={240} y={30} />
+      <Line x1={10} y1={196} x2={290} y2={196} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Circle cx={196} cy={120} r={18} fill={W} stroke={S} strokeWidth={sw} />
+      <Circle cx={202} cy={116} r={2.4} fill={S} />
+      <Path d="M60 186 L 176 134" stroke={S} strokeWidth={22} strokeLinecap="round" />
+      <Path d="M60 186 L 176 134" stroke={W} strokeWidth={16} strokeLinecap="round" />
+      <Path d="M168 140 L 176 196 M186 136 L 196 196" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Path d="M60 186 L 34 194" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Path d="M58 180 C 90 170, 130 152, 170 134" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" opacity={0.9} />
+      <G transform="rotate(10 252 150)">
+        <Rect x={236} y={124} width={34} height={58} rx={8} fill={W} stroke={S} strokeWidth={sw} />
+        <Path d="M246 146 v-6 a7 7 0 0 1 14 0 v6" fill="none" stroke={S} strokeWidth={2.2} />
+        <Rect x={243} y={146} width={20} height={16} rx={4} fill={A} stroke={S} strokeWidth={2} />
+      </G>
+      <Dots d="M214 112 C 226 100, 240 104, 246 118" />
+      <SvgText x={120} y={110} fill={S} fontFamily={fonts.bold} fontSize={16} textAnchor="middle">8 / 10</SvgText>
+      <Path d="M150 80 l0 -14 M144 72 l6 -6 6 6" stroke={S} strokeWidth={2.2} fill="none" strokeLinecap="round" />
+    </G>
+  ),
+  /** A sprout in a pot with a rising line behind it. "Small days add up." */
+  sprout: () => (
+    <G>
+      <Bricks x={22} y={60} />
+      <Path d="M30 170 C 80 160, 110 120, 150 120 S 230 70, 272 30" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" strokeDasharray="1 0" />
+      <Path d="M262 28 l12 0 -2 12" fill="none" stroke={A} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M112 150 h76 l-8 60 h-60z" fill={P} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M106 150 h88" stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      <Path d="M150 150 C 150 120, 150 100, 150 80" stroke={S} strokeWidth={sw} strokeLinecap="round" fill="none" />
+      <Path d="M150 112 C 130 112, 112 98, 108 78 C 130 78, 148 92, 150 112 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Path d="M150 96 C 170 96, 190 82, 194 60 C 170 60, 152 76, 150 96 Z" fill={W} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+      <Label x={60} y={196}>Day 1</Label>
+      <Label x={250} y={70}>Day 30</Label>
+    </G>
+  ),
+  /** The phone rings a bell when time is up. "We'll tell you when it ends." */
+  bellPhone: () => (
+    <G>
+      <Bricks x={24} y={170} />
+      <Bricks x={244} y={176} />
+      <G transform="rotate(6 130 110)">
+        <Rect x={84} y={20} width={96} height={180} rx={20} fill={W} stroke={S} strokeWidth={sw} />
+        <Rect x={100} y={52} width={64} height={30} rx={8} fill={M} stroke={S} strokeWidth={2} />
+        <Path d="M108 64h40M108 72h26" stroke={S} strokeWidth={2} strokeLinecap="round" />
+        <SvgText x={132} y={130} fill={S} fontFamily={fonts.bold} fontSize={22} textAnchor="middle">0:00</SvgText>
+      </G>
+      <G transform="rotate(14 236 76)">
+        <Path d="M212 96 C 212 70, 220 52, 236 52 C 252 52, 260 70, 260 96 L 268 104 L 204 104 Z" fill={A} stroke={S} strokeWidth={sw} strokeLinejoin="round" />
+        <Circle cx={236} cy={112} r={7} fill={W} stroke={S} strokeWidth={2.4} />
+        <Line x1={236} y1={44} x2={236} y2={52} stroke={S} strokeWidth={sw} strokeLinecap="round" />
+      </G>
+      <Path d="M276 60 q10 10 0 24 M286 52 q16 18 0 40" fill="none" stroke={S} strokeWidth={2} strokeLinecap="round" />
+      <Dots d="M206 104 C 196 110, 190 116, 184 120" />
+    </G>
+  ),
   phoneLock: () => (
     <G>
       <Bricks x={20} y={150} />

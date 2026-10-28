@@ -304,7 +304,7 @@ export default function HomeScreen({
         </View>
 
         <Animated.View entering={FadeIn.duration(500)}>
-          <LineArt name="phoneLock" height={190} />
+          <LineArt name="handPhone" height={200} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.duration(motion.transition)}>
