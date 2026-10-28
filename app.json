@@ -95,7 +95,8 @@
         }
       ],
       "./plugins/withNoBackgroundAudio.js",
-      "./plugins/withLauncherQueries.js"
+      "./plugins/withLauncherQueries.js",
+      "expo-image"
     ],
     "extra": {
       "eas": {
