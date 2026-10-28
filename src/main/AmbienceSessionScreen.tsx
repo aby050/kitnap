@@ -311,6 +311,7 @@ export default function AmbienceSessionScreen({
            *  the same price. */}
           <View style={styles.exitWrap}>
             <HoldButton
+          onVideo
               label="Hold to unlock"
               holdLabel="Keep holding to unlock…"
               holdMs={3000}

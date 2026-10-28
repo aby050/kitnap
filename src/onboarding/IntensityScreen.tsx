@@ -22,7 +22,7 @@ function Meter({ level, active }: { level: number; active: boolean }) {
   return (
     <View style={styles.meter}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <View key={n} style={[styles.meterPip, n <= level && { backgroundColor: active ? palette.accent : 'rgba(255,255,255,0.55)' }]} />
+        <View key={n} style={[styles.meterPip, n <= level && { backgroundColor: active ? palette.accent : 'rgba(46,49,54,0.55)' }]} />
       ))}
     </View>
   );
@@ -45,7 +45,7 @@ function Flow({ selected, minutes }: { selected: IntensityKey; minutes: number }
             </View>
             <Text style={styles.flowLabel}>{st.label}</Text>
           </View>
-          {i < steps.length - 1 && <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.35)" style={{ marginTop: 14 }} />}
+          {i < steps.length - 1 && <Ionicons name="chevron-forward" size={16} color="rgba(46,49,54,0.35)" style={{ marginTop: 14 }} />}
         </React.Fragment>
       ))}
     </View>
@@ -101,7 +101,7 @@ export default function IntensityScreen({
                   accessibilityState={{ selected: active }}
                 >
                   <View style={[styles.cardIcon, active && styles.cardIconActive]}>
-                    <Ionicons name={c.icon} size={28} color={active ? '#06232B' : palette.accent} />
+                    <Ionicons name={c.icon} size={28} color={active ? '#FFFFFF' : palette.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.cardTitleRow}>
@@ -130,7 +130,7 @@ export default function IntensityScreen({
         </Animated.View>
 
         <View style={styles.footnote}>
-          <Ionicons name="time-outline" size={16} color="rgba(255,255,255,0.7)" />
+          <Ionicons name="time-outline" size={16} color="rgba(46,49,54,0.7)" />
           <Text style={styles.footnoteText}>Easing off later takes a day. That wait is the protection.</Text>
         </View>
       </ScrollView>
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   container: { 
     flex: 1, 
-    backgroundColor: '#000000',
+    backgroundColor: '#F1EFEB',
   },
   glowContainer: {
     position: 'absolute',
@@ -197,12 +197,12 @@ const styles = StyleSheet.create({
   heading: { color: palette.text, fontFamily: fonts.extrabold, fontSize: 34, fontWeight: '800', textAlign: 'left', lineHeight: 36, letterSpacing: -1.2, textTransform: 'lowercase', alignSelf: 'stretch' },
   segment: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(46,49,54,0.05)',
     borderRadius: 28,
     padding: 6,
     marginTop: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(46,49,54,0.06)',
   },
   segItem: { 
     flex: 1, 
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   segInner: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   segText: {
-    color: 'rgba(255,255,255,0.4)', 
+    color: 'rgba(46,49,54,0.4)', 
     fontSize: 15, 
     fontWeight: '600',
   },
@@ -228,11 +228,11 @@ const styles = StyleSheet.create({
   },
   table: { 
     marginTop: 26, 
-    backgroundColor: '#141517', // premium card container background
+    backgroundColor: '#FFFFFF', // premium card container background
     borderRadius: 24, 
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(46,49,54,0.05)',
   },
   row: {
     flexDirection: 'row',
@@ -244,16 +244,16 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
+    borderBottomColor: 'rgba(46,49,54,0.04)',
   },
   rowLabel: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(46,49,54,0.5)',
     fontSize: 15,
     fontWeight: '500',
   },
   rowValue: {
     flex: 1,
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 15.5,
     fontWeight: '700',
     textAlign: 'right',
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   recommendReason: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(46,49,54,0.6)',
     fontSize: 13.5,
     lineHeight: 19,
     fontWeight: '500',
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   noteText: { 
-    color: 'rgba(255,255,255,0.65)', 
+    color: 'rgba(46,49,54,0.65)', 
     fontSize: 14, 
     lineHeight: 21,
     fontWeight: '500',
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     paddingBottom: 14, 
     paddingTop: 8,
   },
-  sub: { color: 'rgba(255,255,255,0.7)', fontSize: 15, marginTop: 8 },
+  sub: { color: 'rgba(46,49,54,0.7)', fontSize: 15, marginTop: 8 },
   cards: { gap: 12, marginTop: 22 },
   card: {
     flexDirection: 'row',
@@ -316,9 +316,9 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 16,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(46,49,54,0.05)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(46,49,54,0.1)',
   },
   cardActive: { borderColor: palette.accent, backgroundColor: palette.accentSoft },
   cardIcon: {
@@ -333,34 +333,34 @@ const styles = StyleSheet.create({
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardTitle: { color: palette.text, fontSize: 20, fontFamily: fonts.bold, fontWeight: '700' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: palette.accent },
-  badgeText: { color: '#06232B', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.8 },
-  cardLine: { color: 'rgba(255,255,255,0.72)', fontSize: 14, marginTop: 3 },
+  badgeText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.8 },
+  cardLine: { color: 'rgba(46,49,54,0.72)', fontSize: 14, marginTop: 3 },
   meter: { flexDirection: 'row', gap: 4, marginTop: 10 },
-  meterPip: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.14)' },
+  meterPip: { width: 22, height: 5, borderRadius: 3, backgroundColor: 'rgba(46,49,54,0.14)' },
   radio: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderColor: 'rgba(46,49,54,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   radioOn: { backgroundColor: palette.accent, borderColor: palette.accent },
-  flowHeading: { color: 'rgba(255,255,255,0.55)', fontSize: 11.5, fontWeight: '800', letterSpacing: 1.6, marginTop: 28, marginBottom: 14 },
+  flowHeading: { color: 'rgba(46,49,54,0.55)', fontSize: 11.5, fontWeight: '800', letterSpacing: 1.6, marginTop: 28, marginBottom: 14 },
   flow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   flowStep: { alignItems: 'center', gap: 8, flex: 1 },
   flowIcon: {
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(46,49,54,0.06)',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.14)',
+    borderColor: 'rgba(46,49,54,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  flowLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, fontWeight: '600', textAlign: 'center' },
+  flowLabel: { color: 'rgba(46,49,54,0.85)', fontSize: 12.5, fontWeight: '600', textAlign: 'center' },
   footnote: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 26 },
-  footnoteText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, flex: 1 },
+  footnoteText: { color: 'rgba(46,49,54,0.7)', fontSize: 13, flex: 1 },
 });

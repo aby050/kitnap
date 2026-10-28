@@ -84,7 +84,7 @@ export default function PaywallScreen({
          *  Every line is a shipped capability. */}
         <Animated.View entering={FadeIn.delay(160).duration(450)} style={styles.hero}>
           <LinearGradient
-            colors={[palette.accentSoft, 'rgba(255,255,255,0.02)']}
+            colors={[palette.accentSoft, 'rgba(46,49,54,0.02)']}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 0.9, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -99,7 +99,7 @@ export default function PaywallScreen({
           <Capability
             mark="shield"
             title="A friend holds the code"
-            desc="Loosening Strict mode takes a code only they have, so you cannot quietly undo it at 11pm."
+            desc="Loosening your blocks takes a code only they have, so you cannot quietly undo them at 11pm."
           />
           {/* Was "Strict mode, verified". Strict mode is free — the camera
               unlock is the product, not the upsell — so selling it here was

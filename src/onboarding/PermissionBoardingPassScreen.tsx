@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { Camera } from 'expo-camera';
 import * as Notifications from 'expo-notifications';
 import {
   canDrawOverlays,
@@ -24,7 +23,7 @@ import { OnboardingMarkSlot } from './OnboardingMark';
 import LineArt, { ArtName } from './LineArt';
 const PERMISSION_ART: Record<string, ArtName> = {
   overlay: 'handPhone', usage: 'chart', accessibility: 'shield', notification: 'bellPhone',
-  battery: 'sun', screenTime: 'chart', camera: 'camera',
+  battery: 'sun', screenTime: 'chart'
 };
 import { CardPanel, INK, INK_DIM, InkButton, PastelCard, TextLink, TINTS } from './PastelCard';
 import AccessibilityDisclosure from './AccessibilityDisclosure';
@@ -65,15 +64,12 @@ export default function PermissionBoardingPassScreen({
   const [notification, setNotification] = useState(false);
   const [battery, setBattery] = useState(false);
   const [screenTime, setScreenTime] = useState(false);
-  const [camera, setCamera] = useState(false);
 
   const refresh = useCallback(async () => {
     if (Platform.OS === 'ios') {
       setScreenTime(getScreenTimeAuthorizationStatus() === 'approved');
       const notif = await Notifications.getPermissionsAsync();
       setNotification(notif.granted || notif.ios?.status === Notifications.IosAuthorizationStatus.AUTHORIZED);
-      const cam = await Camera.getCameraPermissionsAsync();
-      setCamera(cam.granted);
       return;
     }
     if (Platform.OS !== 'android') return;
@@ -160,17 +156,6 @@ export default function PermissionBoardingPassScreen({
       granted: notification,
       onRequest: async () => {
         await Notifications.requestPermissionsAsync();
-        await refresh();
-      },
-    },
-    {
-      key: 'camera',
-      icon: 'eye',
-      title: 'Camera',
-      desc: 'Used only for Strict-mode movement challenges. Nothing is recorded or leaves the phone.',
-      granted: camera,
-      onRequest: async () => {
-        await Camera.requestCameraPermissionsAsync();
         await refresh();
       },
     },

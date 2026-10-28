@@ -29,7 +29,6 @@
           "whatsapp"
         ],
         "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "Phonewise never records audio. The camera library it uses declares this; nothing in the app asks for your microphone.",
         "NSPhotoLibraryUsageDescription": "Only if you choose to save a progress photo. Phonewise never reads your photo library.",
         "NSLocalNetworkUsageDescription": "Used only when running Phonewise from a development machine. The App Store build never connects to your local network."
       }
@@ -57,12 +56,6 @@
     },
     "plugins": [
       "expo-font",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Used for your progress photo. Photos stay on your phone."
-        }
-      ],
       [
         "expo-audio",
         {
@@ -92,7 +85,7 @@
         }
       ],
       "./plugins/withShieldOpenApp.js",
-        "./plugins/withIPhoneOnlyExtensions.js",
+      "./plugins/withIPhoneOnlyExtensions.js",
       "@react-native-community/datetimepicker",
       [
         "expo-video",

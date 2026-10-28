@@ -300,7 +300,13 @@ export default function MainApp({
     return true;
   };
   const [activeThemeKey, setActiveThemeKey] = useState<ThemeKey>(themeKey);
-  const [activeIntensityKey, setActiveIntensityKey] = useState<IntensityKey>(intensityKey);
+  // Physical-activity unlocks are gone, so Strict (movement to get in) no
+  // longer exists. Everyone is on Steady; a stored Strict choice is migrated.
+  const [activeIntensityKey, setActiveIntensityKey] = useState<IntensityKey>('steady');
+  useEffect(() => {
+    if (intensityKey !== 'steady') onPatch({ intensityKey: 'steady' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [intensitySince, setIntensitySince] = useState<string | null>(
     persisted.intensitySince ?? null,
   );
@@ -730,7 +736,7 @@ export default function MainApp({
     setProGate({
       title: 'Guardian is part of Phonewise Pro',
       body:
-        'Someone you trust holds the code that loosens Strict mode, so you cannot quietly undo it yourself.',
+        'Someone you trust holds the code that loosens your blocks, so you cannot quietly undo them yourself.',
       icon: 'shield',
     });
   };
@@ -1355,7 +1361,6 @@ export default function MainApp({
           onOpenFutureSelf={() => setOverlay('futureSelf')}
           onOpenBlockedApps={() => setOverlay('blockedApps')}
           onOpenSubscription={() => setOverlay('subscription')}
-          onOpenDifficulty={() => openDifficulty('settings')}
           /* The biggest door of the three: deleting the account takes the
              blocklist, the schedules and the guardian with it. Guarded on the
              way in rather than at the confirm — `onConfirmDelete` has to
@@ -1753,7 +1758,6 @@ export default function MainApp({
               onOpenBlockedApps={() => setOverlay('blockedApps')}
               bailoutBalance={emergencyTokens}
               bailoutFromPrice={cheapestBailoutPrice}
-              onOpenDifficulty={() => openDifficulty(null)}
               onBuyBailouts={() => setOverlay('emergencyTokens')}
               intensityKey={activeIntensityKey}
               progress={progress}
@@ -1787,7 +1791,6 @@ export default function MainApp({
               onOpenSchedules={() => setOverlay('schedules')}
               onOpenEssentials={() => setOverlay('essentials')}
               onOpenBlocks={() => setOverlay('blocks')}
-              onOpenDifficulty={() => openDifficulty(null)}
             />
           )}
           {tab === 'timer' && (

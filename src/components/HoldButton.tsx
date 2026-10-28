@@ -95,7 +95,10 @@ export default function HoldButton({
   holdMs = DEFAULT_HOLD_MS,
   style,
   accessibilityLabel,
+  onVideo = false,
 }: {
+  /** Sits over footage (session timer): white label instead of ink. */
+  onVideo?: boolean;
   label: string;
   /** Shown while the charge is building. */
   holdLabel?: string;
@@ -215,10 +218,10 @@ export default function HoldButton({
         <Animated.View style={[styles.edgeGlow, glowStyle]} pointerEvents="none" />
 
         <View style={styles.labelWrap} pointerEvents="none">
-          <Animated.Text style={[styles.label, idleLabelStyle]} numberOfLines={1}>
+          <Animated.Text style={[styles.label, !onVideo && { color: '#2E3136' }, idleLabelStyle]} numberOfLines={1}>
             {label}
           </Animated.Text>
-          <Animated.Text style={[styles.label, styles.labelOverlay, holdLabelStyle]} numberOfLines={1}>
+          <Animated.Text style={[styles.label, !onVideo && { color: '#2E3136' }, styles.labelOverlay, holdLabelStyle]} numberOfLines={1}>
             {holdLabel}
           </Animated.Text>
         </View>

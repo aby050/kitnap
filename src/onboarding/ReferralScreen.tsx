@@ -108,12 +108,12 @@ const styles = StyleSheet.create({
   tierCard: {
     flexDirection: 'row',
     gap: 14,
-    backgroundColor: 'rgba(255,255,255,0.045)',
+    backgroundColor: 'rgba(46,49,54,0.045)',
     borderRadius: 22,
     padding: 14,
   },
   tierBadge: { width: 78, height: 78, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  tierBadgeDark: { backgroundColor: 'rgba(255,255,255,0.07)' },
+  tierBadgeDark: { backgroundColor: 'rgba(46,49,54,0.07)' },
   tierGem: {
     width: 34,
     height: 34,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(46,49,54,0.12)',
     marginTop: 10,
     overflow: 'hidden',
   },

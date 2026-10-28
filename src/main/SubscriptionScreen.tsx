@@ -251,7 +251,7 @@ const PERKS: { icon: React.ComponentProps<typeof Icon>['name']; title: string; d
     title: `${PLAN_BAILOUTS.$rc_annual} bailouts a year`,
     desc: `Topped up every renewal. Monthly gets ${PLAN_BAILOUTS.$rc_monthly} a month; the free plan keeps its ${FREE_EMERGENCY_TOKENS} forever.`,
   },
-  { icon: 'shield', title: 'Guardian code', desc: 'Someone you trust holds the key to loosening Strict mode.' },
+  { icon: 'shield', title: 'Guardian code', desc: 'Someone you trust holds the key to loosening your blocks.' },
   { icon: 'calendar', title: 'Unlimited schedules', desc: 'Recurring windows that block on their own. Free plan gets one.' },
 ];
 

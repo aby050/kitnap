@@ -152,12 +152,6 @@ export default function SettingsScreen({
             mark="shield"
             onPress={onOpenBlockedApps}
           />
-          <HeroTile
-            value={difficultyLabel ?? 'Steady'}
-            label="UNLOCK DIFFICULTY"
-            mark="sliders"
-            onPress={onOpenDifficulty}
-          />
         </View>
 
         <GroupLabel>The block</GroupLabel>

@@ -246,7 +246,7 @@ export default function WeeklyInsight({
               >
                 {/* Ambient glow leak overlay */}
                 <LinearGradient
-                  colors={[`${slide.accentColor}33`, 'rgba(255,255,255,0)']}
+                  colors={[`${slide.accentColor}33`, 'rgba(46,49,54,0)']}
                   start={{ x: 0, y: 0.3 }}
                   end={{ x: 0.8, y: 0.7 }}
                   style={styles.lightLeak}

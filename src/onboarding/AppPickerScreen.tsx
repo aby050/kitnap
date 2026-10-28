@@ -64,6 +64,18 @@ const BRAND: Record<string, keyof typeof Ionicons.glyphMap> = {
   notion: 'document-text',
 };
 
+/** Real brand colours, shown once an app is chosen. */
+const BRAND_COLOR: Record<string, string> = {
+  instagram: '#E1306C', facebook: '#1877F2', twitter: '#111111', x: '#111111', whatsapp: '#25D366',
+  telegram: '#26A5E4', youtube: '#FF0000', spotify: '#1DB954', snapchat: '#FFFC00', reddit: '#FF4500',
+  twitch: '#9146FF', slack: '#4A154B', gmail: '#EA4335', linkedin: '#0A66C2', discord: '#5865F2',
+  tiktok: '#010101', netflix: '#E50914', pinterest: '#E60023', zoom: '#2D8CFF', notion: '#111111',
+};
+function brandKey(id: string, label: string): string | undefined {
+  const k = [id, label.toLowerCase(), id.split('.').find((p) => BRAND_COLOR[p])].find((x) => x && BRAND_COLOR[x as string]);
+  return k as string | undefined;
+}
+
 const BROWSER_OR_TOOL = /chrome|firefox|brave|opera|edge|browser|duckduckgo|vivaldi|settings|camera|gallery|contacts|dialer|phone|clock|calculator|files|play\.store|vending/i;
 /** The system's own category flag is unreliable (browsers sometimes arrive as
  *  social); anything that is clearly a browser or a utility is not a "Social"
@@ -72,7 +84,7 @@ function fixCategory(pkg: string, category: string): string {
   return category === 'social' && BROWSER_OR_TOOL.test(pkg) ? 'other' : category;
 }
 
-function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: string }) {
+function AppIconSvg({ id, label, icon, ink = '#FFFFFF' }: { id: string; label: string; icon?: string; ink?: string }) {
   // The phone's real launcher icon always wins.
   if (icon) {
     return <Image source={{ uri: icon }} style={{ width: '100%', height: '100%', resizeMode: 'contain' }} />;
@@ -82,8 +94,8 @@ function AppIconSvg({ id, label, icon }: { id: string; label: string; icon?: str
   };
   if (CAT[id]) return <CategoryGlyph name={id} size={22} color={palette.accent} />;
   const brand = BRAND[id] ?? BRAND[label.toLowerCase()];
-  if (brand) return <Ionicons name={brand} size={20} color="#FFFFFF" />;
-  return <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 15 }}>{label.slice(0, 1).toUpperCase()}</Text>;
+  if (brand) return <Ionicons name={brand} size={22} color={ink} />;
+  return <Text style={{ color: ink, fontWeight: '800', fontSize: 15 }}>{label.slice(0, 1).toUpperCase()}</Text>;
 }
 
 export default function AppPickerScreen({
@@ -93,7 +105,7 @@ export default function AppPickerScreen({
   onBack,
   title = 'What should we block?',
   confirmLabel,
-  pastel,
+  pastel = true,
 }: {
   /** Onboarding look: pastel card with a white panel. The in-app editor keeps the dark one. */
   pastel?: boolean;
@@ -330,9 +342,17 @@ export default function AppPickerScreen({
     return (
       <Pressable onPress={() => toggle(e.id)} style={styles.tile} accessibilityRole="button" accessibilityState={{ selected: on }}>
         <View style={[styles.tileIcon, on && styles.tileIconOn, on && P.tileIconOn]}>
-          <View style={[styles.tileImg, !e.icon && { backgroundColor: pastel ? '#2A2A30' : 'rgba(255,255,255,0.09)' }]}>
-            <AppIconSvg id={e.id} label={e.name} icon={e.icon} />
-          </View>
+          {/* Chosen apps light up in their real brand colours; the rest stay
+              quiet grey line icons until picked. */}
+          {on && !e.icon ? (
+            <View style={[styles.tileImg, { backgroundColor: BRAND_COLOR[brandKey(e.id, e.name) ?? ''] ?? INK }]}>
+              <AppIconSvg id={e.id} label={e.name} ink={brandKey(e.id, e.name) === 'snapchat' ? '#111111' : '#FFFFFF'} />
+            </View>
+          ) : (
+            <View style={[styles.tileImg, !e.icon && { backgroundColor: pastel ? '#E8E4DC' : 'rgba(255,255,255,0.09)' }, !on && e.icon && { opacity: 0.45 }]}>
+              <AppIconSvg id={e.id} label={e.name} icon={e.icon} ink={pastel ? '#5E636B' : '#FFFFFF'} />
+            </View>
+          )}
           {on && (
             <View style={[styles.tileCheck, P.tileCheck]}>
               <Ionicons name="checkmark" size={13} color={pastel ? '#FFFFFF' : '#06232B'} />
@@ -362,8 +382,8 @@ export default function AppPickerScreen({
       <KeyboardAvoider>
         <View style={[styles.centerStack, P.centerStack]}>
           {onBack && (
-            <Pressable onPress={onBack} style={styles.backBtn} hitSlop={10} accessibilityLabel="Back">
-              <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            <Pressable onPress={onBack} style={[styles.backBtn, P.backBtn]} hitSlop={10} accessibilityLabel="Back">
+              <Ionicons name="chevron-back" size={22} color={fg} />
             </Pressable>
           )}
           <View style={P.head}>
@@ -550,6 +570,7 @@ const styles = StyleSheet.create({
 /** Overrides for the onboarding (pastel) look. */
 const pastelStyles = StyleSheet.create({
   centerStack: { paddingTop: 0 },
+  backBtn: { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: INK, marginLeft: 20, marginTop: 4 },
   head: { alignItems: 'stretch', paddingHorizontal: 24, paddingTop: 8, paddingBottom: 14 },
   title: { color: INK, textAlign: 'left', marginTop: 8 },
   recommendHint: { color: INK_DIM, textAlign: 'left', marginBottom: 0, marginTop: 6 },

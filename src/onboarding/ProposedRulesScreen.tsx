@@ -250,8 +250,8 @@ export default function ProposedRulesScreen({ name, onContinue }: { name: string
                     <Line x1="10" y1="7" x2="10" y2="12" stroke={palette.accent} strokeWidth="2.2" strokeLinecap="round" />
                     <Line x1="20" y1="7" x2="20" y2="12" stroke={palette.accent} strokeWidth="2.2" strokeLinecap="round" />
                     
-                    <Path d="M 36 20 L 54 20" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeDasharray="3 3" />
-                    <Path d="M 50 16 L 55 20 L 50 24" stroke="rgba(255,255,255,0.25)" strokeWidth="2" strokeLinecap="round" />
+                    <Path d="M 36 20 L 54 20" stroke="rgba(46,49,54,0.25)" strokeWidth="2" strokeDasharray="3 3" />
+                    <Path d="M 50 16 L 55 20 L 50 24" stroke="rgba(46,49,54,0.25)" strokeWidth="2" strokeLinecap="round" />
 
                     <Path d="M74 30s6-3 6-8V15l-6-2-6 2v5c0 5 6 8 6 8z" stroke={palette.accent} strokeWidth="2" fill="none" />
                   </Svg>
@@ -296,10 +296,10 @@ export default function ProposedRulesScreen({ name, onContinue }: { name: string
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#F1EFEB',
   },
   heading: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 25,
     fontWeight: '800',
     textAlign: 'center',
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   sub: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(46,49,54,0.5)',
     fontSize: 15.5,
     textAlign: 'center',
     marginTop: 8,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(46,49,54,0.08)',
     justifyContent: 'center',
   },
   cardDeselected: {
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     width: width * 0.85,
-    backgroundColor: '#141517',
+    backgroundColor: '#FFFFFF',
     borderRadius: 28,
     padding: 24,
     borderWidth: 2,
@@ -430,14 +430,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalTitle: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 24,
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: -0.5,
   },
   modalTime: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(46,49,54,0.5)',
     fontSize: 15,
     fontWeight: '600',
   },
@@ -457,13 +457,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalActionBadge: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(46,49,54,0.06)',
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 10,
   },
   modalActionText: {
-    color: '#ffffff',
+    color: '#2E3136',
     fontSize: 12.5,
     fontWeight: '700',
   },
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalDescription: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(46,49,54,0.7)',
     fontSize: 14.5,
     lineHeight: 22,
     textAlign: 'center',

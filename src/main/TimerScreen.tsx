@@ -715,6 +715,7 @@ export default function TimerScreen({
                   delete-account confirm — one commitment control across the
                   app rather than a bespoke one per screen. */}
               <HoldButton
+          onVideo
                 label="Hold to end this session"
                 holdLabel="Keep holding to end…"
                 holdMs={3000}
