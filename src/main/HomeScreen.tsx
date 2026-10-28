@@ -35,6 +35,9 @@ import { AMBIENCES, mediaFor } from '../data/ambiences';
 import { tapLight } from '../ui/haptics';
 import { dataRamp, fonts, motion, palette, radius, space, type } from '../design/tokens';
 import KnockoutLabel from '../components/KnockoutLabel';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import LineArt from '../onboarding/LineArt';
+import { HIGHLIGHT, INK, INK_DIM, InkButton, PAPER } from '../onboarding/PastelCard';
 import { ruleIcon, scheduleStatus } from './MyAppsScreen';
 import BlockedSelection from '../components/BlockedSelection';
 import { installedLabel } from '../data/installedApps';
@@ -279,201 +282,119 @@ export default function HomeScreen({
     onChangeGoal(i + 1 < GOALS.length ? GOALS[i + 1] : null);
   };
 
+  const ctaLabel = Platform.OS === 'ios' ? 'Start focus lock' : 'Start block';
   return (
-    <Screen edges={['top']} bloom>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Brand header */}
-        <View style={styles.headerRow}>
-          {/* Key left, profile right, with the status pill between them.
-              These used to share one right-hand group, which on Android —
-              where the iOS-only pill isn't rendered — left both icons
-              huddled in the same corner. */}
-          <View style={styles.headerLeft}>
-            <View style={styles.bailoutIconWrap}>
-              {/* The app's own Bailout mark, not the icon set's generic key.
-                  Every other surface that talks about bailouts draws this
-                  coin; Home drawing a keyring made the same currency look
-                  like two different things. */}
-              <IconButton
-                glyph={<BailoutGlyph size={20} color={palette.text} />}
-                onPress={() => setShowBailout(true)}
-                accessibilityLabel="Bailouts"
-                bordered
-              />
-              {bailoutBalance > 0 && (
-                <View style={styles.bailoutBadge}>
-                  <Text style={styles.bailoutBadgeText}>{bailoutBalance}</Text>
-                </View>
-              )}
-            </View>
+    <SafeAreaView style={P.root} edges={['top']}>
+      <ScrollView contentContainerStyle={P.scroll} showsVerticalScrollIndicator={false}>
+        <View style={P.header}>
+          <View>
+            <Pressable onPress={() => setShowBailout(true)} style={P.iconBtn} accessibilityLabel="Bailouts" hitSlop={6}>
+              <BailoutGlyph size={20} color={INK} />
+            </Pressable>
+            {bailoutBalance > 0 && (
+              <View style={P.badge}>
+                <Text style={P.badgeText}>{bailoutBalance}</Text>
+              </View>
+            )}
           </View>
-          {Platform.OS === 'ios' && (
-            <View style={styles.statusPill}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>Blocking on</Text>
-            </View>
-          )}
-          <IconButton name="user" onPress={onOpenProfile} accessibilityLabel="Open profile" bordered />
+          <Text style={P.wordmark}>phonewise</Text>
+          <Pressable onPress={onOpenProfile} style={P.iconBtn} accessibilityLabel="Open profile" hitSlop={6}>
+            <Icon name="user" size={20} color={INK} />
+          </Pressable>
         </View>
 
-        {/* The promise, up front. */}
+        <Animated.View entering={FadeIn.duration(500)}>
+          <LineArt name="phoneLock" height={190} />
+        </Animated.View>
+
         <Animated.View entering={FadeInDown.duration(motion.transition)}>
-          <Editorial lead="A serious block." emphasis="No way around it." compact style={styles.voice} />
-          <Text style={styles.promise}>
-            No push-ups, no puzzles, no bypass. Use it only when you are serious about changing your
-            life.
+          <Text style={P.headline}>
+            A serious block. <Text style={{ color: HIGHLIGHT }}>No way around it.</Text>
+          </Text>
+          <Text style={P.promise}>
+            No push-ups, no puzzles, no bypass. Use it only when you are serious about changing your life.
           </Text>
         </Animated.View>
 
-        {/* What will be locked: the apps they chose, as icons. */}
-        <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={[styles.lockCard, heroAnimStyle]}>
-          <Text style={[type.overline, styles.heroLabel]}>
-            {Platform.OS === 'ios' ? 'Focus lock' : 'Locked apps'}
-          </Text>
+        {Platform.OS === 'ios' && sessionRunning && (
+          <View style={P.runningBanner}>
+            <View style={P.dot} />
+            <Text style={P.runningText}>Focus lock running — nothing unlocks until it ends</Text>
+          </View>
+        )}
+
+        <Animated.View entering={FadeInDown.delay(60).duration(motion.transition)} style={[P.card, heroAnimStyle]}>
+          <View style={P.cardHead}>
+            <Text style={P.overline}>{Platform.OS === 'ios' ? 'FOCUS LOCK' : 'LOCKED APPS'}</Text>
+            <Pressable onPress={onOpenApps} hitSlop={8}>
+              <Text style={P.link}>Manage</Text>
+            </Pressable>
+          </View>
           {Platform.OS === 'ios' ? (
             <BlockedSelection compact />
           ) : blockedPackages.length > 0 ? (
-            <Pressable style={styles.lockGrid} onPress={onOpenApps} accessibilityLabel="Blocked apps">
+            <Pressable style={P.lockGrid} onPress={onOpenApps} accessibilityLabel="Blocked apps">
               {blockedPackages.slice(0, 11).map((pkg) => (
-                <AppGlyph key={pkg} name={installedLabel(pkg) ?? pkg} packageName={pkg} size={36} />
+                <AppGlyph key={pkg} name={installedLabel(pkg) ?? pkg} packageName={pkg} size={38} />
               ))}
               {blockedPackages.length > 11 && (
-                <View style={styles.lockMore}>
-                  <Text style={styles.lockMoreText}>+{blockedPackages.length - 11}</Text>
+                <View style={P.lockMore}>
+                  <Text style={P.lockMoreText}>+{blockedPackages.length - 11}</Text>
                 </View>
               )}
             </Pressable>
           ) : (
-            <Pressable onPress={onOpenApps} style={styles.lockEmpty}>
-              <Text style={styles.lockEmptyText}>Choose the apps to lock</Text>
+            <Pressable onPress={onOpenApps} style={{ paddingVertical: 8 }}>
+              <Text style={P.link}>Choose the apps to lock</Text>
             </Pressable>
           )}
         </Animated.View>
 
-        {/* Duration stepper */}
-        <Animated.View entering={FadeInDown.delay(100).duration(motion.transition)} style={styles.stepper}>
-          <Pressable
-            style={styles.stepBtn}
-            onPressIn={() => startAdjust(-1)}
-            onPressOut={stopAdjust}
-            hitSlop={8}
-          >
-            <Icon name="minus" size={20} color={palette.text} />
+        <Animated.View entering={FadeInDown.delay(100).duration(motion.transition)} style={P.stepper}>
+          <Pressable style={P.stepBtn} onPressIn={() => startAdjust(-1)} onPressOut={stopAdjust} hitSlop={8}>
+            <Icon name="minus" size={20} color={INK} />
           </Pressable>
-          <View style={styles.stepValue}>
-            <Text style={type.bodyStrong}>{formatBlockLength(durationMinutes)}</Text>
+          <View style={P.stepValue}>
+            <Text style={P.stepText}>{formatBlockLength(durationMinutes)}</Text>
           </View>
-          <Pressable
-            style={styles.stepBtn}
-            onPressIn={() => startAdjust(1)}
-            onPressOut={stopAdjust}
-            hitSlop={8}
-          >
-            <Icon name="plus" size={20} color={palette.text} />
+          <Pressable style={P.stepBtn} onPressIn={() => startAdjust(1)} onPressOut={stopAdjust} hitSlop={8}>
+            <Icon name="plus" size={20} color={INK} />
           </Pressable>
         </Animated.View>
 
-        {/* Primary action */}
-        <Animated.View entering={FadeInDown.delay(140).duration(motion.transition)} style={styles.cta}>
-          {/* Only while something is actually running. The idle copy that used
-              to sit here — "Blocking is always on. Focus lock below makes it
-              stricter." — was explanatory text pinned permanently above the
-              primary action, and it pointed the wrong way: the focus lock it
-              called "below" is the dial above. The fact it was carrying is
-              worth keeping, so it moved to the header as a live status pill,
-              where it costs a glance instead of a paragraph. */}
-          {Platform.OS === 'ios' && sessionRunning && (
-            <View style={styles.baselineBanner}>
-              <Text style={styles.baselineText}>
-                Focus lock running — nothing unlocks until it ends
-              </Text>
-            </View>
-          )}
-          {/* The label is knocked out of the white pill: it is filled with the
-              ground's own colour at that point on screen, so it reads as a
-              hole. Green while the button sits low in the saturated zone,
-              black once it scrolls up into the black.
-              `measureInWindow` rather than onLayout's y, because the pill is
-              inside a ScrollView and onLayout reports a position inside the
-              content, not on the screen — the fill has to track where the
-              button actually IS, including as it scrolls. */}
-          <View
-            onLayout={(e) => {
-              const { width, height } = e.nativeEvent.layout;
-              setCtaSize({ width, height });
-              ctaRef.current?.measureInWindow((_x: number, y: number) => setCtaY(y));
-            }}
-            ref={ctaRef}
-            collapsable={false}
-          >
-            {/* No icon. Button lays out [icon][gap][label] as a centred row,
-                so the label's centre is offset from the pill's centre by half
-                the icon block — while the knockout layer above is centred on
-                the pill itself, which put the glyph through the first letter.
-                Reproducing that offset here would couple this screen to
-                Button's internal spacing and break the moment it changed.
-                The label already says "lock", and the references this
-                treatment came from use plain text buttons. */}
-            <Button
-              label={Platform.OS === 'ios' ? 'Start focus lock' : 'Start block'}
-              variant="primary"
-              labelHidden={ctaSize.width > 0}
-              onPress={handleStart}
-            />
-            {ctaSize.width > 0 && (
-              <KnockoutLabel
-                text={Platform.OS === 'ios' ? 'Start focus lock' : 'Start block'}
-                screenY={ctaY}
-                width={ctaSize.width}
-                height={ctaSize.height}
-              />
-            )}
-          </View>
-          {Platform.OS === 'ios' && (
-            <>
-              <BlockedAppsPill running={sessionRunning} onUnlock={onTriggerShield} />
-            </>
-          )}
-          <Pressable style={styles.manageRow} onPress={onOpenApps} hitSlop={6}>
-            <Icon name="lock" size={13} color={palette.onColorTextDim} />
-            <Text style={[type.caption, styles.manageText]}>Manage blocked apps</Text>
-            <Icon name="chevronRight" size={13} color={palette.onColorTextDim} />
-          </Pressable>
+        <Animated.View entering={FadeInDown.delay(140).duration(motion.transition)} style={P.cta}>
+          <InkButton label={ctaLabel} onPress={handleStart} />
+          {Platform.OS === 'ios' && <BlockedAppsPill running={sessionRunning} onUnlock={onTriggerShield} />}
         </Animated.View>
 
-        {/* Auto-blocks: what will lock on its own, and when. */}
         {schedules.length > 0 && (
-          <View style={styles.autoWrap}>
-            <View style={styles.autoHead}>
-              <Text style={styles.autoTitle}>AUTO-BLOCKS</Text>
+          <View style={{ marginTop: 28 }}>
+            <View style={P.cardHead}>
+              <Text style={P.sectionTitle}>Auto-blocks</Text>
               {onOpenSchedules && (
                 <Pressable onPress={onOpenSchedules} hitSlop={8}>
-                  <Text style={styles.autoEdit}>Edit</Text>
+                  <Text style={P.link}>Edit</Text>
                 </Pressable>
               )}
             </View>
-            <Card padded={false}>
+            <View style={[P.card, { paddingVertical: 4, marginTop: 10 }]}>
               {schedules.map((rule, i) => {
                 const status = scheduleStatus(rule.start, rule.end);
                 return (
-                  <View key={rule.id}>
-                    {i > 0 && <Divider inset={56} />}
-                    <Row
-                      icon={ruleIcon(rule.name, rule.start)}
-                      iconColor={status.active ? palette.accent : palette.textSecondary}
-                      title={rule.name}
-                      subtitle={`${rule.days} · ${rule.start}–${rule.end}`}
-                      right={<Pill label={status.label} tone={status.active ? 'accent' : 'neutral'} />}
-                      onPress={onOpenSchedules}
-                      chevron={false}
-                    />
-                  </View>
+                  <Pressable key={rule.id} onPress={onOpenSchedules} style={[P.ruleRow, i > 0 && P.ruleDivider]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={P.ruleName} numberOfLines={1}>{rule.name}</Text>
+                      <Text style={P.ruleSub}>{`${rule.days} · ${rule.start}–${rule.end}`}</Text>
+                    </View>
+                    <View style={[P.statusPill, status.active && P.statusPillOn]}>
+                      <Text style={[P.statusPillText, status.active && { color: '#FFFFFF' }]}>{status.label}</Text>
+                    </View>
+                  </Pressable>
                 );
               })}
-            </Card>
+            </View>
           </View>
         )}
-
       </ScrollView>
 
       {showBailout && (
@@ -487,9 +408,60 @@ export default function HomeScreen({
           onClose={() => setShowBailout(false)}
         />
       )}
-    </Screen>
+    </SafeAreaView>
   );
 }
+
+/** Paper look, shared with onboarding: off-white page, ink outlines, one orange accent. */
+const P = StyleSheet.create({
+  root: { flex: 1, backgroundColor: PAPER },
+  scroll: { paddingHorizontal: 24, paddingTop: 6, paddingBottom: space.tabClearance },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48 },
+  wordmark: { color: INK, fontFamily: fonts.medium, fontSize: 18, fontWeight: '500' },
+  iconBtn: {
+    width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: INK,
+    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+  },
+  badge: {
+    position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9,
+    backgroundColor: HIGHLIGHT, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
+  },
+  badgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
+  headline: { color: INK, fontFamily: fonts.bold, fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -0.6, marginTop: 4 },
+  promise: { color: INK_DIM, fontSize: 15.5, lineHeight: 22, marginTop: 10 },
+  runningBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', marginTop: 16,
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: INK,
+  },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: HIGHLIGHT },
+  runningText: { color: INK, fontSize: 13, fontWeight: '600' },
+  card: { marginTop: 22, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: INK },
+  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  overline: { color: INK_DIM, fontFamily: fonts.bold, fontSize: 11.5, letterSpacing: 1.4 },
+  link: { color: INK, fontFamily: fonts.semibold, fontSize: 14, textDecorationLine: 'underline' },
+  lockGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  lockMore: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: PAPER },
+  lockMoreText: { color: INK, fontSize: 13, fontWeight: '700' },
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 24 },
+  stepBtn: {
+    width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: INK,
+    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center',
+  },
+  stepValue: {
+    minWidth: 140, height: 48, borderRadius: 24, borderWidth: 1.5, borderColor: INK,
+    backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20,
+  },
+  stepText: { color: INK, fontFamily: fonts.bold, fontSize: 18, fontWeight: '700' },
+  cta: { marginTop: 22, gap: 12 },
+  sectionTitle: { color: INK, fontFamily: fonts.bold, fontSize: 20, fontWeight: '700', marginBottom: -2 },
+  ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  ruleDivider: { borderTopWidth: 1, borderTopColor: 'rgba(46,49,54,0.12)' },
+  ruleName: { color: INK, fontFamily: fonts.semibold, fontSize: 16, fontWeight: '600' },
+  ruleSub: { color: INK_DIM, fontSize: 13, marginTop: 2 },
+  statusPill: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: PAPER },
+  statusPillOn: { backgroundColor: HIGHLIGHT },
+  statusPillText: { color: INK, fontSize: 12.5, fontWeight: '700' },
+});
 
 const styles = StyleSheet.create({
   autoWrap: { marginTop: space.xl },
