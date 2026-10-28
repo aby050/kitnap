@@ -571,7 +571,9 @@ export default function App() {
             />
           )}
 
-          {showMascot && <MascotSplash onDone={() => setShowMascot(false)} />}
+          {showMascot && (
+            <MascotSplash waitForStart={stage === 'splash'} onDone={() => setShowMascot(false)} />
+          )}
         </View>
       </SafeAreaProvider>
     </GestureHandlerRootView>
