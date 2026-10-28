@@ -6,7 +6,7 @@
       "phonewise",
       "device-activity"
     ],
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -48,7 +48,7 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "versionCode": 14,
+      "versionCode": 15,
       "package": "com.abhay.byre"
     },
     "web": {
