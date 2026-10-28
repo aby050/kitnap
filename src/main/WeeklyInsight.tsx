@@ -132,7 +132,7 @@ export default function WeeklyInsight({
       key: 'screentime',
       title: 'Screen Time',
       icon: 'hourglass',
-      gradientColors: ['#4C1D95', '#0B0816'] as const,
+      gradientColors: ['#E7E0FA', '#F6F3FE'] as const,
       accentColor: '#A78BFA',
       value: hasLastWeek && screenTimePct !== 0 ? `${Math.abs(screenTimePct)}%` : formatDuration(d.savedMinutes),
       arrow: screenTimePct > 0 ? '↙' : screenTimePct < 0 ? '↗' : '↙',
@@ -156,7 +156,7 @@ export default function WeeklyInsight({
       key: 'focus',
       title: 'Focus Time',
       icon: 'target',
-      gradientColors: ['#065F46', '#04180E'] as const,
+      gradientColors: ['#D8F0DA', '#F2FAF2'] as const,
       accentColor: palette.accent,
       value: lastWeekFocus > 0 && focusPct !== 0 ? `${focusPct > 0 ? '+' : ''}${focusPct}%` : formatDuration(d.focusMinutes),
       arrow: focusPct >= 0 ? '↗' : '↘',
@@ -176,7 +176,7 @@ export default function WeeklyInsight({
       key: 'blocked',
       title: 'Shield Wall',
       icon: 'shield',
-      gradientColors: ['#1E3A8A', '#060E20'] as const,
+      gradientColors: ['#DCE6FB', '#F3F6FE'] as const,
       accentColor: '#60A5FA',
       value: String(d.distractionsBlocked || 84),
       arrow: blockedDiff >= 0 ? '↗' : '↘',
@@ -196,7 +196,7 @@ export default function WeeklyInsight({
       key: 'streak',
       title: 'Focus Streak',
       icon: 'flame',
-      gradientColors: ['#9A3412', '#1A0802'] as const,
+      gradientColors: ['#FBE3C8', '#FFF6EC'] as const,
       accentColor: '#FB923C',
       value: `${d.streak || 5}d`,
       arrow: '↗',
@@ -256,7 +256,7 @@ export default function WeeklyInsight({
                 <View style={styles.cardHeader}>
                   <View style={styles.headerLeft}>
                     <View style={[styles.iconBg, { backgroundColor: '#FFFFFF' }]}>
-                      <Icon name={slide.icon as IconName} size={18} color="#0B0816" strokeWidth={2} />
+                      <Icon name={slide.icon as IconName} size={18} color="#2E3136" strokeWidth={2} />
                     </View>
                     <Text style={styles.cardTitle}>{slide.title}</Text>
                   </View>

@@ -106,7 +106,7 @@ export default function ProgressPhotosScreen({
             ) : (
               <View style={[StyleSheet.absoluteFill, styles.captureDisabledFill]} />
             )}
-            <Icon name="camera" size={19} color={enabled ? '#04140c' : palette.textTertiary} strokeWidth={2} />
+            <Icon name="camera" size={19} color={enabled ? '#FFFFFF' : palette.textTertiary} strokeWidth={2} />
             <Text style={[styles.captureText, !enabled && styles.captureTextDisabled]}>
               {busy
                 ? 'Opening camera…'
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   captureDisabledFill: { backgroundColor: palette.surfaceHigh },
-  captureText: { color: '#04140c', fontSize: 15.5, fontWeight: '800', letterSpacing: -0.2 },
+  captureText: { color: '#FFFFFF', fontSize: 15.5, fontWeight: '800', letterSpacing: -0.2 },
   captureTextDisabled: { color: palette.textTertiary },
   hint: { color: palette.textTertiary, fontSize: 12.5, textAlign: 'center', marginTop: -space.sm },
 

@@ -131,12 +131,12 @@ export default function MilestonesScreen({
               <LinearGradient
                 colors={
                   selectedBadge.category === 'streak'
-                    ? ['#3A1F0C', '#1C0D05', '#0A0503']
+                    ? ['#FBE3C8', '#FDEFE0', '#FFF8F0']
                     : selectedBadge.category === 'focus'
-                    ? ['#0B3A2C', '#061D16', '#020C09']
+                    ? ['#D8F0DA', '#E9F7EA', '#F6FCF6']
                     : selectedBadge.category === 'saved'
-                    ? ['#332408', '#1A1204', '#080501']
-                    : ['#2E1029', '#170814', '#080207']
+                    ? ['#FAEDC2', '#FCF4DA', '#FFFBEF']
+                    : ['#EFE0F5', '#F6EDF9', '#FCF8FD']
                 }
                 locations={[0, 0.55, 1]}
                 style={StyleSheet.absoluteFill}
