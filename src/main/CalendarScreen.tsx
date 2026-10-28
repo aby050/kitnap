@@ -12,27 +12,25 @@ type DayType = 'none' | 'low' | 'avg' | 'high' | 'challenge' | 'goal';
 function classify(log: ReturnType<typeof getDay>, avgSaved: number): DayType {
   const active = log.focusMinutes > 0 || log.savedMinutes > 0 || log.lockSessions > 0 || log.distractionsBlocked > 0;
   if (!active) return 'none';
-  if (log.hardUnlocks > 0) return 'challenge';
   if (avgSaved > 0 && log.savedMinutes >= avgSaved * 1.3) return 'low';
   if (avgSaved > 0 && log.savedMinutes <= avgSaved * 0.5) return 'high';
   return 'avg';
 }
 
-// Aligned to the app's intensity ramp: azure (best) → gold → amber → crimson.
+// Calm (green) → ordinary (soft orange) → heavy (rose): readable at a glance.
 const TYPE_COLOR: Record<DayType, string> = {
   none: palette.surfaceHigh,
-  low: palette.accent,
-  avg: palette.accent,
-  high: palette.warn,
-  challenge: palette.danger,
-  goal: palette.accent,
+  low: '#8CCB8E',
+  avg: '#F2B26B',
+  high: '#E58A8A',
+  challenge: '#F2B26B',
+  goal: '#8CCB8E',
 };
 
 const LEGEND: { type: DayType; label: string }[] = [
-  { type: 'low', label: 'Low distraction' },
-  { type: 'avg', label: 'Average day' },
-  { type: 'high', label: 'High distraction' },
-  { type: 'challenge', label: 'Hard unlock completed' },
+  { type: 'low', label: 'Calm day' },
+  { type: 'avg', label: 'Ordinary day' },
+  { type: 'high', label: 'Phone-heavy day' },
 ];
 
 function monthLabel(year: number, month: number) {
@@ -88,7 +86,7 @@ export default function CalendarScreen({ progress, onBack }: { progress: Progres
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#050C16', '#000000', '#000000']} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} />
+
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
           <Pressable onPress={onBack} style={styles.circleBtn} hitSlop={10}>
@@ -184,7 +182,7 @@ export default function CalendarScreen({ progress, onBack }: { progress: Progres
                   <Metric icon="hourglass" label="Time saved" value={formatDuration(selectedLog.savedMinutes)} />
                   <Metric icon="shield" label="Distractions blocked" value={`${selectedLog.distractionsBlocked}`} />
                   <Metric icon="lock" label="Lock sessions" value={`${selectedLog.lockSessions}`} />
-                  <Metric icon="key" label="Hard unlocks" value={`${selectedLog.hardUnlocks}`} />
+                  <Metric icon="key" label="Unlocks" value={`${selectedLog.hardUnlocks}`} />
                 </View>
               )}
             </Animated.View>
@@ -211,15 +209,15 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: palette.base },
   container: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.gutter, paddingVertical: space.md },
-  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.glass, alignItems: 'center', justifyContent: 'center' },
+  circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: palette.text, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: palette.text, fontSize: 20, fontWeight: '800', letterSpacing: -0.4 },
   scroll: { paddingHorizontal: space.gutter, paddingTop: space.xs, paddingBottom: 110 },
 
   card: {
-    backgroundColor: palette.surface,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: palette.text,
     borderRadius: radius.xxl,
-    borderWidth: 1,
-    borderColor: palette.border,
     padding: space.lg,
     marginTop: space.base,
   },
@@ -241,16 +239,16 @@ const styles = StyleSheet.create({
   dayDotSelected: { borderWidth: 2, borderColor: palette.text },
   dayDotToday: { borderWidth: 1.5, borderColor: palette.accentBorder },
   dayNum: { fontSize: 12.5, fontWeight: '800' },
-  dayNumOn: { color: '#04140c' },
+  dayNumOn: { color: palette.text },
   dayNumOff: { color: palette.textTertiary },
 
   legendWrap: {
     marginTop: space.lg,
     padding: space.base,
     borderRadius: radius.lg,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.hairline,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: palette.text,
     gap: space.sm,
   },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
@@ -259,10 +257,10 @@ const styles = StyleSheet.create({
 
   detailCard: {
     marginTop: space.lg,
-    backgroundColor: palette.surface,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: palette.text,
     borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: palette.border,
     padding: space.lg,
   },
   detailDate: { color: palette.text, fontSize: 16.5, fontWeight: '800', letterSpacing: -0.3, marginBottom: space.md },
