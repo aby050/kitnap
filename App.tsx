@@ -24,6 +24,18 @@ import SplashFlow from './src/onboarding/SplashFlow';
 import MascotSplash from './src/onboarding/MascotSplash';
 import ArtGallery from './src/onboarding/ArtGallery';
 import WelcomeTribute from './src/onboarding/WelcomeTribute';
+
+// Web preview only (development builds): every load starts from the
+// first-launch splash, as a new user sees it. Add ?keep=1 to keep the saved
+// state; ?demo=1 and ?art=1 keep their own behaviour.
+if (__DEV__ && typeof window !== 'undefined' && window.localStorage) {
+  const q = window.location.search;
+  if (!/keep=1|demo=1|art=1/.test(q)) {
+    try {
+      window.localStorage.removeItem('screentime.v1');
+    } catch {}
+  }
+}
 import IntroStories from './src/onboarding/IntroStories';
 import UsageRevealScreen from './src/onboarding/UsageRevealScreen';
 import OnboardingFlow from './src/onboarding/OnboardingFlow';
