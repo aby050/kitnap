@@ -1,4 +1,4 @@
-// Renames the Play listing in every language: "Phonewise" -> "Kitnap" in title, short
+// Renames the Play listing in every language to "Kitnap" in title, short
 // and full description, and uploads the Kitnap icon. `node scripts/play-rename.mjs` is a
 // dry run; add `apply` to commit the edit (which sends it to Google review).
 import { createSign } from 'crypto';

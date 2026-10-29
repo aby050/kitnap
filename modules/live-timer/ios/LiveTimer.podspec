@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
   s.summary        = 'Live Activity for the running session.'
   s.description    = 'Starts and ends the ActivityKit Live Activity that shows the countdown on the Lock Screen, Dynamic Island and always-on display.'
   s.author         = ''
-  s.homepage       = 'https://byre.app'
+  s.homepage       = 'https://kitnap.rvastudio.in'
   s.platforms      = { :ios => '16.4' }
   s.source         = { git: '' }
   s.static_framework = true

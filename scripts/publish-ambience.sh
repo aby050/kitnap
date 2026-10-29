@@ -13,7 +13,7 @@
 #   npx wrangler login
 #   npx wrangler r2 bucket create byre-ambience
 #   # then in the Cloudflare dashboard: R2 → byre-ambience → Settings →
-#   # Public access → connect a custom domain, e.g. cdn.byre.app
+#   # Public access → connect a custom domain, e.g. cdn.rvastudio.in
 #
 # Usage:  scripts/publish-ambience.sh
 set -euo pipefail

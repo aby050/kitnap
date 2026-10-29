@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
   s.summary        = 'Renders real app icons for a saved FamilyActivitySelection.'
   s.description    = 'Apple only draws a chosen app’s icon through SwiftUI Label(ApplicationToken); the token itself never reaches JavaScript, so this view reads the saved selection natively and renders it.'
   s.author         = ''
-  s.homepage       = 'https://byre.app'
+  s.homepage       = 'https://kitnap.rvastudio.in'
   s.platforms      = { :ios => '16.4' }
   s.source         = { git: '' }
   s.static_framework = true

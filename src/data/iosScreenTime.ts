@@ -456,7 +456,7 @@ const MIN_OS_WINDOW_MINUTES = 15;
       ],
     );
   } catch (e) {
-    console.warn('[byre] grant backstop not armed', e);
+    console.warn('[kitnap] grant backstop not armed', e);
   }
 }
 

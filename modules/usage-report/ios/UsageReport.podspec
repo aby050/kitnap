@@ -4,7 +4,7 @@ Pod::Spec.new do |s|
   s.summary        = 'Hosts Apple’s DeviceActivityReport view for real in-app Screen Time numbers.'
   s.description    = 'DeviceActivityResults never cross into app code as data — only as a SwiftUI view the OS renders from a DeviceActivityReport extension. This hosts that view.'
   s.author         = ''
-  s.homepage       = 'https://byre.app'
+  s.homepage       = 'https://kitnap.rvastudio.in'
   s.platforms      = { :ios => '16.4' }
   s.source         = { git: '' }
   s.static_framework = true

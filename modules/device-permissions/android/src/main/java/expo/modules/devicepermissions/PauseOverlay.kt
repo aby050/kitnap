@@ -148,7 +148,7 @@ object PauseOverlay {
       view = root
       shownFor = packageName
     } catch (e: Exception) {
-      Log.e("ByrePauseOverlay", "Could not add overlay", e)
+      Log.e("KitnapPauseOverlay", "Could not add overlay", e)
       return
     }
 
@@ -173,7 +173,7 @@ object PauseOverlay {
     try {
       wm?.removeView(current)
     } catch (e: Exception) {
-      Log.w("ByrePauseOverlay", "Overlay already gone", e)
+      Log.w("KitnapPauseOverlay", "Overlay already gone", e)
     }
     view = null
     shownFor = null
@@ -189,7 +189,7 @@ object PauseOverlay {
           .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
       } catch (e: Exception) {
-        Log.e("ByrePauseOverlay", "Could not go home", e)
+        Log.e("KitnapPauseOverlay", "Could not go home", e)
       }
     }
   }

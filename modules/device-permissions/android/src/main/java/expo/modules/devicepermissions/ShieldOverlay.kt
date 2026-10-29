@@ -81,7 +81,7 @@ object ShieldOverlay {
     if (!canDraw(context)) {
       // No permission: fall back to the old behaviour rather than silently
       // doing nothing. A weaker block beats no block.
-      openByre(context, packageName)
+      openKitnap(context, packageName)
       return
     }
     if (view != null && shownFor == packageName) return
@@ -126,10 +126,10 @@ object ShieldOverlay {
       wm.addView(root, params)
       view = root
       shownFor = packageName
-      Log.d("ByreShieldOverlay", "Cover up over $packageName")
+      Log.d("KitnapShieldOverlay", "Cover up over $packageName")
     } catch (e: Exception) {
-      Log.e("ByreShieldOverlay", "Could not add overlay", e)
-      openByre(context, packageName)
+      Log.e("KitnapShieldOverlay", "Could not add overlay", e)
+      openKitnap(context, packageName)
     }
   }
 
@@ -138,12 +138,12 @@ object ShieldOverlay {
     // Logged because the last bug here was the cover being taken down by
     // something that had no business doing it — a removal with no visible
     // cause is very hard to tell apart from one that never happened.
-    Log.d("ByreShieldOverlay", "Cover down (was over $shownFor)")
+    Log.d("KitnapShieldOverlay", "Cover down (was over $shownFor)")
     val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
     try {
       wm?.removeView(current)
     } catch (e: Exception) {
-      Log.w("ByreShieldOverlay", "Overlay already gone", e)
+      Log.w("KitnapShieldOverlay", "Overlay already gone", e)
     }
     view = null
     shownFor = null
@@ -309,7 +309,7 @@ object ShieldOverlay {
         // app they were reaching for, without opening anything.
         hide(context)
         if (LockdownStore.isOn(context)) {
-          openByre(context, packageName)
+          openKitnap(context, packageName)
         } else {
           try {
             context.startActivity(
@@ -318,7 +318,7 @@ object ShieldOverlay {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             )
           } catch (e: Exception) {
-            Log.e("ByreShieldOverlay", "Could not reach home", e)
+            Log.e("KitnapShieldOverlay", "Could not reach home", e)
           }
         }
       }
@@ -352,7 +352,7 @@ object ShieldOverlay {
             try {
               context.startActivity(altLaunch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             } catch (e: Exception) {
-              Log.e("ByreShieldOverlay", "Could not open alternative", e)
+              Log.e("KitnapShieldOverlay", "Could not open alternative", e)
             }
           }
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -370,7 +370,7 @@ object ShieldOverlay {
       isClickable = true
       setOnClickListener {
         hide(context)
-        openByre(context, packageName)
+        openKitnap(context, packageName)
       }
     }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
@@ -396,13 +396,13 @@ object ShieldOverlay {
   private fun formatMinutes(m: Long): String =
     if (m < 60) "$m min" else if (m % 60 == 0L) "${m / 60}h" else "${m / 60}h ${m % 60}m"
 
-  private fun openByre(context: Context, packageName: String) {
+  private fun openKitnap(context: Context, packageName: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("phonewise://shield?package=$packageName"))
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
     try {
       context.startActivity(intent)
     } catch (e: Exception) {
-      Log.e("PhonewiseShieldOverlay", "Failed to open Kitnap", e)
+      Log.e("KitnapShieldOverlay", "Failed to open Kitnap", e)
     }
   }
 }
