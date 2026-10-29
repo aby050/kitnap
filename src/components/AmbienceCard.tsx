@@ -52,7 +52,7 @@ export function AmbienceCard({ item, onStart }: { item: Ambience; onStart: () =>
           end={{ x: 0.9, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        {still ? <Image source={still} style={StyleSheet.absoluteFill} resizeMode="cover" /> : null}
+        {still ? <Image source={still} style={StyleSheet.absoluteFill} resizeMode="stretch" /> : null}
 
         {/* Scrim. Without it the title sits on whatever the footage happens to
          *  be doing that frame, which is unreadable on bright stills. */}

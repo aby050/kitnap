@@ -20,7 +20,7 @@ import { MediaSource } from '../data/ambienceMedia';
 export default function AmbienceVideoLayer({
   source,
   onFirstFrame,
-  contentFit = 'cover',
+  contentFit = 'fill',
 }: {
   source: MediaSource;
   onFirstFrame?: () => void;

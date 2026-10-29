@@ -213,7 +213,7 @@ export default function AmbienceSessionScreen({
           </Animated.View>
         ) : null}
         {hasVideo && VideoLayer && media.video ? (
-          <VideoLayer source={media.video} onFirstFrame={() => setFirstFrame(true)} />
+          <VideoLayer source={media.video} contentFit="fill" onFirstFrame={() => setFirstFrame(true)} />
         ) : null}
 
         {/* Legibility scrim for the controls at both ends. */}

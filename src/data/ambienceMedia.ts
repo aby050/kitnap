@@ -44,7 +44,10 @@ export type AmbienceMedia = {
 
 /** Loops that ship inside the binary. Everything else streams. */
 const BUNDLED_VIDEO: Record<string, number> = {
-  peace: require('../../assets/ambience/peace.mp4'),
+  // Cat rooms: small looping clips shipped in the app.
+  morning: require('../../assets/ambience/cat-morning.mp4'),
+  peace: require('../../assets/ambience/cat-peace.mp4'),
+  night: require('../../assets/ambience/cat-night.mp4'),
   winddown: require('../../assets/ambience/winddown.mp4'),
 };
 
@@ -53,14 +56,14 @@ const BUNDLED_VIDEO: Record<string, number> = {
 const POSTERS: Record<string, number> = {
   breathe: require('../../assets/ambience/breathe-poster.jpg'),
   meditate: require('../../assets/ambience/meditate-poster.jpg'),
-  morning: require('../../assets/ambience/morning-poster.jpg'),
+  morning: require('../../assets/ambience/cat-morning-poster.jpg'),
   reading: require('../../assets/ambience/reading-poster.jpg'),
   think: require('../../assets/ambience/think-poster.jpg'),
   winddown: require('../../assets/ambience/winddown-poster.jpg'),
   family: require('../../assets/ambience/family-poster.jpg'),
   study: require('../../assets/ambience/study-poster.jpg'),
-  peace: require('../../assets/ambience/peace-poster.jpg'),
-  night: require('../../assets/ambience/night-poster.jpg'),
+  peace: require('../../assets/ambience/cat-peace-poster.jpg'),
+  night: require('../../assets/ambience/cat-night-poster.jpg'),
 };
 
 export function mediaFor(key: string): AmbienceMedia {
