@@ -45,7 +45,13 @@ export default function OnboardingFlow({
   onComplete: (answers: Record<string, Answer>, history?: HistoryEntry[]) => void;
   onAccountSignedIn?: (account: Account) => void;
 }) {
-  const [stepIndex, setStepIndex] = useState(0);
+  // Web preview, development builds only: `?q=<question id>` opens that question directly.
+  const [stepIndex, setStepIndex] = useState(() => {
+    if (!__DEV__ || typeof window === 'undefined' || !window.location?.search) return 0;
+    const id = new URLSearchParams(window.location.search).get('q');
+    const i = id ? questions.findIndex((q) => q.id === id) : -1;
+    return i < 0 ? 0 : i;
+  });
   const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
   const [answers, setAnswers] = useState<Record<string, Answer>>(initialAnswers);
   // "Yes, sign in" interrupts the question stack with a real sign-in step;

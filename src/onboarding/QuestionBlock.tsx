@@ -17,11 +17,12 @@ import { Field } from '../design/primitives';
 import { fonts, palette, space } from '../design/tokens';
 import { HIGHLIGHT, INK, INK_DIM } from './PastelCard';
 import LineArt, { ArtName } from './LineArt';
+import ControlTug from './ControlTug';
 
 /** One original line drawing per question. */
 const QUESTION_ART: Record<string, ArtName> = {
   matters: 'thinker', interests: 'sun', slipWindow: 'nightBed', hardBlock: 'phoneLock', name: 'wave',
-  healthLimit: 'pushup', movement: 'pushup', repBaseline: 'pushup', whereBlocked: 'pin', controlScale: 'gauge',
+  healthLimit: 'pushup', movement: 'pushup', repBaseline: 'pushup', whereBlocked: 'pin',
 };
 
 type Props = {
@@ -274,7 +275,8 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
       style={styles.block}
     >
       <View style={styles.promptArea}>
-      {question.kind !== 'static' && question.kind !== 'review' && (
+      {/* The tug-of-war is the control question's picture, so it gets no line art. */}
+      {question.kind !== 'static' && question.kind !== 'review' && !(question.kind === 'slider' && question.labels) && (
         <Animated.View entering={FadeIn.duration(500)} style={styles.art}>
           <LineArt name={QUESTION_ART[question.id] ?? 'phoneLock'} height={200} />
         </Animated.View>
@@ -380,7 +382,15 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
 
       {isTypingComplete && question.kind === 'slider' && (
         <Animated.View entering={FadeInDown.duration(350)} style={styles.fullWidth}>
-          {(() => {
+          {question.labels ? (
+            <ControlTug
+              value={Math.round(sliderVal)}
+              min={question.min}
+              max={question.max}
+              labels={question.labels}
+              onChange={setSliderVal}
+            />
+          ) : (() => {
             const rounded = Math.round(sliderVal);
             const named = question.labels?.[rounded - question.min];
             // The top step of a `maxPlus` slider means "N or older", so it
@@ -424,7 +434,7 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
               </View>
             );
           })()}
-          <Slider
+          {!question.labels && <Slider
             style={{ width: '100%', height: 40 }}
             minimumValue={question.min}
             maximumValue={question.max}
@@ -434,14 +444,8 @@ export default function QuestionBlock({ question, onAnswer }: Props) {
             minimumTrackTintColor={HIGHLIGHT}
             maximumTrackTintColor="rgba(27,27,31,0.15)"
             thumbTintColor={INK}
-          />
-          {question.labels && (
-            <View style={styles.sliderEnds}>
-              <Text style={styles.sliderEndText}>Phone in charge</Text>
-              <Text style={styles.sliderEndText}>You in charge</Text>
-            </View>
-          )}
-          <View style={{ height: space.md }} />
+          />}
+          {!question.labels && <View style={{ height: space.md }} />}
           <InkButton
             label="Continue"
             onPress={() => {

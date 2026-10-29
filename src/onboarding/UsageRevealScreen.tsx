@@ -5,8 +5,8 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { checkUsageAccessPermission, queryDailyUsage } from '../data/androidUsage';
 import { installedLabel, useInstalledApps } from '../data/installedApps';
 import { DEFAULT_BLOCKED_APPS } from '../data/blockedApps';
-import { CardPanel, INK, INK_DIM, InkButton, PastelCard, PILL, TINTS } from './PastelCard';
-import { fonts, palette } from '../design/tokens';
+import { INK, INK_DIM, InkButton, PastelCard, TINTS } from './PastelCard';
+import { fonts } from '../design/tokens';
 import AppGlyph from '../ui/AppGlyph';
 
 type Row = { packageName: string; label: string; minutes: number };
@@ -78,55 +78,125 @@ export default function UsageRevealScreen({ onContinue }: { onContinue: () => vo
   }, []);
 
   if (!rows) return <View style={{ flex: 1 }} />;
-  const peak = Math.max(1, ...rows.map((r) => r.minutes));
+  const yearDays = (perDay * 365) / 60 / 24;
 
   return (
-    <PastelCard tint={TINTS.pink}>
+    <PastelCard tint={TINTS.cream}>
       <Animated.View entering={FadeIn.duration(500)} style={styles.head}>
         <Text style={styles.eyebrow}>YOUR LAST 7 DAYS</Text>
-        <Text style={styles.title}>Where your time goes</Text>
+        <View style={styles.heroRow}>
+          <CountUp to={Math.round(yearDays)} style={styles.heroNum} />
+          <Text style={styles.heroUnit}>days</Text>
+        </View>
         <Text style={styles.sub}>
-          About <Text style={styles.strong}>{fmt(perDay)}</Text> a day on your phone. These apps take the most.
+          a year go to your phone. That's <Text style={styles.strong}>{fmt(perDay)}</Text> every single day.
         </Text>
       </Animated.View>
 
-      <CardPanel style={styles.panel}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        {rows.map((r, i) => (
-          <Animated.View key={r.packageName} entering={FadeInDown.delay(120 + i * 80).duration(380)} style={styles.row}>
-            <AppGlyph name={r.label} packageName={r.packageName} size={40} />
-            <View style={styles.mid}>
-              <View style={styles.line}>
-                <Text style={styles.name} numberOfLines={1}>{r.label}</Text>
-                <Text style={styles.time}>{fmt(r.minutes)} / day</Text>
+      <View style={styles.body}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator={false}>
+          <Animated.View entering={FadeInDown.delay(250).duration(500)} style={styles.receiptWrap}>
+            <View style={styles.receipt}>
+              <Text style={styles.rHead}>KITNAP · TIME RECEIPT</Text>
+              <Text style={styles.rDate}>Paid with your attention</Text>
+              <View style={styles.dash} />
+              {rows.map((r, i) => (
+                <Animated.View key={r.packageName} entering={FadeIn.delay(500 + i * 140).duration(300)} style={styles.row}>
+                  <AppGlyph name={r.label} packageName={r.packageName} size={30} />
+                  <View style={styles.mid}>
+                    <Text style={styles.name} numberOfLines={1}>{r.label}</Text>
+                    <Text style={styles.time}>{fmt(r.minutes)} a day</Text>
+                  </View>
+                  <Text style={styles.cost}>{daysLabel((r.minutes * 365) / 60 / 24)}</Text>
+                </Animated.View>
+              ))}
+              {/* The rest of the day's phone time, so the receipt adds up to its total. */}
+              {perDay - rows.reduce((n, r) => n + r.minutes, 0) >= 1 && (
+                <View style={styles.row}>
+                  <View style={styles.otherDot}><Text style={styles.otherDots}>···</Text></View>
+                  <View style={styles.mid}>
+                    <Text style={styles.name}>Everything else</Text>
+                    <Text style={styles.time}>{fmt(perDay - rows.reduce((n, r) => n + r.minutes, 0))} a day</Text>
+                  </View>
+                  <Text style={styles.cost}>{daysLabel(((perDay - rows.reduce((n, r) => n + r.minutes, 0)) * 365) / 60 / 24)}</Text>
+                </View>
+              )}
+              <View style={styles.dash} />
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>TOTAL / YEAR</Text>
+                <Text style={styles.totalVal}>{daysLabel(yearDays)}</Text>
               </View>
-              <View style={styles.track}>
-                <View style={[styles.fill, { width: `${Math.max(6, (r.minutes / peak) * 100)}%` }]} />
-              </View>
+              <Animated.View entering={FadeIn.delay(500 + rows.length * 140 + 200).duration(250)} style={styles.stamp}>
+                <Text style={styles.stampText}>TOO{'\n'}MUCH</Text>
+              </Animated.View>
+            </View>
+            <View style={styles.zigzag}>
+              {Array.from({ length: 22 }).map((_, i) => <View key={i} style={styles.tooth} />)}
             </View>
           </Animated.View>
-        ))}
-      </ScrollView>
-
-      <InkButton label="Choose what to block" onPress={onContinue} />
-      </CardPanel>
+        </ScrollView>
+        <InkButton label="Take some days back" onPress={onContinue} />
+      </View>
     </PastelCard>
   );
 }
 
+function daysLabel(d: number) {
+  return d >= 1 ? `${Math.round(d)} days` : `${Math.round(d * 24)} hrs`;
+}
+
+/** The headline number climbs to its value so the size of it lands. */
+function CountUp({ to, style }: { to: number; style: any }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const start = Date.now();
+    const id = setInterval(() => {
+      const t = Math.min(1, (Date.now() - start) / 1100);
+      setN(Math.round(to * (1 - Math.pow(1 - t, 3))));
+      if (t >= 1) clearInterval(id);
+    }, 30);
+    return () => clearInterval(id);
+  }, [to]);
+  return <Text style={style}>{n}</Text>;
+}
+
+const PAPER = '#FFFDF7';
 const styles = StyleSheet.create({
-  head: { alignItems: 'flex-start', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16 },
+  head: { alignItems: 'flex-start', paddingHorizontal: 24, paddingTop: 20, paddingBottom: 14 },
   eyebrow: { color: INK_DIM, fontFamily: fonts.bold, fontSize: 11, letterSpacing: 1.4, backgroundColor: 'rgba(27,27,31,0.07)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, overflow: 'hidden' },
-  title: { color: INK, fontFamily: fonts.bold, fontSize: 28, lineHeight: 34, letterSpacing: -0.6, marginTop: 14, textAlign: 'left' },
-  sub: { color: INK_DIM, fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, marginTop: 8, textAlign: 'left' },
+  heroRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 10 },
+  heroNum: { color: '#E8821A', fontFamily: fonts.bold, fontSize: 76, lineHeight: 84, letterSpacing: -3 },
+  heroUnit: { color: INK, fontFamily: fonts.bold, fontSize: 30, letterSpacing: -0.6 },
+  sub: { color: INK_DIM, fontFamily: fonts.regular, fontSize: 16, lineHeight: 23, marginTop: 2, textAlign: 'left' },
   strong: { color: INK, fontFamily: fonts.semibold },
-  panel: { flex: 1 },
-  list: { gap: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, borderRadius: 18, backgroundColor: PILL, borderWidth: 1.5, borderColor: INK },
-  mid: { flex: 1, gap: 8 },
-  line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  name: { color: INK, fontFamily: fonts.semibold, fontSize: 16, flex: 1 },
-  time: { color: INK_DIM, fontFamily: fonts.medium, fontSize: 13 },
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(27,27,31,0.1)', overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: 3, backgroundColor: '#E8821A' },
+  body: { flex: 1, paddingHorizontal: 20, paddingBottom: 16, gap: 12 },
+  receiptWrap: { transform: [{ rotate: '-1.2deg' }], marginTop: 4, marginHorizontal: 4 },
+  receipt: {
+    backgroundColor: PAPER, paddingHorizontal: 18, paddingTop: 18, paddingBottom: 10,
+    borderTopLeftRadius: 6, borderTopRightRadius: 6,
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+  },
+  rHead: { color: INK, fontFamily: fonts.bold, fontSize: 13, letterSpacing: 2, textAlign: 'center' },
+  rDate: { color: INK_DIM, fontSize: 12, textAlign: 'center', marginTop: 3 },
+  dash: { borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(27,27,31,0.25)', marginVertical: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  mid: { flex: 1 },
+  otherDot: { width: 30, height: 30, borderRadius: 8, backgroundColor: 'rgba(27,27,31,0.08)', alignItems: 'center', justifyContent: 'center' },
+  otherDots: { color: INK_DIM, fontFamily: fonts.bold, fontSize: 16, marginTop: -4 },
+  name: { color: INK, fontFamily: fonts.semibold, fontSize: 15 },
+  time: { color: INK_DIM, fontSize: 12, marginTop: 1 },
+  cost: { color: INK, fontFamily: fonts.bold, fontSize: 15 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  totalLabel: { color: INK, fontFamily: fonts.bold, fontSize: 13, letterSpacing: 1.5 },
+  totalVal: { color: '#E8821A', fontFamily: fonts.bold, fontSize: 22 },
+  stamp: {
+    position: 'absolute', right: 14, top: 44, transform: [{ rotate: '14deg' }],
+    borderWidth: 2.5, borderColor: 'rgba(214,69,65,0.7)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+  },
+  stampText: { color: 'rgba(214,69,65,0.75)', fontFamily: fonts.bold, fontSize: 13, letterSpacing: 1.5, textAlign: 'center', lineHeight: 15 },
+  zigzag: { flexDirection: 'row', overflow: 'hidden', height: 8 },
+  tooth: {
+    flex: 1, height: 0, borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 8,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: PAPER,
+  },
 });

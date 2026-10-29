@@ -30,7 +30,7 @@ import WelcomeTribute from './src/onboarding/WelcomeTribute';
 // state; ?demo=1 and ?art=1 keep their own behaviour.
 if (__DEV__ && typeof window !== 'undefined' && window.localStorage) {
   const q = window.location.search;
-  if (!/keep=1|demo=1|art=1/.test(q)) {
+  if (!/keep=1|demo=1|art=1|screen=/.test(q)) {
     try {
       window.localStorage.removeItem('screentime.v1');
     } catch {}
@@ -408,6 +408,10 @@ export default function App() {
 
   if (__DEV__ && Platform.OS === 'web' && typeof window !== 'undefined' && window.location.search.includes('art=1')) {
     return <ArtGallery />;
+  }
+  // Dev web preview: `?screen=usage` opens the usage reveal on its own.
+  if (__DEV__ && Platform.OS === 'web' && typeof window !== 'undefined' && window.location.search.includes('screen=usage')) {
+    return <SafeAreaProvider><UsageRevealScreen onContinue={() => {}} /></SafeAreaProvider>;
   }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
