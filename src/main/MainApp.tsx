@@ -224,10 +224,20 @@ export default function MainApp({
 }) {
   // Relaunching mid-session must land back on the locked screen, not on Home
   // — otherwise force-quitting is a way to browse the app during a block.
-  const [tab, setTab] = useState<Tab>(() =>
-    persisted.session && persisted.session.endsAt > Date.now() ? 'timer' : 'home',
+  const [tab, setTab] = useState<Tab>(() => {
+    // Dev web preview: `?tab=apps|timer` opens that tab.
+    if (__DEV__ && Platform.OS === 'web' && typeof window !== 'undefined') {
+      const t = new URLSearchParams(window.location.search).get('tab');
+      if (t === 'apps' || t === 'timer' || t === 'home') return t;
+    }
+    return persisted.session && persisted.session.endsAt > Date.now() ? 'timer' : 'home';
+  });
+  // Dev web preview: `?overlay=calendar|milestones|weeklyInsight…` opens that screen.
+  const [overlay, setOverlay] = useState<Overlay>(() =>
+    __DEV__ && Platform.OS === 'web' && typeof window !== 'undefined'
+      ? ((new URLSearchParams(window.location.search).get('overlay') as Overlay) ?? null)
+      : null,
   );
-  const [overlay, setOverlay] = useState<Overlay>(null);
   // Where to land after the Difficulty screen — it's reachable from both
   // Settings and Home now, and hardcoding "back to Settings" sent people
   // who opened it from Home somewhere they never came from.
@@ -772,7 +782,14 @@ export default function MainApp({
   useEffect(() => {
     if (!__DEV__ || Platform.OS !== 'web') return;
     const q = typeof window !== 'undefined' ? window.location.search : '';
-    if (q.includes('demo=1')) applyDevState(buildDemoState());
+    if (q.includes('demo=1')) {
+      applyDevState(buildDemoState());
+      // applyDevState lands on home; keep any ?tab= / ?overlay= from the link.
+      const p = new URLSearchParams(q);
+      const t = p.get('tab');
+      if (t === 'apps' || t === 'timer') setTab(t);
+      if (p.get('overlay')) setOverlay(p.get('overlay') as Overlay);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Computed once at mount so finishing (or skipping) the check-in doesn't

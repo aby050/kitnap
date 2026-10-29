@@ -202,7 +202,9 @@ export default function App() {
   useEffect(() => {
     loadState().then((s) => {
       setPersisted(s);
-      if (s.onboardingComplete) {
+      // Dev web preview: ?demo=1 skips onboarding straight into the sample-data app.
+      const demo = __DEV__ && Platform.OS === 'web' && typeof window !== 'undefined' && window.location.search.includes('demo=1');
+      if (s.onboardingComplete || demo) {
         setThemeKey(s.themeKey);
         setIntensityKey(s.intensityKey);
         setFutureSelfMessage(s.futureSelfMessage);
