@@ -15,6 +15,29 @@ import Animated, {
 import { withSpring } from '../design/noBounce';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+type TfOp = ['t', number, number] | ['r', number, number?, number?] | ['s', number, number?];
+/** SVG transform as the array form Reanimated can apply on the UI thread.
+ *  The CSS-string form goes through Reanimated's string parser, which calls an
+ *  un-workletized callback there and kills the app ("Tried to synchronously
+ *  call a Remote Function"). Rotate takes an optional centre, as in SVG. */
+function tf(...ops: TfOp[]) {
+  'worklet';
+  const out: any[] = [];
+  for (let i = 0; i < ops.length; i++) {
+    const op = ops[i];
+    if (op[0] === 't') {
+      out.push({ translateX: op[1] }, { translateY: op[2] });
+    } else if (op[0] === 's') {
+      out.push({ scaleX: op[1] }, { scaleY: op[2] === undefined ? op[1] : op[2] });
+    } else {
+      const cx = op[2] || 0;
+      const cy = op[3] || 0;
+      out.push({ translateX: cx }, { translateY: cy }, { rotate: op[1] + 'deg' }, { translateX: -cx }, { translateY: -cy });
+    }
+  }
+  return out;
+}
+
 const AG = Animated.createAnimatedComponent(G);
 
 /** 0→1 forever. */
@@ -512,8 +535,8 @@ function NightBed() {
     if (v < 0.85) return 5.5;
     return 5.5 + ((v - 0.85) / 0.15) * 18.5;
   };
-  const hourP = useAnimatedProps(() => ({ transform: `rotate(${45 + hoursOf(t.value) * 30} 60 60)` }));
-  const minP = useAnimatedProps(() => ({ transform: `rotate(${180 + hoursOf(t.value) * 360} 60 60)` }));
+  const hourP = useAnimatedProps(() => ({ rotation: 45 + hoursOf(t.value) * 30, originX: 60, originY: 60 }));
+  const minP = useAnimatedProps(() => ({ rotation: 180 + hoursOf(t.value) * 360, originX: 60, originY: 60 }));
   const moonP = useAnimatedProps(() => ({ opacity: 1 - dayOf(t.value) }));
   const sunP = useAnimatedProps(() => ({ opacity: dayOf(t.value) }));
   const nightLabel = useAnimatedProps(() => ({ opacity: 1 - dayOf(t.value) }));
@@ -565,7 +588,7 @@ function Gauge() {
   const shake = useLoop(160);
   const p = useAnimatedProps(() => {
     const jitter = Math.sin(shake.value * Math.PI * 2) * 1.6 * strain.value;
-    return { transform: `rotate(${34 + strain.value * 36 + jitter} 150 170)` };
+    return { transform: tf(['r', (34 + strain.value * 36 + jitter), 150, 170]) };
   });
   return (
     <G>
@@ -652,7 +675,7 @@ function Orbit({ t, phase, children }: { t: SharedValue<number>; phase: number; 
   };
   const p = useAnimatedProps(() => {
     const [x, y, r] = pos(t.value);
-    return { transform: `translate(${x} ${y}) rotate(${r})` };
+    return { transform: tf(['t', (x), (y)], ['r', (r)]) };
   });
   const tether = useAnimatedProps(() => {
     const [x, y] = pos(t.value);
@@ -684,7 +707,7 @@ function HandPhone() {
   const lock = useAnimatedProps(() => {
     const k = Math.min(1, Math.max(0, (cycle.value - 0.5) / 0.12));
     const out = cycle.value > 0.9 ? 1 - (cycle.value - 0.9) / 0.1 : 1;
-    return { opacity: k * out, transform: `translate(170 110) scale(${0.6 + k * 0.4}) translate(-170 -110)` };
+    return { opacity: k * out, transform: tf(['t', 170, 110], ['s', (0.6 + k * 0.4)], ['t', -170, -110]) };
   });
   // The moment the lock lands, a ring pulses out from it.
   const pulse = useAnimatedProps(() => {
@@ -733,7 +756,7 @@ function Incoming({ cycle, kind, fx, fy }: { cycle: SharedValue<number>; kind: '
     const x = fx + (156 - fx) * pull * 0.35;
     const y = fy + (90 - fy) * pull * 0.35;
     const bounced = c > 0.55 && c < 0.85 ? Math.sin(((c - 0.55) / 0.3) * Math.PI) * 18 : 0;
-    return { transform: `translate(${x} ${y}) rotate(${bounced} 14 14)`, opacity: 1 - pull * 0.35 };
+    return { transform: tf(['t', (x), (y)], ['r', (bounced), 14, 14]), opacity: 1 - pull * 0.35 };
   });
   return (
     <AG animatedProps={p}>
@@ -747,7 +770,7 @@ function Incoming({ cycle, kind, fx, fy }: { cycle: SharedValue<number>; kind: '
 function Watch() {
   const sweep = useLoop(5600);
   const ring = useLoop(3800, Easing.out(Easing.quad));
-  const sweepP = useAnimatedProps(() => ({ transform: `rotate(${sweep.value * 360} 150 112)` }));
+  const sweepP = useAnimatedProps(() => ({ transform: tf(['r', (sweep.value * 360), 150, 112]) }));
   const ringP = useAnimatedProps(() => ({ r: 20 + ring.value * 70, opacity: 1 - ring.value }));
   const hit = useAnimatedProps(() => {
     const d = Math.abs(((sweep.value * 360 + 360) % 360) - 40);
@@ -797,9 +820,9 @@ function BellPhone() {
   const bubble = useAnimatedProps(() => {
     const v = note.value;
     const k = v < 0.15 ? v / 0.15 : v < 0.7 ? 1 : v < 0.8 ? 1 - (v - 0.7) / 0.1 : 0;
-    return { opacity: k, transform: `translate(210 19) scale(${0.7 + k * 0.3}) translate(-210 -19)` };
+    return { opacity: k, transform: tf(['t', 210, 19], ['s', (0.7 + k * 0.3)], ['t', -210, -19]) };
   });
-  const bell = useAnimatedProps(() => ({ transform: `rotate(${-14 + swing.value * 28} 236 46)` }));
+  const bell = useAnimatedProps(() => ({ transform: tf(['r', (-14 + swing.value * 28), 236, 46]) }));
   const w1 = useAnimatedProps(() => ({ opacity: 1 - wave.value }));
   const w2 = useAnimatedProps(() => ({ opacity: wave.value < 0.5 ? wave.value * 2 : 2 - wave.value * 2 }));
   return (
@@ -836,8 +859,8 @@ function Sun() {
     blink.value = withRepeat(withSequence(withDelay(2600, withTiming(0.1, { duration: 120 })), withTiming(1, { duration: 160 })), -1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const rays = useAnimatedProps(() => ({ transform: `rotate(${turn.value * 360} 150 96)` }));
-  const eyes = useAnimatedProps(() => ({ transform: `translate(0 ${88 * (1 - blink.value)}) scale(1 ${blink.value})` }));
+  const rays = useAnimatedProps(() => ({ transform: tf(['r', (turn.value * 360), 150, 96]) }));
+  const eyes = useAnimatedProps(() => ({ transform: tf(['t', 0, (88 * (1 - blink.value))], ['s', 1, (blink.value)]) }));
   return (
     <G>
       <Bricks x={30} y={60} />
@@ -885,23 +908,23 @@ function Sprout() {
   };
   const stem = useAnimatedProps(() => {
     const k = phase(g.value, 0, 0.3) * fade(g.value);
-    return { transform: `translate(0 ${150 * (1 - k)}) scale(1 ${Math.max(0.001, k)})` };
+    return { transform: tf(['t', 0, (150 * (1 - k))], ['s', 1, (Math.max(0.001, k))]) };
   });
   const leaf1 = useAnimatedProps(() => {
     const k = phase(g.value, 0.2, 0.38) * fade(g.value);
-    return { opacity: k, transform: `translate(150 112) scale(${Math.max(0.001, k)}) translate(-150 -112)` };
+    return { opacity: k, transform: tf(['t', 150, 112], ['s', (Math.max(0.001, k))], ['t', -150, -112]) };
   });
   const leaf2 = useAnimatedProps(() => {
     const k = phase(g.value, 0.36, 0.54) * fade(g.value);
-    return { opacity: k, transform: `translate(150 96) scale(${Math.max(0.001, k)}) translate(-150 -96)` };
+    return { opacity: k, transform: tf(['t', 150, 96], ['s', (Math.max(0.001, k))], ['t', -150, -96]) };
   });
   const leaf3 = useAnimatedProps(() => {
     const k = phase(g.value, 0.5, 0.64) * fade(g.value);
-    return { opacity: k, transform: `translate(150 84) scale(${Math.max(0.001, k)}) translate(-150 -84)` };
+    return { opacity: k, transform: tf(['t', 150, 84], ['s', (Math.max(0.001, k))], ['t', -150, -84]) };
   });
   const flower = useAnimatedProps(() => {
     const k = phase(g.value, 0.62, 0.8) * fade(g.value);
-    return { opacity: k, transform: `translate(150 58) rotate(${(1 - k) * -40}) scale(${Math.max(0.001, k)}) translate(-150 -58)` };
+    return { opacity: k, transform: tf(['t', 150, 58], ['r', ((1 - k) * -40)], ['s', (Math.max(0.001, k))], ['t', -150, -58]) };
   });
   return (
     <G>
@@ -939,12 +962,12 @@ function Sprout() {
 function SleepyCat() {
   const breath = usePingPong(1900);
   const z = useLoop(3200);
-  const body = useAnimatedProps(() => ({ transform: `translate(0 176) scale(1 ${1 + breath.value * 0.05}) translate(0 -176)` }));
-  const head = useAnimatedProps(() => ({ transform: `translate(0 ${-breath.value * 2.5})` }));
-  const z1 = useAnimatedProps(() => ({ opacity: 1 - z.value, transform: `translate(${z.value * 8} ${-z.value * 22})` }));
+  const body = useAnimatedProps(() => ({ transform: tf(['t', 0, 176], ['s', 1, (1 + breath.value * 0.05)], ['t', 0, -176]) }));
+  const head = useAnimatedProps(() => ({ transform: tf(['t', 0, (-breath.value * 2.5)]) }));
+  const z1 = useAnimatedProps(() => ({ opacity: 1 - z.value, transform: tf(['t', (z.value * 8), (-z.value * 22)]) }));
   const z2 = useAnimatedProps(() => {
     const v = (z.value + 0.5) % 1;
-    return { opacity: 1 - v, transform: `translate(${v * 8} ${-v * 22})` };
+    return { opacity: 1 - v, transform: tf(['t', (v * 8), (-v * 22)]) };
   });
   return (
     <G>
@@ -976,12 +999,12 @@ function SleepyCat() {
 function KeyCat() {
   const laugh = useLoop(520);
   const ha = useLoop(2400);
-  const shake = useAnimatedProps(() => ({ transform: `rotate(${Math.sin(laugh.value * Math.PI * 2) * 2.5} 150 196)` }));
-  const key = useAnimatedProps(() => ({ transform: `rotate(${Math.sin(laugh.value * Math.PI * 2) * 8 - 18} 214 118)` }));
-  const ha1 = useAnimatedProps(() => ({ opacity: ha.value < 0.5 ? 1 - ha.value * 2 : 0, transform: `translate(0 ${-ha.value * 30})` }));
+  const shake = useAnimatedProps(() => ({ transform: tf(['r', (Math.sin(laugh.value * Math.PI * 2) * 2.5), 150, 196]) }));
+  const key = useAnimatedProps(() => ({ transform: tf(['r', (Math.sin(laugh.value * Math.PI * 2) * 8 - 18), 214, 118]) }));
+  const ha1 = useAnimatedProps(() => ({ opacity: ha.value < 0.5 ? 1 - ha.value * 2 : 0, transform: tf(['t', 0, (-ha.value * 30)]) }));
   const ha2 = useAnimatedProps(() => {
     const v = (ha.value + 0.5) % 1;
-    return { opacity: v < 0.5 ? 1 - v * 2 : 0, transform: `translate(0 ${-v * 30})` };
+    return { opacity: v < 0.5 ? 1 - v * 2 : 0, transform: tf(['t', 0, (-v * 30)]) };
   });
   return (
     <G>

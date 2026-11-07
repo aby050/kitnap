@@ -49,7 +49,7 @@ try {
     track,
     releases: [{ versionCodes: [String(bundle.versionCode)], status: 'completed', releaseNotes: [{ language: 'en-US', text: notes }] }],
   }));
-  const done = await call('POST', `${E}:commit`);
+  const done = await call('POST', `${E}:commit?changesNotSentForReview=${process.env.NOT_SENT === '1'}`);
   console.log(`committed edit ${done.id} to ${track}`);
 } catch (e) {
   await fetch(E, { method: 'DELETE', headers: json });

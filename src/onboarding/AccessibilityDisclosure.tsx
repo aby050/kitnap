@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../design/primitives';
 import { palette, radius } from '../design/tokens';
 import Icon, { IconName } from '../ui/Icon';
@@ -61,7 +61,7 @@ export default function AccessibilityDisclosure({
           <View style={styles.handle} />
 
           <Text style={styles.eyebrow}>BEFORE YOU TURN THIS ON</Text>
-          <Text style={styles.title}>Kitnap uses Android's Accessibility Service</Text>
+          <Text style={styles.title}>Kitnap uses Android's Accessibility Service API</Text>
           <Text style={styles.lede}>
             It is the only way an app can tell that another app has opened. Here is exactly what that
             means, in full.
@@ -88,10 +88,8 @@ export default function AccessibilityDisclosure({
           </ScrollView>
 
           <View style={styles.cta}>
-            <Button label="I understand — open Settings" variant="primary" onPress={onAccept} />
-            <Pressable onPress={onCancel} hitSlop={10}>
-              <Text style={styles.decline}>Not now</Text>
-            </Pressable>
+            <Button label="Agree and open Settings" variant="primary" onPress={onAccept} />
+            <Button label="Decline" variant="outline" onPress={onCancel} />
           </View>
         </View>
       </View>
@@ -147,5 +145,4 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cta: { gap: 12, marginTop: 6 },
-  decline: { color: palette.textTertiary, fontSize: 14, fontWeight: '600', textAlign: 'center' },
 });

@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  isSuccessResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import AppleSignInButton from './AppleSignInButton';
 import { Account } from '../data/store';
 import { fonts, palette } from '../design/tokens';
 import { PRIVACY_POLICY_URL, TERMS_URL } from '../data/purchases';
 
-/** Google requires a real OAuth client ID from Google Cloud Console before it
- *  can complete a real sign-in — there's nothing to fake here without lying
- *  about a network round-trip that never happened. Swap this in when you have
- *  one; until then the button is honest about needing setup instead of
- *  pretending to succeed. */
-const GOOGLE_CLIENT_ID_CONFIGURED = false;
+/** Web OAuth client from Google Cloud (project rva-platform). Android
+ *  matches the app by package + signing SHA-1 against the Android clients
+ *  registered in the same project; this id is what the token is issued for. */
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 
 export default function LoginScreen({
   onSignedIn,
@@ -22,11 +26,24 @@ export default function LoginScreen({
 }) {
   const [error, setError] = useState('');
 
-  const handleGoogle = () => {
+  const [busy, setBusy] = useState(false);
+  const handleGoogle = async () => {
     setError('');
-    if (!GOOGLE_CLIENT_ID_CONFIGURED) {
-      setError('Google Sign In needs an OAuth client ID configured first — see LoginScreen.tsx.');
-      return;
+    if (busy) return;
+    setBusy(true);
+    try {
+      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const res = await GoogleSignin.signIn();
+      if (isSuccessResponse(res)) {
+        const u = res.data.user;
+        onSignedIn({ method: 'google', identifier: u.email, name: u.name ?? u.givenName ?? '' });
+      }
+    } catch (e: any) {
+      if (isErrorWithCode(e) && e.code === statusCodes.IN_PROGRESS) return;
+      setError("Google sign-in didn't go through. Please try again.");
+    } finally {
+      setBusy(false);
     }
   };
 
