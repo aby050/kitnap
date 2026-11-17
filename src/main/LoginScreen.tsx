@@ -41,7 +41,8 @@ export default function LoginScreen({
       }
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === statusCodes.IN_PROGRESS) return;
-      setError("Google sign-in didn't go through. Please try again.");
+      const code = isErrorWithCode(e) ? e.code : '';
+      setError("Google sign-in didn't go through. Please try again." + (code ? ` (${code})` : ''));
     } finally {
       setBusy(false);
     }
