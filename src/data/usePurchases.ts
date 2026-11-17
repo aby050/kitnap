@@ -8,7 +8,6 @@ import {
   initPurchases,
   isConfigured,
 } from './purchases';
-import { getSecretPro, subscribeSecretPro } from './secretPro';
 
 /**
  * Pretend the subscription is active, for development only.
@@ -41,8 +40,6 @@ export type PurchasesState = {
  *  the App root so every screen reads the same subscription truth — the
  *  listener fires on renewals, expiries and restores without a refetch. */
 export function usePurchases(): PurchasesState {
-  const [secretPro, setSecretProState] = useState(getSecretPro());
-  useEffect(() => subscribeSecretPro(setSecretProState), []);
   const [ready, setReady] = useState(false);
   const [info, setInfo] = useState<CustomerInfo | null>(null);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
@@ -91,7 +88,7 @@ export function usePurchases(): PurchasesState {
 
   return {
     ready,
-    pro: (__DEV__ && DEV_FORCE_PRO) || secretPro || hasPro(info),
+    pro: (__DEV__ && DEV_FORCE_PRO) || hasPro(info),
     info,
     offering,
     discountOffering,

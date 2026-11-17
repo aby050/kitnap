@@ -1,7 +1,6 @@
 import LineArt from '../onboarding/LineArt';
-import React, { useRef } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View, Platform, Image } from 'react-native';
-import { setSecretPro } from '../data/secretPro';
+import React from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SettingRow } from '../components/ui';
 import { fonts, palette, radius, space } from '../design/tokens';
@@ -118,18 +117,6 @@ export default function SettingsScreen({
   /* Read on render rather than held in state: this screen is pushed over the
    * app, so it mounts fresh every time it is opened and a selection changed
    * on the picker behind it would otherwise show stale here. */
-  const taps = useRef({ n: 0, t: 0 });
-  const onLogoTap = () => {
-    const now = Date.now();
-    taps.current.n = now - taps.current.t < 1500 ? taps.current.n + 1 : 1;
-    taps.current.t = now;
-    if (taps.current.n >= 11) {
-      taps.current.n = 0;
-      setSecretPro(true);
-      Alert.alert('Kitnap Pro', 'Pro is now active on this device.');
-    }
-  };
-
   const counts = getSelectionCounts();
   const blocked = (counts?.apps ?? 0) + (counts?.categories ?? 0);
   const blockedLabel = blocked > 0 ? String(blocked) : 'None yet';
@@ -282,9 +269,7 @@ export default function SettingsScreen({
           {/* Vector, and deliberately the dark tone: at this size the bright
               turquoise mark would out-shout the list above it, which is the
               screen's actual content. Dark, it reads as a maker's stamp. */}
-          <Pressable onPress={onLogoTap} hitSlop={8}>
-            <KitnapMark size={72} tone="dark" />
-          </Pressable>
+          <KitnapMark size={72} tone="dark" />
           <Text style={styles.footerName}>Kitnap</Text>
           <Text style={styles.footerVersion}>{versionLine}</Text>
         </View>
