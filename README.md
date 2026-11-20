@@ -1,6 +1,8 @@
 <div align="center">
 
-# Kitnap
+<img src="assets/kitnap-logo.png" width="96" alt="Kitnap logo" />
+
+# Kitnap — App Blocker & Focus
 
 **A calm, honest screen-time blocker for Android and iOS.**
 
@@ -16,7 +18,21 @@ and see where your time actually goes — with no backend and no tracking.
 
 [Website](https://kitnap.rvastudio.in) · [Privacy](https://kitnap.rvastudio.in/privacy) · [Terms](https://kitnap.rvastudio.in/terms)
 
+[<img alt="Get it on Google Play" height="48" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png">](https://play.google.com/store/apps/details?id=com.abhay.byre)
+
 </div>
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/1.jpg" width="200" alt="Kitnap screenshot 1" />
+  <img src="docs/screenshots/2.jpg" width="200" alt="Kitnap screenshot 2" />
+  <img src="docs/screenshots/3.jpg" width="200" alt="Kitnap screenshot 3" />
+  <img src="docs/screenshots/4.jpg" width="200" alt="Kitnap screenshot 4" />
+  <img src="docs/screenshots/5.jpg" width="200" alt="Kitnap screenshot 5" />
+  <img src="docs/screenshots/6.jpg" width="200" alt="Kitnap screenshot 6" />
+  <img src="docs/screenshots/7.jpg" width="200" alt="Kitnap screenshot 7" />
+</p>
 
 ---
 
