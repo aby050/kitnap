@@ -10,7 +10,7 @@ Block the apps that pull you in, run focus sessions that can't be quietly cancel
 and see where your time actually goes — with no backend and no tracking.
 
 [![CI](https://github.com/aby050/kitnap/actions/workflows/ci.yml/badge.svg)](https://github.com/aby050/kitnap/actions/workflows/ci.yml)
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 ![Expo SDK 57](https://img.shields.io/badge/Expo-SDK%2057-000020?logo=expo)
 ![React Native 0.86](https://img.shields.io/badge/React%20Native-0.86-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
@@ -131,11 +131,6 @@ to something that was settled deliberately. Report security issues privately as 
 
 ## License
 
-Kitnap is **source-available** under the [PolyForm Noncommercial License 1.0.0](LICENSE).
-You may read, run, modify and share the code for any noncommercial purpose, and contributions
-are welcome. Commercial use — including publishing the app or a derivative to an app store —
-is not permitted without written permission.
+[MIT](LICENSE). Use, modify and ship it freely, including commercially.
 
 The Kitnap name, logo, mascot and artwork are not covered by the code license.
-
-© 2026 Abhay Bundela / RVA Studio
